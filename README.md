@@ -105,7 +105,9 @@ drawcast render talk.drawcast.json --tts-command "python my_tts.py"
 
 1. **Check.** The script is validated, with layout estimated from the element sizes.
 2. **Speak.** Narration is split into sentences and each is synthesized and cached. English words are
-   turned into phonemes with a pronunciation dictionary; numbers and acronyms are written out first.
+   turned into phonemes with a pronunciation dictionary and Chinese into pinyin with the tone changes
+   of connected speech; numbers and acronyms are written out first. `--speed` changes the tempo of the
+   finished audio, not the voice.
 3. **Schedule.** Each `at` phrase is located in its sentence. Sentence boundaries are exact; a word's
    position inside its sentence is estimated from syllable counts, which lands within about a quarter
    of a second.
@@ -118,9 +120,13 @@ drawcast render talk.drawcast.json --tts-command "python my_tts.py"
 ## Limits
 
 - Chinese means Mandarin. Other languages are not supported by the built-in voice.
-- The English dictionary has about 178,000 words. Unknown words are assembled from known ones or
-  spelled out, which is sometimes wrong for names. Respell a name the way it sounds if it comes out
-  badly.
+- The English dictionary has about 178,000 words. An unknown word is assembled from known ones or read
+  by spelling rules, which is sometimes wrong for names. Respell a name the way it sounds if it comes
+  out badly.
+- English words inside a Chinese sentence are less reliable than either language alone. In our tests
+  a speech recogniser made out about two in three of them; the rest were slurred or dropped. The
+  model paces a sentence by the language of the voice clip, and the other language gets the wrong
+  tempo.
 - Word timing inside a sentence is an estimate, as described above.
 - There is no audio besides the narration.
 

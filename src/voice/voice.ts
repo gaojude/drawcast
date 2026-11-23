@@ -42,14 +42,16 @@ const sha = (...parts: (string | Uint8Array)[]) => parts.reduce((h, p) => h.upda
 
 /** Sampling steps of the model: more is slower and a little cleaner. */
 const STEPS = 8;
+/** Changed whenever the text is turned into tokens differently, so that cached speech is made again. */
+const TOKENS = "tokens-2";
 
 async function dictionaries(chineseFile: string): Promise<Dictionaries> {
   const english = gunzipSync(await readFile(path.join(packageRoot, "assets", "lexicon-en.txt.gz"))).toString("utf8");
   return { english: parseDictionary(english), chinese: parseDictionary(await readFile(chineseFile, "utf8")) };
 }
 
-function zipVoice(clip: Audio, transcript: string, speed: number, log: (line: string) => void): Voice {
-  const key = sha("zipvoice-distill-zh-en", String(STEPS), speed.toFixed(2), transcript, new Uint8Array(clip.samples.buffer, clip.samples.byteOffset, clip.samples.byteLength));
+function zipVoice(clip: Audio, transcript: string, log: (line: string) => void): Voice {
+  const key = sha("zipvoice-distill-zh-en", TOKENS, String(STEPS), transcript, new Uint8Array(clip.samples.buffer, clip.samples.byteOffset, clip.samples.byteLength));
   return {
     key,
     async open() {
@@ -79,14 +81,15 @@ function zipVoice(clip: Audio, transcript: string, speed: number, log: (line: st
         const out = await tts.generateAsync({
           text: "",
           sid: 0,
-          speed,
+          speed: 1,
           enableExternalBuffer: false,
           generationConfig: new sherpa.GenerationConfig({
             referenceAudio: clip.samples,
             referenceSampleRate: clip.sampleRate,
             referenceText: transcript,
             numSteps: STEPS,
-            speed,
+            // the engine garbles speech when asked to go faster, so speed is applied afterwards
+            speed: 1,
             // the first list is the clip's transcript, the second what to say
             tokens: [reference, tokens],
           }),
@@ -128,7 +131,6 @@ function commandVoice(command: string): Voice {
 export interface VoiceOptions {
   /** the script's `voice`, or the `--voice` flag */
   spec?: VoiceSpec;
-  speed: number;
   /** the folder the script is in; a voice clip's path is relative to it */
   baseDir: string;
   /** everything the script says, to pick a voice by language */
@@ -143,12 +145,12 @@ export async function resolveVoice(o: VoiceOptions): Promise<Voice> {
     const clip = await readWav(path.resolve(o.baseDir, o.spec.clip));
     const seconds = clip.samples.length / clip.sampleRate;
     if (seconds < 2 || seconds > 15) throw new Error(`The voice clip is ${seconds.toFixed(1)} s long; use 3 to 10 seconds of clear speech.`);
-    return zipVoice(clip, o.spec.transcript, o.speed, o.log);
+    return zipVoice(clip, o.spec.transcript, o.log);
   }
   const voices = builtInVoices();
   const language = isCjk(o.narration) ? "zh" : "en";
   const name = o.spec ?? Object.keys(voices).find((v) => voices[v].language === language)!;
   const voice = voices[name];
   if (!voice) throw new Error(`There is no voice called "${name}". Built-in voices: ${Object.keys(voices).join(", ")}.`);
-  return zipVoice(await readWav(path.join(voicesDir, `${name}.wav`)), voice.transcript, o.speed, o.log);
+  return zipVoice(await readWav(path.join(voicesDir, `${name}.wav`)), voice.transcript, o.log);
 }

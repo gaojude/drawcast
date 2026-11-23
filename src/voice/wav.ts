@@ -86,6 +86,47 @@ export function resample(audio: Audio, sampleRate: number): Audio {
   return { samples: out, sampleRate };
 }
 
+/**
+ * The same speech faster or slower, at the same pitch.
+ *
+ * Short overlapping windows of the input are laid down closer together or further apart. Each window
+ * is taken from near where the speed says it should come, at the offset that continues the previous
+ * one most smoothly, which is what keeps the pitch (this is the WSOLA method).
+ */
+export function changeTempo(audio: Audio, speed: number): Audio {
+  if (Math.abs(speed - 1) < 0.005) return audio;
+  const { samples, sampleRate } = audio;
+  const size = 2 * Math.round(0.015 * sampleRate);
+  const hop = size / 2;
+  const reach = Math.round(0.01 * sampleRate);
+  if (samples.length < size * 2) return audio;
+
+  const out = new Float32Array(Math.ceil(samples.length / speed) + size);
+  const hann = Float32Array.from({ length: size }, (_, i) => 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / size));
+  let length = 0;
+  // where in the input the previous window would have gone on to
+  let follow = 0;
+  for (let k = 0; ; k++) {
+    const want = Math.round(k * hop * speed);
+    if (want + size > samples.length) break;
+    let from = want;
+    if (k > 0) {
+      let best = -Infinity;
+      for (let shift = -reach; shift <= reach; shift += 2) {
+        const start = want + shift;
+        if (start < 0 || start + size > samples.length) continue;
+        let match = 0;
+        for (let i = 0; i < size && follow + i < samples.length; i += 4) match += samples[start + i] * samples[follow + i];
+        if (match > best) [best, from] = [match, start];
+      }
+    }
+    for (let i = 0; i < size; i++) out[k * hop + i] += samples[from + i] * hann[i];
+    follow = from + hop;
+    length = k * hop + size;
+  }
+  return { samples: out.subarray(0, length), sampleRate };
+}
+
 /** Cut the silence off both ends, keeping `keep` seconds of it. */
 export function trimSilence(audio: Audio, keep = 0.03, threshold = 0.01): Audio {
   const { samples, sampleRate } = audio;

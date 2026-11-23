@@ -1,5 +1,6 @@
 /** Downloading the speech model on first use. */
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { createWriteStream, existsSync } from "node:fs";
 import { mkdir, rename, rm } from "node:fs/promises";
 import path from "node:path";
@@ -9,6 +10,11 @@ import { cacheDir } from "../paths.ts";
 
 const RELEASES = "https://github.com/k2-fsa/sherpa-onnx/releases/download";
 const ZIPVOICE = "sherpa-onnx-zipvoice-distill-int8-zh-en-emilia";
+/** SHA-256 of the two downloads, so that what runs is what was tested. */
+const SHA256 = {
+  zipvoice: "77219c8b40f4ee8d73a7f902305ff6c1128ef9b54461c41b4ca6ed890b6c2803",
+  vocoder: "bcb3b970e384161c4d634f0bb9e999ff1c471b34c9bc0b1049a5014065ed3cc0",
+};
 
 export interface ModelFiles {
   tokens: string;
@@ -34,14 +40,16 @@ function modelFiles(): ModelFiles {
 
 export const modelsInstalled = () => Object.values(modelFiles()).every((f) => existsSync(f));
 
-async function download(url: string, to: string, log: (line: string) => void): Promise<void> {
+async function download(url: string, to: string, sha256: string, log: (line: string) => void): Promise<void> {
   const res = await fetch(url);
   if (!res.ok || !res.body) throw new Error(`Could not download ${url} (HTTP ${res.status}).`);
   const total = Number(res.headers.get("content-length")) || 0;
   let done = 0;
   let shown = -1;
+  const hash = createHash("sha256");
   const body = Readable.fromWeb(res.body as any);
   body.on("data", (chunk: Buffer) => {
+    hash.update(chunk);
     done += chunk.length;
     const tenth = total ? Math.floor((done / total) * 10) : -1;
     if (tenth > shown) {
@@ -51,6 +59,10 @@ async function download(url: string, to: string, log: (line: string) => void): P
   });
   // write beside the target and rename, so an interrupted download is never mistaken for a model
   await pipeline(body, createWriteStream(`${to}.part`));
+  if (hash.digest("hex") !== sha256) {
+    await rm(`${to}.part`);
+    throw new Error(`${url} is not the file drawcast expects (its checksum differs). Try again; if it keeps happening, the published model has changed and drawcast needs an update.`);
+  }
   await rename(`${to}.part`, to);
 }
 
@@ -70,10 +82,10 @@ export async function ensureModels(log: (line: string) => void): Promise<ModelFi
   if (modelsInstalled()) return files;
   await mkdir(modelsDir(), { recursive: true });
   log(`Downloading the speech model to ${modelsDir()} (once, about 180 MB)`);
-  if (!existsSync(files.vocoder)) await download(`${RELEASES}/vocoder-models/vocos_24khz.onnx`, files.vocoder, log);
+  if (!existsSync(files.vocoder)) await download(`${RELEASES}/vocoder-models/vocos_24khz.onnx`, files.vocoder, SHA256.vocoder, log);
   if (!existsSync(files.decoder)) {
     const archive = path.join(modelsDir(), `${ZIPVOICE}.tar.bz2`);
-    await download(`${RELEASES}/tts-models/${ZIPVOICE}.tar.bz2`, archive, log);
+    await download(`${RELEASES}/tts-models/${ZIPVOICE}.tar.bz2`, archive, SHA256.zipvoice, log);
     await untar(archive, modelsDir());
     await rm(archive);
   }

@@ -195,9 +195,11 @@ Excalidraw's palette, which looks right together:
 ## Narration
 
 - Write for the ear: short sentences, plain words. What is said is also what the captions show.
-- Numbers, percentages and years are read out. Two and three letter words in capitals (`API`, `DNS`)
-  are spelled letter by letter; write one in lower case to have it read as a word. An English word
-  the voice does not know is assembled from words it does know, or spelled out as a last resort.
+- Numbers, percentages and years are read out. A short word in capitals (`API`, `DNS`, `JSON`) is
+  spelled letter by letter; write it the way it sounds (`jason`) to have it read as a word. An English
+  word the voice does not know is read by its spelling, which is usually close and sometimes wrong.
+- English inside a Chinese sentence is the voice's weak point: a word now and then comes out slurred.
+  Use few such words and common ones, or say the term in Chinese and write the English on the canvas.
 - A word's time within its sentence is estimated, so an `at` lands within about a quarter of a second
   of the word. The start of each sentence is exact.
 

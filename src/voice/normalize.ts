@@ -1,9 +1,11 @@
 /**
  * Makes narration sayable. The voice can say Chinese characters and the English words in its dictionary,
  * and nothing else. So digits and symbols are written out as words, and an English word the dictionary
- * lacks is given a pronunciation built from words it has, or is spelled out.
+ * lacks is given a pronunciation: built from words it has, or guessed from the spelling. Acronyms are
+ * spelled out.
  */
 import { isCjk } from "../shared/text.ts";
+import { guess } from "./guess.ts";
 
 export interface Lexicon {
   /** word -> its phones, space separated */
@@ -135,7 +137,7 @@ export function normalize(text: string, lexicon: Lexicon): Normalized {
     // an acronym, or letters with no vowel to say: read it letter by letter
     if ((raw === raw.toUpperCase() && raw.length <= 5) || !/[aeiouy]/.test(word)) return spell(word);
     if (lexicon.get(word)) return word;
-    const phones = derive(word, lexicon);
+    const phones = derive(word, lexicon) ?? guess(word);
     if (!phones) return spell(word);
     entries.set(word, phones);
     return word;

@@ -78,14 +78,13 @@ export async function renderVideo(loaded: Loaded, o: RenderOptions): Promise<{ d
   const { script, baseDir } = loaded;
   const voice = await resolveVoice({
     spec: o.voice ?? script.voice,
-    speed: o.speed ?? script.speed ?? 1,
     baseDir,
     narration: script.steps.map((s) => s.say ?? "").join(" "),
     ttsCommand: o.ttsCommand,
     log: o.log,
   });
   o.log("Narration");
-  const narration = await narrate(script, voice, o.log);
+  const narration = await narrate(script, voice, o.speed ?? script.speed ?? 1, o.log);
 
   const player = await openPlayer(await playerRequest(loaded, narration, o.width, o.captions ?? script.captions ?? true), o.log);
   const audioFile = path.join(cacheDir(), "tmp", `narration-${process.pid}.wav`);

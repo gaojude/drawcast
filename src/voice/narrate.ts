@@ -13,7 +13,7 @@ import { cacheDir } from "../paths.ts";
 import { sentences, tokenLength, tokens } from "../shared/text.ts";
 import type { Script, StepAudio, TimedToken } from "../shared/types.ts";
 import type { Voice } from "./voice.ts";
-import { type Audio, readWav, resample, trimSilence, writeWav } from "./wav.ts";
+import { type Audio, changeTempo, readWav, resample, trimSilence, writeWav } from "./wav.ts";
 
 export const SAMPLE_RATE = 48000;
 /** Silence between two sentences of a step. */
@@ -78,7 +78,8 @@ export function estimateNarration(script: Script): Narration {
   return { steps, clips: steps.map(() => null) };
 }
 
-export async function narrate(script: Script, voice: Voice, log: (line: string) => void): Promise<Narration> {
+/** `speed` is applied to the finished speech, so a sentence is spoken once whatever speeds it is played at. */
+export async function narrate(script: Script, voice: Voice, speed: number, log: (line: string) => void): Promise<Narration> {
   const perStep = script.steps.map((step) => (step.say?.trim() ? sentences(step.say) : []));
   const all = [...new Set(perStep.flat())];
   const dir = path.join(cacheDir(), "speech", voice.key);
@@ -102,7 +103,7 @@ export async function narrate(script: Script, voice: Voice, log: (line: string) 
       steps.push(null);
       continue;
     }
-    const parts = await Promise.all(list.map(async (s) => resample(await readWav(fileOf(s)), SAMPLE_RATE)));
+    const parts = await Promise.all(list.map(async (s) => changeTempo(resample(await readWav(fileOf(s)), SAMPLE_RATE), speed)));
     clips.push(concat(parts, SENTENCE_GAP));
     steps.push(stepAudio(list.map((sentence, i) => ({ sentence, seconds: parts[i].samples.length / SAMPLE_RATE }))));
   }
