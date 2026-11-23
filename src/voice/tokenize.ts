@@ -6,8 +6,8 @@
  * as "it tasks a"). So the lookup is done here and the model gets finished tokens.
  *
  * Its Chinese dictionary gives a word its spoken tones (你好 is ni2 hao3) but covers only the words it
- * lists. Everything else is looked up character by character, and the tone changes between those
- * characters are worked out here.
+ * lists. Everything else is looked up character by character, and the tone changes inside a word are
+ * worked out here. Only inside a word, because that is how the model's training text was marked.
  */
 
 export interface Dictionaries {
@@ -58,6 +58,8 @@ export function toTokens(text: string, dict: Dictionaries): string[] {
 /** One syllable: its tokens (an initial, if it has one, and a final that ends in the tone). */
 interface Syllable {
   character: string;
+  /** which word of the sentence it belongs to */
+  word: number;
   tokens: string[];
   /** part of a dictionary word, whose tones are already the spoken ones */
   inWord: boolean;
@@ -72,8 +74,14 @@ const ALONE: Record<string, string[]> = { 长: ["ch0", "ang2"], 得: ["d0", "e5"
 const AFTER_ONE = "二三四五六七八九零月日号";
 const BEFORE_ONE = "一二三四五六七八九零十百千万亿第";
 
+const segmenter = new Intl.Segmenter("zh", { granularity: "word" });
+
 /** A run of Chinese characters as tokens, with the tones as they are spoken. */
 function chinese(run: string, words: Map<string, string[]>): string[] {
+  // the word each character is in, for words the dictionary does not list
+  const wordAt: number[] = [];
+  [...segmenter.segment(run)].forEach((s, n) => wordAt.push(...Array(s.segment.length).fill(n)));
+
   const syllables: Syllable[] = [];
   // the longest dictionary word first: 银行 is not 银 + 行 read on its own
   for (let i = 0; i < run.length; ) {
@@ -86,24 +94,26 @@ function chinese(run: string, words: Map<string, string[]>): string[] {
     let n = 0;
     tokens.forEach((token, at) => {
       if (!/[1-5]$/.test(token)) return;
-      syllables.push({ character: word[n++] ?? "", tokens: tokens.slice(start, at + 1), inWord: length > 1 });
+      syllables.push({ character: word[n] ?? "", word: wordAt[i + n], tokens: tokens.slice(start, at + 1), inWord: length > 1 });
+      n++;
       start = at + 1;
     });
     i += length;
   }
 
-  // Tone sandhi, for what the dictionary's words do not already cover. From the right, so that a row
-  // of third tones alternates: 我很好 is wo3 hen2 hao3.
-  for (let i = syllables.length - 2; i >= 0; i--) {
+  // Tone sandhi, for the words the dictionary does not list.
+  const tones = syllables.map(tone);
+  for (let i = 0; i < syllables.length - 1; i++) {
     const [s, next, previous] = [syllables[i], syllables[i + 1], syllables[i - 1]];
-    if (s.inWord) continue;
+    if (s.inWord || s.word !== next.word) continue;
     if (s.character === "一") {
       // yi2 before a fourth tone, yi4 before the others
       const counted = AFTER_ONE.includes(next.character) || (previous && BEFORE_ONE.includes(previous.character));
-      if (!counted) setTone(s, tone(next) === 4 ? 2 : 4);
+      if (!counted) setTone(s, tones[i + 1] === 4 ? 2 : 4);
     } else if (s.character === "不") {
-      if (tone(next) === 4) setTone(s, 2);
-    } else if (tone(s) === 3 && tone(next) === 3) {
+      if (tones[i + 1] === 4) setTone(s, 2);
+    } else if (tones[i] === 3 && tones[i + 1] === 3) {
+      // the first of two third tones rises: 所以 is suo2 yi3
       setTone(s, 2);
     }
   }

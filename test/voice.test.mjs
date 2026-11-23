@@ -55,17 +55,19 @@ test("tokens keep a space between English words and none around Chinese", () => 
   assert.deepEqual(toTokens("react用", dict), ["ɹ", "i", "æ", "k", "t", "y", "ong4"]);
 });
 
-test("tones change as they do in speech", () => {
-  const chinese = parseDictionary("我 w0 o3\n很 h0 en3\n好 h0 ao3\n一 y0 i1\n个 g0 e4\n天 t0 ian1\n十 sh0 i2\n不 b0 u4\n是 sh0 i4\n行 x0 ing2\n你好 n0 i2 h0 ao3\n地 d0 i4\n跑 p0 ao3");
+test("tones change inside a word as they do in speech", () => {
+  const chinese = parseDictionary("所 s0 uo3\n以 y0 i3\n我 w0 o3\n一 y0 i1\n下 x0 ia4\n百 b0 ai3\n月 y0 ue4\n不 b0 u4\n对 d0 ui4\n行 x0 ing2\n你好 n0 i2 h0 ao3\n地 d0 i4\n走 z0 ou3\n里 l0 i3\n找 zh0 ao3");
   const tones = (text) => toTokens(text, { english: new Map(), chinese }).filter((t) => /[1-5]$/.test(t)).join(" ");
   // two third tones in a row: the first rises
-  assert.equal(tones("我很好"), "o3 en2 ao3");
+  assert.equal(tones("所以"), "uo2 i3");
   assert.equal(tones("你好"), "i2 ao3");
-  // 一 and 不 before a fourth tone rise; 一 before any other falls, and in a number stays level
-  assert.equal(tones("一个，一天，十一"), "i2 e4 i4 ian1 i2 i1");
-  assert.equal(tones("不是，不行"), "u2 i4 u4 ing2");
+  // but not from one word to the next
+  assert.equal(tones("里，找"), "i3 ao3");
+  // 一 and 不 rise before a fourth tone; 一 falls before any other, and stays level in a date
+  assert.equal(tones("一下，一百，一月"), "i2 ia4 i4 ai3 i1 ue4");
+  assert.equal(tones("不对，不行"), "u2 ui4 u4 ing2");
   // 地 on its own is the particle
-  assert.equal(tones("好地跑"), "ao3 e5 ao3");
+  assert.equal(tones("走地"), "ou3 e5");
 });
 
 test("wav helpers", () => {
