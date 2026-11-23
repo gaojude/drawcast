@@ -1,0 +1,34 @@
+{
+  "drawcast": 1,
+  "title": "Why a cache helps",
+  "steps": [
+    {
+      "say": "Every time the app needs a user, it goes to the database and asks. And the database is slow.",
+      "do": [
+        { "at": "app", "add": { "id": "app", "type": "rectangle", "x": 120, "y": 260, "width": 200, "height": 100, "label": "App", "backgroundColor": "#a5d8ff" } },
+        { "at": "database", "add": { "id": "db", "type": "rectangle", "x": 940, "y": 260, "width": 220, "height": 100, "label": "Database", "backgroundColor": "#e9ecef" } },
+        { "at": "asks", "add": { "id": "query", "type": "arrow", "from": "app", "to": "db", "label": "80 ms" } },
+        { "at": "slow", "point": "query" }
+      ]
+    },
+    {
+      "say": "So we put a cache in between. It remembers the answers it has already seen.",
+      "do": [
+        { "at": "cache", "remove": "query" },
+        { "add": { "id": "cache", "type": "ellipse", "x": 530, "y": 250, "width": 200, "height": 120, "label": "Cache", "backgroundColor": "#ffec99" } },
+        { "at": "remembers", "add": [
+          { "id": "ask", "type": "arrow", "from": "app", "to": "cache", "label": "1 ms" },
+          { "id": "miss", "type": "arrow", "from": "cache", "to": "db", "strokeStyle": "dashed", "label": "only on a miss" }
+        ] }
+      ],
+      "pause": 0.5
+    },
+    {
+      "say": "Most requests never reach the database at all.",
+      "do": [
+        { "at": "never", "update": { "id": ["db", "miss"], "opacity": 35 } },
+        { "at": "database", "camera": { "fit": ["app", "cache"], "padding": 120 } }
+      ]
+    }
+  ]
+}

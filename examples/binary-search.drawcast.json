@@ -1,0 +1,38 @@
+{
+  "drawcast": 1,
+  "title": "二分查找",
+  "voice": "lin",
+  "steps": [
+    {
+      "say": "一百万个排好序的数字里，找到其中一个，最多要看几次？",
+      "do": [
+        { "at": "排好序", "add": { "id": "row", "type": "rectangle", "x": 140, "y": 250, "width": 1000, "height": 80, "backgroundColor": "#e9ecef" } },
+        { "add": { "id": "lo", "type": "text", "x": 140, "y": 345, "text": "1" } },
+        { "add": { "id": "hi", "type": "text", "x": 1040, "y": 345, "text": "1,000,000" } },
+        { "at": "几次", "add": { "id": "q", "type": "text", "x": 560, "y": 110, "text": "最多几次？", "fontSize": 36 } }
+      ],
+      "pause": 1
+    },
+    {
+      "say": "答案是二十次。秘诀就是每次都看正中间。",
+      "do": [
+        { "at": "二十", "update": { "id": "q", "text": "最多 20 次", "strokeColor": "#e03131" } },
+        { "at": "正中间", "add": { "id": "mid", "type": "line", "points": [[640, 235], [640, 345]], "strokeColor": "#e03131", "strokeWidth": 4 } }
+      ]
+    },
+    {
+      "say": "中间的数比目标大，右边这一半就不用看了。",
+      "do": [
+        { "at": "右边", "add": { "id": "gone", "type": "rectangle", "x": 645, "y": 255, "width": 490, "height": 70, "backgroundColor": "#ffc9c9", "strokeColor": "#e03131", "fillStyle": "hachure", "rounded": false } },
+        { "at": "不用看", "update": { "id": ["gone", "hi"], "opacity": 30 } }
+      ]
+    },
+    {
+      "say": "每看一次，范围就少一半。一百万连续减半二十次，就只剩一个了。",
+      "do": [
+        { "at": "少一半", "add": { "id": "halves", "type": "text", "x": 300, "y": 450, "text": "1,000,000 → 500,000 → 250,000 → … → 1", "fontSize": 28, "fontFamily": "code" } },
+        { "at": "只剩", "point": "halves" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "drawcast": 1,
+  "title": "What happens when you type a URL",
+  "steps": [
+    {
+      "say": "What actually happens when you type a web address and press enter?",
+      "do": [
+        { "at": "type", "add": { "id": "title", "type": "text", "x": 80, "y": 50, "text": "example.com  ->  ?", "fontSize": 40 } }
+      ],
+      "pause": 0.4
+    },
+    {
+      "say": "Your browser only knows a name. To reach the site, it needs a number: an IP address.",
+      "do": [
+        { "at": "browser", "add": { "id": "browser", "type": "rectangle", "x": 100, "y": 240, "width": 220, "height": 110, "label": "Browser", "backgroundColor": "#a5d8ff" } },
+        { "at": "site", "add": { "id": "site", "type": "rectangle", "x": 960, "y": 240, "width": 220, "height": 110, "label": "example.com\n93.184.216.34", "backgroundColor": "#b2f2bb" } },
+        { "at": "number", "point": "site" }
+      ]
+    },
+    {
+      "say": "So it asks a resolver, which is a bit like a phone book for the internet.",
+      "do": [
+        { "at": "resolver", "add": { "id": "resolver", "type": "ellipse", "x": 530, "y": 430, "width": 220, "height": 120, "label": "DNS resolver", "backgroundColor": "#ffec99" } },
+        { "at": "phone book", "add": { "id": "ask", "type": "arrow", "from": "browser", "to": "resolver", "label": "example.com?" } }
+      ]
+    },
+    {
+      "say": "The resolver answers with the address, and only then can the browser connect to the site itself.",
+      "do": [
+        { "at": "answers", "add": { "id": "answer", "type": "arrow", "from": "resolver", "to": "browser", "via": [[330, 520]], "rounded": true, "label": "93.184.216.34", "strokeColor": "#e03131" } },
+        { "at": "connect", "add": { "id": "connect", "type": "arrow", "from": "browser", "to": "site", "strokeWidth": 4, "strokeColor": "#2f9e44" } },
+        { "update": { "id": "site", "backgroundColor": "#69db7c" } }
+      ]
+    },
+    {
+      "say": "One lookup, and a name has become a place.",
+      "do": [
+        { "at": "name", "update": { "id": "title", "text": "example.com  ->  93.184.216.34" } }
+      ]
+    }
+  ]
+}
