@@ -1,6 +1,6 @@
 {
   "name": "drawcast",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Turn a narrated Excalidraw script into a video. Local text-to-speech, no screen recording.",
   "license": "MIT",
   "repository": {
