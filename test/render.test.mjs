@@ -126,9 +126,12 @@ test("each step is reported as soon as it and those before it are spoken", async
       };
     };
     const heard = [];
-    const narration = await narrate(script, voice, 1, () => {}, (index, step, clip) => {
-      heard.push([index, step?.captions.map((c) => c.text) ?? null, clip?.samples.length ?? null]);
-      if (index === 0) open();
+    const narration = await narrate(script, voice, 1, () => {}, {
+      spoken(index, step, clip) {
+        heard.push([index, step?.captions.map((c) => c.text) ?? null, clip?.samples.length ?? null]);
+        if (index === 0) open();
+      },
+      startOver: () => assert.fail("the voice did not give up"),
     });
     assert.deepEqual(heard.map((h) => h[0]), [0, 1, 2]);
     assert.deepEqual(heard.map((h) => h[1]), [[ONE, TWO, THREE], null, [FOUR, FIVE, SIX, TWO]]);
@@ -146,20 +149,79 @@ test("with everything in the cache, every step is reported without a voice", asy
     const again = slowVoice(2);
     again.key = first.key;
     again.open = async () => assert.fail("nothing is left to say");
-    await narrate(script, again, 1, () => {}, (index) => heard.push(index));
+    await narrate(script, again, 1, () => {}, { spoken: (index) => heard.push(index), startOver: () => assert.fail("no voice gave up") });
     assert.deepEqual(heard, [0, 1, 2]);
+  });
+});
+
+/**
+ * A voice like `slowVoice` that cannot say some sentences, with another voice to say the script instead.
+ * It takes until `when` to find that it cannot, as a voice on the far side of a connection does.
+ */
+function failingVoice(cannotSay, fallback, when = Promise.resolve()) {
+  const voice = slowVoice(1);
+  voice.key = "test-gives-up";
+  voice.fallback = fallback;
+  const open = voice.open;
+  voice.open = async () => {
+    const say = await open();
+    return async (sentence) => {
+      if (!cannotSay.includes(sentence)) return say(sentence);
+      await when;
+      throw new Error(`cannot say "${sentence}"`);
+    };
+  };
+  return voice;
+}
+
+test("a voice that gives up partway hands the whole script to its fallback, and says so", async () => {
+  await inCache(async () => {
+    const other = slowVoice(2);
+    other.key = "test-fallback";
+    // it gives up a moment after its first step (and the silent one behind it) has been reported
+    let giveUp;
+    const voice = failingVoice([FOUR], other, new Promise((resolve) => (giveUp = resolve)));
+    const events = [];
+    const lines = [];
+    const narration = await narrate(script, voice, 1, (l) => lines.push(l), {
+      spoken(index) {
+        events.push(index);
+        if (events.length === 1) setTimeout(giveUp, 20);
+      },
+      startOver: () => events.push("over"),
+    });
+    // the first step was reported in the first voice, and then all of them in the second
+    assert.deepEqual(events, [0, 1, "over", 0, 1, 2]);
+    assert.deepEqual(voice.said, [ONE, TWO, THREE], "nothing is asked of a voice that has given up");
+    assert.deepEqual([...other.said].sort(), [ONE, TWO, THREE, FOUR, FIVE, SIX].sort(), "the second voice says all of it, not the rest of it");
+    assert.equal(narration.steps.length, 3);
+    assert.ok(lines.some((l) => /the built-in voice will: cannot say/.test(l)));
+  });
+});
+
+test("a voice that cannot start hands over before anything is reported, so nothing starts over", async () => {
+  await inCache(async () => {
+    const other = slowVoice(2);
+    other.key = "test-fallback";
+    const voice = failingVoice([], other);
+    voice.open = async () => {
+      throw new Error("edge-tts was not found");
+    };
+    const events = [];
+    await narrate(script, voice, 1, () => {}, { spoken: (index) => events.push(index), startOver: () => events.push("over") });
+    assert.deepEqual(events, [0, 1, 2]);
   });
 });
 
 /** A player that schedules like the page does, but simply: a step lasts as long as its audio (a silent one a second), plus half a second. */
 function toyPlayer(steps) {
-  const starts = [];
+  let starts = [];
   let at = 0.5;
-  const sent = [];
-  return {
-    sent,
+  const player = {
+    sent: [],
+    startedOver: 0,
     async schedule(audio) {
-      sent.push(audio);
+      player.sent.push(audio);
       for (const a of audio) {
         starts.push(at);
         at += (a?.duration ?? 1) + 0.5;
@@ -167,7 +229,13 @@ function toyPlayer(steps) {
       const duration = starts.length === steps ? at + 1 : null;
       return { stepStarts: [...starts], settled: duration ?? at, duration };
     },
+    async startOver() {
+      player.startedOver++;
+      starts = [];
+      at = 0.5;
+    },
   };
+  return player;
 }
 
 const tone = (seconds, level) => ({ samples: new Float32Array(seconds * SAMPLE_RATE).fill(level), sampleRate: SAMPLE_RATE });
@@ -177,7 +245,7 @@ test("a video settles a step at a time, as its narration is heard", async () => 
   const player = toyPlayer(3);
   const lines = [];
   let heard;
-  const telling = tell(Promise.resolve(player), script, (h) => new Promise(() => (heard = h)), { fps: 10, captions: false, log: (l) => lines.push(l) });
+  const telling = tell(Promise.resolve(player), script, (listener) => new Promise(() => (heard = listener.spoken)), { fps: 10, captions: false, log: (l) => lines.push(l) });
   assert.deepEqual([telling.frames, telling.samples, telling.duration], [0, 0, null]);
 
   // the first step: spoken from 0.5 s to 2.5 s, so the second starts at 3 s and everything before that is settled
@@ -204,6 +272,37 @@ test("a video settles a step at a time, as its narration is heard", async () => 
   // the last step starts at 4.5 s
   const end = telling.sound(4 * SAMPLE_RATE, 7 * SAMPLE_RATE);
   assert.deepEqual([end[0.5 * SAMPLE_RATE - 1], end[0.5 * SAMPLE_RATE], end[1.5 * SAMPLE_RATE - 1], end[1.5 * SAMPLE_RATE]], [0, 0.25, 0.25, 0]);
+});
+
+test("when the narration starts over in another voice, nothing is settled any more", async () => {
+  const player = toyPlayer(3);
+  let listener;
+  const telling = tell(Promise.resolve(player), script, (l) => new Promise(() => (listener = l)), { fps: 10, captions: true, log: () => {} });
+  let more = telling.more();
+  listener.spoken(0, audioOf(2), tone(2, 0.5));
+  await more;
+  assert.deepEqual([telling.frames, telling.round], [30, 0]);
+
+  // whoever was waiting for more is woken, to find that what it made is void
+  more = telling.more();
+  listener.startOver();
+  await more;
+  assert.deepEqual([telling.frames, telling.samples, telling.duration, telling.round], [0, 0, null, 1]);
+
+  // the other voice takes four seconds over the first step, and the page schedules it from the start again
+  more = telling.more();
+  listener.spoken(0, audioOf(4), tone(4, 0.125));
+  await more;
+  assert.equal(player.startedOver, 1);
+  assert.deepEqual([telling.frames, telling.samples, telling.round], [50, 5 * SAMPLE_RATE, 1]);
+  const sound = telling.sound(0, telling.samples);
+  assert.deepEqual([sound[0.5 * SAMPLE_RATE], sound[4.5 * SAMPLE_RATE - 1], sound[4.5 * SAMPLE_RATE]], [0.125, 0.125, 0]);
+
+  more = telling.more();
+  listener.spoken(1, null, null);
+  listener.spoken(2, audioOf(1), tone(1, 0.125));
+  await more;
+  assert.deepEqual(await telling.whole, { duration: 9, frames: 90 });
 });
 
 test("a narration that fails stops the telling", async () => {

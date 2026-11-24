@@ -6,8 +6,8 @@
  */
 import { convertToExcalidrawElements, exportToCanvas } from "@excalidraw/excalidraw";
 import { type ColorSpace, avcCodecs } from "../shared/h264.ts";
-import { DEFAULT_CANVAS, type Script, type StepAudio } from "../shared/types.ts";
-import { type Frame, type ImageInfo, type Schedule, type Timeline, timeline } from "./compile.ts";
+import { DEFAULT_CANVAS, type Formula, type Script, type StepAudio } from "../shared/types.ts";
+import { type FormulaFile, type Frame, type ImageInfo, type Schedule, type Timeline, timeline } from "./compile.ts";
 import type { Rect } from "./elements.ts";
 
 /** Everything about a video but its timing, so the page can get ready while the narration is still being spoken. */
@@ -15,6 +15,8 @@ export interface PrepareRequest {
   script: Script;
   /** image `src` -> data URL */
   images: Record<string, string>;
+  /** LaTeX -> the formula typeset from it */
+  math: Record<string, Formula>;
   output: { width: number; height: number };
   /** For a video: the encoder to find and try out meanwhile. A still needs none. */
   video?: EncodeRequest;
@@ -31,6 +33,7 @@ const LASER = "#e03131";
 let request: PrepareRequest;
 let images: Map<string, ImageInfo>;
 let files: Record<string, unknown>;
+let formula: FormulaFile;
 /** The script against its audio, as far as the audio has come. */
 let line: Timeline;
 
@@ -94,11 +97,29 @@ const drawBoard = (elements: readonly unknown[], view: Rect) =>
   });
 
 /**
+ * Excalidraw ends every list of fonts with "Segoe UI Emoji", for emoji on Windows. That font also answers
+ * for symbols it has no real glyph for: it draws ≠ as a hyphen, ∞ and ∫ as a degree sign, √ as Ã, and ↔ as
+ * an emoji. A font declared here under the same name hides the installed one, and it is the installed one
+ * limited to the emoji, so any other character the drawing fonts lack goes to a font the system picks for
+ * it. Where there is no such font installed this does nothing, and nothing needed doing.
+ */
+let emojiOnly: Promise<unknown> | undefined;
+function limitEmojiFont() {
+  emojiOnly ??= (async () => {
+    const face = new FontFace("Segoe UI Emoji", 'local("Segoe UI Emoji")', { unicodeRange: "U+200D, U+20E3, U+2600-27BF, U+2B00-2BFF, U+FE0F, U+1F000-1FAFF, U+E0020-E007F" });
+    document.fonts.add(face);
+    await face.load().catch(() => {});
+  })();
+  return emojiOnly;
+}
+
+/**
  * Text is measured when its element is built, so its font has to be there first: measured in a fallback
  * font, a label comes out too narrow and loses its last letters. Excalidraw loads the fonts (and, for
  * Chinese, only the slices of the font) that the elements it is asked to export need.
  */
 async function loadFonts(script: Script) {
+  await limitEmojiFont();
   const specs = script.steps.flatMap((s) => s.do ?? []).flatMap((a) => (a.add ? [a.add].flat() : []));
   const texts = [
     ...specs.filter((s) => s.label || s.text).map((s) => ({ text: `${s.label ?? ""}${s.text ?? ""}`, fontFamily: { hand: 5, normal: 6, code: 3 }[s.fontFamily ?? "hand"] })),
@@ -112,9 +133,29 @@ async function loadFonts(script: Script) {
   await document.fonts.load(`500 24px ${CAPTION_FONT}`, said).catch(() => []);
 }
 
+/**
+ * A formula is an image like any other, except that it comes in whatever colour it is asked for: its
+ * picture is drawn in `currentColor`, and each colour of it is a file of its own.
+ */
+function formulaFiles(math: Record<string, Formula>): FormulaFile {
+  const ids = new Map<string, string>();
+  return (tex, color) => {
+    const formula = math[tex];
+    if (!formula) return undefined;
+    const key = JSON.stringify([tex, color]);
+    let fileId = ids.get(key);
+    if (!fileId) {
+      fileId = `math-${ids.size}`;
+      ids.set(key, fileId);
+      const svg = formula.svg.replace("<svg ", `<svg color="${color}" `);
+      files[fileId] = { id: fileId, dataURL: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`, mimeType: "image/svg+xml", created: 1 };
+    }
+    return { fileId, width: formula.width, height: formula.height };
+  };
+}
+
 async function loadImages(sources: Record<string, string>): Promise<Map<string, ImageInfo>> {
   const out = new Map<string, ImageInfo>();
-  files = {};
   await Promise.all(
     Object.entries(sources).map(async ([src, dataURL], i) => {
       const img = new Image();
@@ -136,9 +177,12 @@ async function prepare(req: PrepareRequest): Promise<void> {
   stopEncoding();
   request = req;
   still = surface();
+  files = {};
+  // one set of formula pictures for the page: a timeline made later asks for the same ones by the same names
+  formula = formulaFiles(req.math);
   encoderReady = req.video ? startEncoding(req.video).catch((e) => ({ encoder: null, tried: [String(e?.message || e)] })) : null;
   [images] = await Promise.all([loadImages(req.images), loadFonts(req.script)]);
-  line = timeline(req.script, images);
+  line = timeline(req.script, images, formula);
 }
 
 /**
@@ -147,12 +191,17 @@ async function prepare(req: PrepareRequest): Promise<void> {
  */
 const schedule = (audio: (StepAudio | null)[]): Schedule => line.extend(audio);
 
+/** Forgets every step scheduled so far: the script is to be scheduled again, against other audio. */
+function startOver(): void {
+  line = timeline(request.script, images, formula);
+  // what was painted for another timing is not this timing's picture
+  for (const s of [still, ...lanes.map((lane) => lane.surface)]) s.boardKey = s.frameKey = "";
+}
+
 /** Schedules the whole script at once, from the start, against audio for every step. */
 function load(audio: (StepAudio | null)[]): LoadResult {
   if (audio.length !== request.script.steps.length) throw new Error(`The script has ${request.script.steps.length} steps, and audio came for ${audio.length}.`);
-  line = timeline(request.script, images);
-  // what was painted for another timing is not this timing's picture
-  for (const s of [still, ...lanes.map((lane) => lane.surface)]) s.boardKey = s.frameKey = "";
+  startOver();
   const { stepStarts, settled } = line.extend(audio);
   return { duration: settled, stepStarts };
 }
@@ -578,6 +627,6 @@ async function encodeSegment(index: number, first: number, count: number): Promi
 /** The encoder `prepare` was asked to find, once the search is over. */
 const encoder = (): Promise<EncodeStart> => encoderReady ?? Promise.resolve({ encoder: null, tried: ["no video was asked for"] });
 
-const api = { prepare, load, schedule, frame, elements, encoder, encodeSegment, stopEncoding };
+const api = { prepare, load, schedule, startOver, frame, elements, encoder, encodeSegment, stopEncoding };
 export type PlayerApi = typeof api;
 (window as any).drawcast = api;

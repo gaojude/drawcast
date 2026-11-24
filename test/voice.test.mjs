@@ -104,9 +104,16 @@ test("行 is a line when lines are counted, and the verb otherwise", () => {
 
 test("a voice is a built-in name or one of the model's speakers", async () => {
   const resolve = (spec, narration = "Hello.") => resolveVoice({ spec, narration, log: () => {} });
-  // left unset, it follows the language of the narration
-  assert.equal((await resolve(undefined, "你好。")).key, (await resolve("chen")).key);
-  assert.equal((await resolve(undefined)).key, (await resolve("maple")).key);
+  // left unset, it is the online voice for the language of the narration, falling back to a built-in one
+  const zh = await resolve(undefined, "你好。");
+  assert.equal(zh.key, (await resolve("edge:zh-CN-XiaoxiaoNeural")).key);
+  assert.equal(zh.fallback.key, (await resolve("lin")).key);
+  const en = await resolve(undefined);
+  assert.equal(en.key, (await resolve("edge:en-US-EmmaMultilingualNeural")).key);
+  assert.equal(en.fallback.key, (await resolve("maple")).key);
+  // a voice that is named has nothing to fall back on
+  assert.equal((await resolve("lin")).fallback, undefined);
+  assert.equal((await resolve("edge:zh-CN-XiaoxiaoNeural")).fallback, undefined);
   // maple is a name for the speaker af_maple; chen is zm_061 with another speaker mixed in
   assert.equal((await resolve("maple")).key, (await resolve("af_maple")).key);
   assert.notEqual((await resolve("chen")).key, (await resolve("zm_061")).key);

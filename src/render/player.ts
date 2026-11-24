@@ -41,6 +41,8 @@ export interface Player {
    * before the `settled` it returns can be asked for after this, while later steps are still unknown.
    */
   schedule(audio: (StepAudio | null)[]): Promise<Schedule>;
+  /** Forgets every step scheduled so far: the script is to be scheduled again, against another voice's audio. */
+  startOver(): Promise<void>;
   /** PNG of the frame at `t`, or null when it equals the one before. */
   frame(t: number): Promise<Buffer | null>;
   /** The Excalidraw elements on the canvas at `t`. */
@@ -86,6 +88,7 @@ export async function openPlayer(request: PrepareRequest, log: (line: string) =>
       close,
       load: (audio) => page.evaluate((a) => drawcast.load(a), audio as any),
       schedule: (audio) => page.evaluate((a) => drawcast.schedule(a), audio as any),
+      startOver: () => page.evaluate(() => drawcast.startOver()),
       async frame(t) {
         const url = await page.evaluate((time) => drawcast.frame(time), t);
         return url ? Buffer.from(url.slice(url.indexOf(",") + 1), "base64") : null;

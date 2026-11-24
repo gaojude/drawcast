@@ -6,8 +6,8 @@ import { check, type Report } from "../format/check.ts";
 import { cacheDir } from "../paths.ts";
 import type { PrepareRequest } from "../player/main.ts";
 import { segmentFrames } from "../shared/h264.ts";
-import { DEFAULT_CANVAS, OUTPUT_SCALE, type Script, type StepAudio } from "../shared/types.ts";
-import { SAMPLE_RATE, estimateNarration, narrate } from "../voice/narrate.ts";
+import { DEFAULT_CANVAS, type Formula, OUTPUT_SCALE, type Script, type StepAudio } from "../shared/types.ts";
+import { type Listener, SAMPLE_RATE, estimateNarration, narrate } from "../voice/narrate.ts";
 import { resolveVoice } from "../voice/voice.ts";
 import { type Audio, pcm16, writeWav } from "../voice/wav.ts";
 import { type Output, startEncoder, startMuxer } from "./encode.ts";
@@ -37,11 +37,23 @@ export async function loadScript(file: string): Promise<Loaded> {
   try {
     parsed = JSON.parse(await readFile(file, "utf8"));
   } catch (e) {
-    throw new Error(`Could not read ${file}: ${(e as Error).message}`);
+    const { message } = e as Error;
+    // LaTeX is full of backslashes, and JSON takes one as the start of an escape
+    const hint = /escape/i.test(message) ? `. In JSON a backslash is written twice: "\\\\alpha", not "\\alpha".` : "";
+    throw new Error(`Could not read ${file}: ${message}${hint}`);
   }
-  const report = check(parsed, baseDir);
+  const report = await check(parsed, baseDir);
   if (report.errors.length) throw new ScriptError(report);
   return { script: parsed as Script, baseDir, report };
+}
+
+/** Every formula the script draws, typeset and keyed by its LaTeX. */
+export async function typesetFormulas(script: Script): Promise<Record<string, Formula>> {
+  const actions = script.steps.flatMap((s) => s.do ?? []);
+  const sources = [...actions.flatMap((a) => (a.add ? [a.add].flat() : [])), ...actions.flatMap((a) => (a.update ? [a.update] : []))].map((spec) => spec.tex).filter((tex): tex is string => !!tex);
+  if (!sources.length) return {};
+  const { typeset } = await import("../math/typeset.ts");
+  return Object.fromEntries(sources.map((tex) => [tex, typeset(tex)]));
 }
 
 const IMAGE_MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp", ".svg": "image/svg+xml" };
@@ -64,10 +76,12 @@ async function playerRequest(loaded: Loaded, width: number | undefined, fps?: nu
     const data = await readFile(path.resolve(baseDir, src));
     images[src] = `data:${IMAGE_MIME[path.extname(src).toLowerCase()]};base64,${data.toString("base64")}`;
   }
-  if (fps === undefined) return { script, images, output: { width: outWidth, height: outHeight } };
+  const math = await typesetFormulas(script);
+  if (fps === undefined) return { script, images, math, output: { width: outWidth, height: outHeight } };
   return {
     script,
     images,
+    math,
     // an odd size gains a row or column of the canvas, not a black edge
     output: { width: outWidth + (outWidth % 2), height: outHeight + (outHeight % 2) },
     // two encoders keep one page busy; more wait on each other
@@ -113,7 +127,13 @@ export interface Telling {
   readonly samples: number;
   /** the length of the video in seconds; null until the last step has been spoken */
   readonly duration: number | null;
-  /** Resolves the next time more is settled. Rejects if the narration has failed. */
+  /**
+   * Which telling this is. A voice that cannot go on hands the whole script to another, and the video
+   * is then told again from the start: this goes up, nothing is settled any more, and whatever was made
+   * of the video so far is of one that will not be.
+   */
+  readonly round: number;
+  /** Resolves the next time more is settled, or the telling starts over. Rejects if the narration has failed. */
   more(): Promise<void>;
   /** What stopped the telling, if anything did: the narration failing, or the page. */
   readonly failure: unknown;
@@ -123,39 +143,65 @@ export interface Telling {
   whole: Promise<{ duration: number; frames: number }>;
 }
 
-/** What `narrate` calls with each step once it and those before it are spoken. */
-type Heard = (index: number, step: StepAudio | null, clip: Audio | null) => void;
-
 /**
- * Starts the narration (`narrate` is given what to call with each step, in order), tells the page of
- * the steps as they arrive, and keeps account of what that settles.
+ * Starts the narration (`narrate` is given who to report each step to), tells the page of the steps as
+ * they arrive, and keeps account of what that settles.
  */
-export function tell(opening: Promise<Player>, script: Script, narrate: (heard: Heard) => Promise<unknown>, o: { fps: number; captions: boolean; log: Log }): Telling {
-  const steps: (StepAudio | null)[] = [];
-  const clips: (Audio | null)[] = [];
+export function tell(opening: Promise<Player>, script: Script, narrate: (listener: Listener) => Promise<unknown>, o: { fps: number; captions: boolean; log: Log }): Telling {
+  let steps: (StepAudio | null)[] = [];
+  let clips: (Audio | null)[] = [];
   const spoken = signal();
   const settled = signal();
   let stepStarts: number[] = [];
   let frames = 0;
   let samples = 0;
   let duration: number | null = null;
+  let round = 0;
   let failure: unknown = null;
 
-  const narrating = narrate((index, step, clip) => {
-    steps[index] = step;
-    clips[index] = clip;
-    spoken.fire();
+  const narrating = narrate({
+    spoken(index, step, clip) {
+      steps[index] = step;
+      clips[index] = clip;
+      spoken.fire();
+    },
+    startOver() {
+      // nothing that was settled in the first voice holds in the second
+      round++;
+      steps = [];
+      clips = [];
+      stepStarts = [];
+      frames = samples = 0;
+      duration = null;
+      spoken.fire();
+      settled.fire();
+    },
   });
   // a failure is seen by the loop below, the next time it waits for a step
   narrating.catch(() => {});
 
   const whole = (async () => {
     const player = await opening;
-    for (let told = 0; told < script.steps.length; ) {
-      // woken by a step being spoken, or by the narration failing
-      while (steps.length === told) await Promise.race([spoken.wait(), narrating]);
+    // the round the page's timeline is of, and how many of that round's steps the page has been told
+    let paged = 0;
+    let told = 0;
+    while (paged !== round || told < script.steps.length) {
+      if (paged !== round) {
+        // the page forgets the first voice's timing too
+        paged = round;
+        told = 0;
+        await player.startOver();
+        continue;
+      }
+      if (steps.length === told) {
+        // woken by a step being spoken, by starting over, or by the narration failing
+        await Promise.race([spoken.wait(), narrating]);
+        continue;
+      }
       const batch = steps.slice(told);
       const schedule = await player.schedule(batch.map((step) => timing(step, o.captions)));
+      // started over meanwhile: that was the first voice's timing
+      if (paged !== round) continue;
       told += batch.length;
       stepStarts = schedule.stepStarts;
       // a frame is settled when its time is before `settled`; all of them are, once the length is known
@@ -181,6 +227,9 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (heard: 
     },
     get duration() {
       return duration;
+    },
+    get round() {
+      return round;
     },
     get failure() {
       return failure;
@@ -221,8 +270,18 @@ export async function recordInBrowser(player: Player, telling: Telling, o: Outpu
     return false;
   }
 
-  const muxer = startMuxer({ ...o, color: info.color, sampleRate: SAMPLE_RATE });
-  try {
+  // Once round, unless the narration starts over in another voice: then what was made is thrown away,
+  // and the video is made again from what that voice says.
+  for (;;) {
+    const round = telling.round;
+    const muxer = startMuxer({ ...o, color: info.color, sampleRate: SAMPLE_RATE });
+    // set when the round is over before the video is: it started over, or something broke
+    let over = false;
+    let stop = () => {};
+    const stopped = new Promise<void>((resolve) => (stop = resolve));
+    const news = () => Promise.race([telling.more(), stopped]);
+    const ended = () => over || telling.round !== round;
+
     // how long a segment is: a guess while the length of the video is unknown
     let size = segmentFrames(o.guess, o.fps, info.lanes);
     let sized = false;
@@ -234,9 +293,10 @@ export async function recordInBrowser(player: Player, telling: Telling, o: Outpu
     let done = 0;
     let report: ((done: number) => void) | undefined;
 
-    /** The next segment to make, once every frame of it is settled; null when the video has no more. */
+    /** The next segment to make, once every frame of it is settled; null when there are no more to make. */
     const take = async (): Promise<{ index: number; first: number; count: number } | null> => {
       for (;;) {
+        if (ended()) return null;
         const total = telling.duration === null ? null : telling.frames;
         if (total !== null) {
           if (next >= total) return null;
@@ -252,13 +312,13 @@ export async function recordInBrowser(player: Player, telling: Telling, o: Outpu
           next += count;
           return segment;
         }
-        await telling.more();
+        await news();
       }
     };
     // segments go into the file in order, whichever lane finishes first
     let writing = Promise.resolve();
     const write = async () => {
-      for (let data; (data = made.get(written)); written++) {
+      for (let data; !ended() && (data = made.get(written)); written++) {
         made.delete(written);
         await muxer.write(data);
         done += counts[written];
@@ -274,25 +334,44 @@ export async function recordInBrowser(player: Player, telling: Telling, o: Outpu
     };
     // the sound goes to ffmpeg as it settles, so that it is encoded along the way and not all at the end
     const sound = async () => {
-      for (let sent = 0; ; await telling.more()) {
+      for (let sent = 0; !ended(); await news()) {
         const upTo = telling.samples;
         if (upTo > sent) muxer.sound(pcm16(telling.sound(sent, upTo)));
         sent = upTo;
         if (telling.duration !== null) return;
       }
     };
-    await Promise.all([sound(), ...Array.from({ length: info.lanes }, (_, lane) => work(lane))]);
-  } catch (e) {
+    // One that breaks stops the others, and all of them are waited for: a lane is in the middle of a
+    // segment in the page, and must be out of it before anything else is asked of that lane.
+    const ending = async (work: Promise<void>) => {
+      try {
+        await work;
+      } catch (e) {
+        over = true;
+        stop();
+        throw e;
+      }
+    };
+    const outcome = await Promise.allSettled([sound(), ...Array.from({ length: info.lanes }, (_, lane) => work(lane))].map(ending));
+    const broken = outcome.find((result) => result.status === "rejected");
+
+    if (!broken && telling.round === round) {
+      // the browser has nothing left to do, and closes while ffmpeg finishes the file
+      await Promise.all([muxer.finish(), player.close()]);
+      return true;
+    }
     await muxer.abort();
-    await player.stopEncoding().catch(() => {});
     // a narration that failed is the end of the render, whichever way it is encoded
-    if (telling.failure) throw telling.failure;
-    o.log(`  The quick way to encode failed (${(e as Error).message.split("\n")[0]}). Encoding frame by frame with ffmpeg instead.`);
-    return false;
+    if (telling.failure) {
+      await player.stopEncoding().catch(() => {});
+      throw telling.failure;
+    }
+    if (telling.round === round) {
+      await player.stopEncoding().catch(() => {});
+      o.log(`  The quick way to encode failed (${((broken as PromiseRejectedResult).reason as Error).message.split("\n")[0]}). Encoding frame by frame with ffmpeg instead.`);
+      return false;
+    }
   }
-  // the browser has nothing left to do, and closes while ffmpeg finishes the file
-  await Promise.all([muxer.finish(), player.close()]);
-  return true;
 }
 
 /** The way that always works: every frame leaves the browser as a PNG and ffmpeg encodes the lot. */
@@ -339,7 +418,7 @@ export async function renderVideo(loaded: Loaded, o: RenderOptions): Promise<{ d
   opening.catch(() => {});
   o.log("Narration");
   // And the video is drawn behind the narration, as far as it has been spoken.
-  const telling = tell(opening, script, (heard) => narrate(script, voice, o.speed ?? script.speed ?? 1, o.log, heard), {
+  const telling = tell(opening, script, (listener) => narrate(script, voice, o.speed ?? script.speed ?? 1, o.log, listener), {
     fps: o.fps,
     captions: o.captions ?? script.captions ?? true,
     log: o.log,

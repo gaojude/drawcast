@@ -1,0 +1,75 @@
+{
+  "drawcast": 1,
+  "title": "Why the bell curve hides a pi",
+  "steps": [
+    {
+      "say": "This is the bell curve, e to the minus x squared. How much area lies under it?",
+      "do": [
+        { "at": "bell curve", "add": [
+          { "id": "axis", "type": "arrow", "from": [60, 420], "to": [580, 420], "strokeColor": "#868e96" },
+          { "id": "curve", "type": "line", "points": [[80, 420], [120, 420], [140, 419], [160, 416], [180, 409], [200, 396], [220, 372], [240, 335], [260, 289], [280, 241], [300, 204], [320, 190], [340, 204], [360, 241], [380, 289], [400, 335], [420, 372], [440, 396], [460, 409], [480, 416], [500, 419], [520, 420], [560, 420]], "closed": true, "backgroundColor": "#a5d8ff", "fillStyle": "hachure", "strokeColor": "#1971c2", "roughness": 0 }
+        ] },
+        { "at": "e to the minus", "add": { "id": "name", "type": "math", "x": 420, "y": 200, "fontSize": 28, "strokeColor": "#1971c2", "tex": "y = e^{-x^2}" } },
+        { "at": "How much area", "add": { "id": "q", "type": "math", "x": 930, "y": 70, "textAlign": "center", "fontSize": 34, "tex": "I = \\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx = \\;?" } }
+      ],
+      "pause": 0.3
+    },
+    {
+      "say": "There is no formula for its antiderivative. So here is a trick. Multiply the integral by a copy of itself, using y in place of x.",
+      "do": [
+        { "at": "Multiply", "add": { "id": "sq", "type": "math", "x": 930, "y": 200, "textAlign": "center", "fontSize": 28, "tex": "I^2 = \\left(\\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx\\right) \\left(\\int_{-\\infty}^{\\infty} e^{-y^2}\\,dy\\right)" } }
+      ]
+    },
+    {
+      "say": "The two integrals merge into one, taken over the whole plane.",
+      "do": [
+        { "at": "merge", "update": { "id": "sq", "tex": "I^2 = \\iint_{\\mathbb{R}^2} e^{-(x^2 + y^2)}\\,dx\\,dy" } }
+      ],
+      "pause": 0.3
+    },
+    {
+      "say": "Look at the exponent. x squared plus y squared is the distance from the origin, squared. So we switch to polar coordinates, a radius r and an angle theta.",
+      "do": [
+        { "at": "Look at", "point": "sq" },
+        { "at": "x squared plus", "remove": ["curve", "axis", "name"] },
+        { "at": "distance", "add": [
+          { "id": "xaxis", "type": "line", "points": [[120, 330], [520, 330]], "strokeColor": "#868e96", "strokeWidth": 1 },
+          { "id": "yaxis", "type": "line", "points": [[320, 140], [320, 520]], "strokeColor": "#868e96", "strokeWidth": 1 }
+        ] },
+        { "at": "squared", "add": { "id": "rel", "type": "math", "x": 320, "y": 545, "textAlign": "center", "fontSize": 26, "tex": "x^2 + y^2 = r^2" } },
+        { "at": "polar", "add": [
+          { "id": "ring2", "type": "ellipse", "x": 160, "y": 170, "width": 320, "height": 320, "strokeColor": "#1971c2", "backgroundColor": "#a5d8ff", "fillStyle": "hachure" },
+          { "id": "ring1", "type": "ellipse", "x": 220, "y": 230, "width": 200, "height": 200, "strokeColor": "#1971c2", "strokeStyle": "dashed" }
+        ] },
+        { "at": "radius r", "add": [
+          { "id": "radius", "type": "arrow", "from": [320, 330], "to": [451, 238], "strokeColor": "#e03131", "strokeWidth": 4 },
+          { "id": "r", "type": "text", "x": 428, "y": 262, "text": "r", "fontSize": 28, "strokeColor": "#e03131" }
+        ] },
+        { "at": "angle theta", "add": { "id": "theta", "type": "text", "x": 372, "y": 296, "text": "θ", "fontSize": 24, "strokeColor": "#e03131" } }
+      ]
+    },
+    {
+      "say": "In polar coordinates, each small patch of area picks up a factor of r. And that extra r is exactly what we were missing.",
+      "do": [
+        { "at": "factor of r", "update": { "id": "rel", "tex": "x^2 + y^2 = r^2 \\qquad dx\\,dy = \\textcolor{#e03131}{r}\\,dr\\,d\\theta" } },
+        { "at": "extra r", "add": { "id": "polar", "type": "math", "x": 930, "y": 310, "textAlign": "center", "fontSize": 28, "tex": "I^2 = \\int_{0}^{2\\pi} d\\theta \\int_{0}^{\\infty} e^{-r^2}\\, \\textcolor{#e03131}{r}\\,dr" } }
+      ],
+      "pause": 0.3
+    },
+    {
+      "say": "Now both pieces are easy. The angle gives two pi, and the radius gives one half.",
+      "do": [
+        { "at": "two pi", "add": { "id": "eval", "type": "math", "x": 930, "y": 430, "textAlign": "center", "fontSize": 28, "tex": "I^2 = 2\\pi \\cdot \\left[ -\\tfrac{1}{2} e^{-r^2} \\right]_{0}^{\\infty}" } },
+        { "at": "one half", "update": { "id": "eval", "tex": "I^2 = 2\\pi \\cdot \\tfrac{1}{2} = \\pi" } }
+      ]
+    },
+    {
+      "say": "So the square of the integral is pi, and the area under the bell curve is the square root of pi.",
+      "do": [
+        { "at": "square root", "update": { "id": "q", "tex": "\\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx = \\sqrt{\\pi}", "strokeColor": "#2f9e44" } },
+        { "point": "q" }
+      ],
+      "pause": 0.6
+    }
+  ]
+}

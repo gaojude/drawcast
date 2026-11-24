@@ -84,8 +84,8 @@ async function main(): Promise<number> {
     case "voices": {
       const width = Math.max(...EDGE_VOICES.map((v) => EDGE_PREFIX.length + v.name.length));
       for (const [name, v] of Object.entries(builtInVoices())) console.log(`${name.padEnd(width)}  ${v.language}  ${v.description}`);
-      console.log(`\nLeft unset, a script gets the first voice of its language. The model has ${SPEAKERS.length} speakers and these are\nnames for four of them; any other works by its own name, such as zf_001 or zm_100:\n  https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh/tree/main/voices`);
-      console.log(`\nOnline voices, from Microsoft. They sound more natural, send the narration to Microsoft, and need\nthe edge-tts program (${findEdgeTts() ? "installed" : 'not found: "pipx install edge-tts" or "uv tool install edge-tts"'}):`);
+      console.log(`\nThese run on this machine. The model has ${SPEAKERS.length} speakers and these are names for four of them;\nany other works by its own name, such as zf_001 or zm_100:\n  https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh/tree/main/voices`);
+      console.log(`\nOnline voices, from Microsoft. They sound more natural, send the narration to Microsoft, and need\nthe edge-tts program (${findEdgeTts() ? "installed" : 'not found: "pipx install edge-tts" or "uv tool install edge-tts"'}).\nLeft unset, a script gets the first online voice of its language, or the first built-in one if that\ncannot be had:`);
       for (const v of EDGE_VOICES) console.log(`${(EDGE_PREFIX + v.name).padEnd(width)}  ${v.language}  ${v.description}`);
       console.log(`"edge-tts --list-voices" lists the rest; put "${EDGE_PREFIX}" in front of a name.`);
       return 0;

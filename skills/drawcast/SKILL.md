@@ -27,10 +27,12 @@ The first render downloads a speech model (about 365 MB), which can take a few m
 
 ## Notes
 
-- `drawcast voices` lists the voices. The script's `voice` picks one; by default the voice follows the
-  language of the narration. The `edge:` voices in that list sound more natural but send the narration
-  to Microsoft and need the `edge-tts` program, so use one only when the user asks for an online or
-  better voice.
+- Formulas are supported: a `math` element typesets LaTeX, and Greek letters and maths symbols can be
+  typed straight into text and labels. The guide has the details; narration says a formula in words.
+- `drawcast voices` lists the voices. Leave `voice` unset unless the user asks for one: by default the
+  narration goes to Microsoft's online voice for its language, and to the built-in voice if `edge-tts`
+  or a connection is missing. If the user wants nothing sent online, set a built-in voice (`lin`,
+  `chen`, `maple`, `sol`).
 - Rendering takes roughly as long as the video is. Speech is cached, so rendering again after changing
   only the drawing is faster.
 - If a command fails, read its message: it says what is missing. `drawcast setup` downloads everything
