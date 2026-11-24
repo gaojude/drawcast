@@ -33,7 +33,7 @@
     "whiteboard",
     "text-to-speech",
     "explainer",
-    "claude-skill"
+    "agent-skill"
   ],
   "dependencies": {
     "@puppeteer/browsers": "^3.2.7",
