@@ -4,7 +4,7 @@ import path from "node:path";
 import { check, type Report } from "../format/check.ts";
 import { cacheDir } from "../paths.ts";
 import type { LoadRequest } from "../player/main.ts";
-import { DEFAULT_CANVAS, OUTPUT_SCALE, type Script } from "../shared/types.ts";
+import { DEFAULT_CANVAS, type Formula, OUTPUT_SCALE, type Script } from "../shared/types.ts";
 import { type Narration, SAMPLE_RATE, estimateNarration, narrate } from "../voice/narrate.ts";
 import { resolveVoice } from "../voice/voice.ts";
 import { writeWav } from "../voice/wav.ts";
@@ -35,11 +35,23 @@ export async function loadScript(file: string): Promise<Loaded> {
   try {
     parsed = JSON.parse(await readFile(file, "utf8"));
   } catch (e) {
-    throw new Error(`Could not read ${file}: ${(e as Error).message}`);
+    const { message } = e as Error;
+    // LaTeX is full of backslashes, and JSON takes one as the start of an escape
+    const hint = /escape/i.test(message) ? `. In JSON a backslash is written twice: "\\\\alpha", not "\\alpha".` : "";
+    throw new Error(`Could not read ${file}: ${message}${hint}`);
   }
-  const report = check(parsed, baseDir);
+  const report = await check(parsed, baseDir);
   if (report.errors.length) throw new ScriptError(report);
   return { script: parsed as Script, baseDir, report };
+}
+
+/** Every formula the script draws, typeset and keyed by its LaTeX. */
+export async function typesetFormulas(script: Script): Promise<Record<string, Formula>> {
+  const actions = script.steps.flatMap((s) => s.do ?? []);
+  const sources = [...actions.flatMap((a) => (a.add ? [a.add].flat() : [])), ...actions.flatMap((a) => (a.update ? [a.update] : []))].map((spec) => spec.tex).filter((tex): tex is string => !!tex);
+  if (!sources.length) return {};
+  const { typeset } = await import("../math/typeset.ts");
+  return Object.fromEntries(sources.map((tex) => [tex, typeset(tex)]));
 }
 
 const IMAGE_MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp", ".svg": "image/svg+xml" };
@@ -57,6 +69,7 @@ async function playerRequest(loaded: Loaded, narration: Narration, width: number
   return {
     script,
     images,
+    math: await typesetFormulas(script),
     audio: narration.steps.map((s) => s && (captions ? s : { ...s, captions: [] })),
     output: { width: outWidth, height: Math.round((outWidth * canvas.height) / canvas.width) },
   };

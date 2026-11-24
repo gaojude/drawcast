@@ -1,14 +1,26 @@
 // Builds dist/: the CLI (Node) and the player page with Excalidraw and its fonts (browser).
-import { cp, mkdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dist = path.join(root, "dist");
+const { dependencies } = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 
 await rm(dist, { recursive: true, force: true });
 await mkdir(path.join(dist, "player"), { recursive: true });
+
+// MathJax's SVG output imports its default font even when it is given another. That font is large and
+// loads glyphs on demand; point the import at the TeX font, which src/math/typeset.ts uses anyway.
+const oneMathFont = {
+  name: "one-math-font",
+  setup(b) {
+    b.onResolve({ filter: /^#default-font\// }, (args) =>
+      b.resolve(args.path.replace("#default-font/", "@mathjax/mathjax-tex-font/mjs/"), { kind: args.kind, resolveDir: root }),
+    );
+  },
+};
 
 await build({
   entryPoints: [path.join(root, "src/cli.ts")],
@@ -17,7 +29,10 @@ await build({
   platform: "node",
   format: "esm",
   target: "node20",
-  packages: "external",
+  // What npm installs next to the command stays outside it. MathJax is a devDependency and goes in: it
+  // is imported on demand (see src/format/check.ts), so a script without formulas never runs it.
+  external: Object.keys(dependencies),
+  plugins: [oneMathFont],
   banner: { js: "#!/usr/bin/env node" },
 });
 

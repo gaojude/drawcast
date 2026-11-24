@@ -5,7 +5,7 @@
  * a final state. A frame is each track's latest segment evaluated at that time. Actions only ever append
  * segments, so the result is a pure function of time and any frame can be rendered on its own.
  */
-import { DEFAULT_CANVAS, type Action, type CameraSpec, type ElementSpec, type Enter, type Point, type Script, type StepAudio, type UpdateSpec } from "../shared/types.ts";
+import { DEFAULT_CANVAS, type Action, type CameraSpec, type ElementSpec, type Enter, type Point, type Script, type StepAudio, type TextAlign, type UpdateSpec, alignOffset } from "../shared/types.ts";
 import { findPhrase, tokens } from "../shared/text.ts";
 import * as E from "./elements.ts";
 import type { El, Rect } from "./elements.ts";
@@ -55,6 +55,9 @@ export interface ImageInfo {
   height: number;
 }
 
+/** The picture of a formula in one colour, with its size in em; nothing for LaTeX the script does not use. */
+export type FormulaFile = (tex: string, color: string) => ImageInfo | undefined;
+
 export interface Frame {
   elements: El[];
   view: Rect;
@@ -102,15 +105,19 @@ class Builder {
   cur = new Map<string, El>();
   labels = new Map<string, string>();
   links = new Map<string, Link>();
+  /** the formulas on the canvas, as they are now: an update can change the LaTeX and the colour */
+  math = new Map<string, ElementSpec>();
   views: ViewSeg[] = [];
   pointers: PointerSeg[] = [];
   view: Rect;
   canvas: Rect;
   images: Map<string, ImageInfo>;
+  formula: FormulaFile;
 
-  constructor(canvas: Rect, images: Map<string, ImageInfo>) {
+  constructor(canvas: Rect, images: Map<string, ImageInfo>, formula: FormulaFile) {
     this.canvas = this.view = canvas;
     this.images = images;
+    this.formula = formula;
   }
 
   private seg(id: string, seg: Seg) {
@@ -150,6 +157,10 @@ class Builder {
         return E.makeShape(spec);
       case "text":
         return [E.makeText(spec)];
+      case "math": {
+        const file = this.formula(spec.tex ?? "", spec.strokeColor ?? E.DEFAULT_STROKE);
+        return file ? [E.makeMath(spec, file)] : [];
+      }
       case "line":
         return [E.makeLine(spec)];
       case "freedraw":
@@ -176,6 +187,7 @@ class Builder {
       this.links.set(el.id, { spec, from: ref(spec.from!), to: ref(spec.to!) });
     }
     if (label) this.labels.set(el.id, label.id);
+    if (spec.type === "math") this.math.set(el.id, spec);
 
     if (enter === "none" || (enter === "fade" && duration === 0)) {
       for (const e of [el, label]) if (e) this.seg(e.id, { t0, t1: t0, end: e });
@@ -186,6 +198,12 @@ class Builder {
       for (const e of [el, label]) {
         if (e) this.seg(e.id, { t0, t1, end: e, fn: (t) => ({ ...e, opacity: e.opacity * minJerk(progress(t, t0, t1)) }) });
       }
+      return t1;
+    }
+    if (spec.type === "math") {
+      // written from left to right, about as fast as text of that width is typed
+      const t1 = t0 + (duration ?? clamp((el.width / (spec.fontSize ?? 20)) * 0.07, 0.4, 2));
+      this.seg(el.id, { t0, t1, end: el, fn: this.writing(el, t0, t1) });
       return t1;
     }
 
@@ -234,7 +252,20 @@ class Builder {
     };
   }
 
+  /** A formula being written: its picture is uncovered from the left, the way a line of text grows. */
+  private writing(el: El, t0: number, t1: number): (t: number) => El {
+    return (t) => {
+      const u = Math.max(progress(t, t0, t1), 0.01);
+      return { ...el, width: el.width * u, crop: { ...el.crop, width: el.crop.width * u } };
+    };
+  }
+
   // ---------------------------------------------------------------- update
+
+  /** Which point of a text or a formula its `x` is; undefined for everything placed by its left edge. */
+  private align(el: El): TextAlign | undefined {
+    return this.math.get(el.id)?.textAlign ?? (el.type === "text" && !el.containerId ? el.textAlign : undefined);
+  }
 
   private update(u: UpdateSpec, t0: number, duration: number): number {
     const t1 = t0 + duration;
@@ -252,7 +283,6 @@ class Builder {
         // an arrow that was moved by hand no longer follows its ends
         if (u.dx || u.dy) this.links.delete(id);
       } else {
-        target.x = (u.x ?? base.x) + (u.dx ?? 0);
         target.y = (u.y ?? base.y) + (u.dy ?? 0);
         target.width = u.width ?? base.width;
         target.height = u.height ?? base.height;
@@ -261,7 +291,23 @@ class Builder {
         const rebuilt = E.makeText({ id, type: "text", x: target.x, y: target.y, text: u.text, fontSize: base.fontSize, fontFamily: E.fontName(base.fontFamily), textAlign: base.textAlign });
         target = { ...target, text: rebuilt.text, originalText: rebuilt.originalText, width: rebuilt.width, height: rebuilt.height };
       }
-      const fn = (t: number): El => {
+      const formula = this.math.get(id);
+      const retypeset = formula && u.tex !== undefined && u.tex !== formula.tex;
+      if (formula && (retypeset || u.strokeColor !== undefined)) {
+        const spec = { ...formula, tex: u.tex ?? formula.tex, strokeColor: u.strokeColor ?? formula.strokeColor };
+        const [rebuilt] = this.build(spec);
+        if (rebuilt) {
+          this.math.set(id, spec);
+          target = { ...target, fileId: rebuilt.fileId, crop: rebuilt.crop, width: rebuilt.width, height: rebuilt.height };
+        }
+      }
+      if (!base.points) {
+        // `x` is the point the element was placed by, which for centred text or a centred formula is its
+        // middle: that point stays put when the content, and with it the width, changes
+        const align = this.align(base);
+        target.x = (u.x ?? base.x + alignOffset(base.width, align)) - alignOffset(target.width, align) + (u.dx ?? 0);
+      }
+      const blend = (t: number): El => {
         const k = ease(t);
         return {
           ...target,
@@ -275,6 +321,21 @@ class Builder {
           backgroundColor: lerpColor(base.backgroundColor, target.backgroundColor, k),
         };
       };
+      let fn = blend;
+      if (retypeset) {
+        // one picture cannot turn into another, so the old formula fades out and the new one in
+        fn = (t) => {
+          const k = ease(t);
+          const shown = k < 0.5 ? base : target;
+          return { ...shown, opacity: shown.opacity * Math.abs(1 - 2 * k) };
+        };
+      } else if (formula && target.fileId !== base.fileId) {
+        // a formula's colour is in its picture: on the way from one colour to the other, each shade is a picture
+        fn = (t) => {
+          const el = blend(t);
+          return { ...el, fileId: this.formula(formula.tex ?? "", el.strokeColor)?.fileId ?? el.fileId };
+        };
+      }
       moving.set(id, fn);
       this.seg(id, { t0, t1, end: target, fn });
     }
@@ -314,6 +375,7 @@ class Builder {
       this.seg(id, { t0, t1, end: null, fn: (t) => ({ ...el, opacity: el.opacity * (1 - minJerk(progress(t, t0, t1))) }) });
       this.links.delete(id);
       this.labels.delete(id);
+      this.math.delete(id);
     }
     // an arrow that pointed at something removed stays where it is, attached to nothing
     for (const [id, link] of this.links) {
@@ -380,10 +442,10 @@ function spokenAt(at: string, audio: StepAudio, from: number): { t: number; inde
   return found >= 0 ? { t: audio.tokens[found].t, index: found } : null;
 }
 
-export function compile(script: Script, audio: (StepAudio | null)[], images: Map<string, ImageInfo>): Compiled {
+export function compile(script: Script, audio: (StepAudio | null)[], images: Map<string, ImageInfo>, formula: FormulaFile): Compiled {
   const size = { ...DEFAULT_CANVAS, ...script.canvas };
   const canvas: Rect = { x: 0, y: 0, w: size.width, h: size.height };
-  const b = new Builder(canvas, images);
+  const b = new Builder(canvas, images, formula);
   const stepStarts: number[] = [];
   const captions: { t0: number; t1: number; text: string }[] = [];
   let free = LEAD_IN; // when the next step may start speaking

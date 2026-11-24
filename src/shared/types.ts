@@ -2,7 +2,7 @@
 
 export type Point = [number, number];
 
-export type ElementType = "rectangle" | "ellipse" | "diamond" | "text" | "arrow" | "line" | "freedraw" | "image";
+export type ElementType = "rectangle" | "ellipse" | "diamond" | "text" | "math" | "arrow" | "line" | "freedraw" | "image";
 
 export type FontName = "hand" | "normal" | "code";
 
@@ -34,9 +34,12 @@ export interface ElementSpec extends Style {
   label?: string;
   /** text: the content; `\n` breaks lines. */
   text?: string;
+  /** math: the formula, in LaTeX. */
+  tex?: string;
   fontSize?: number;
   fontFamily?: FontName;
-  textAlign?: "left" | "center" | "right";
+  /** text: how its lines are aligned. text, math: also which point `x` is, the left edge, the middle or the right edge. */
+  textAlign?: TextAlign;
   /** arrow: an element id to attach to, or a point. */
   from?: string | Point;
   to?: string | Point;
@@ -54,6 +57,11 @@ export interface ElementSpec extends Style {
 
 export type Arrowhead = "arrow" | "triangle" | "bar" | "dot";
 
+export type TextAlign = "left" | "center" | "right";
+
+/** How far left of its `x` an element of this width starts. */
+export const alignOffset = (width: number, align: TextAlign | undefined) => (align === "center" ? width / 2 : align === "right" ? width : 0);
+
 export type Enter = "draw" | "fade" | "none";
 
 /** Properties an `update` may change. */
@@ -68,6 +76,8 @@ export interface UpdateSpec extends Style {
   height?: number;
   /** text elements: replace the content. */
   text?: string;
+  /** math elements: replace the formula. */
+  tex?: string;
 }
 
 export type CameraSpec =
@@ -122,6 +132,18 @@ export interface Script {
  */
 export const DEFAULT_CANVAS = { width: 1280, height: 720, background: "#ffffff" };
 export const OUTPUT_SCALE = 1.5;
+
+/** A formula typeset from LaTeX. */
+export interface Formula {
+  /** An SVG picture of it, drawn in `currentColor`. */
+  svg: string;
+  /** Its size in em: times the font size, the size on the canvas. */
+  width: number;
+  height: number;
+}
+
+/** The size the picture of a formula says it has, which an image needs. It is drawn as large as it is shown. */
+export const MATH_PIXELS_PER_EM = 100;
 
 /** When a spoken token starts, in seconds from the start of its step. */
 export interface TimedToken {

@@ -1,0 +1,33 @@
+{
+  "drawcast": 1,
+  "title": "The Pythagorean theorem",
+  "steps": [
+    {
+      "say": "Take a right triangle. Call the two short sides a and b, and the long side c.",
+      "do": [
+        { "at": "right triangle", "add": { "id": "triangle", "type": "line", "points": [[160, 480], [520, 480], [520, 210]], "closed": true, "backgroundColor": "#a5d8ff", "strokeColor": "#1971c2" } },
+        { "at": "short sides", "add": [
+          { "id": "a", "type": "text", "x": 340, "y": 500, "textAlign": "center", "text": "a = 4", "fontSize": 28 },
+          { "id": "b", "type": "text", "x": 545, "y": 330, "text": "b = 3", "fontSize": 28 }
+        ] },
+        { "at": "long side", "add": { "id": "c", "type": "text", "x": 290, "y": 290, "text": "c", "fontSize": 28, "strokeColor": "#e03131" } }
+      ]
+    },
+    {
+      "say": "Then a squared plus b squared equals c squared.",
+      "do": [
+        { "at": "a squared", "add": { "id": "theorem", "type": "math", "x": 920, "y": 220, "textAlign": "center", "fontSize": 44, "tex": "a^2 + b^2 = c^2" } }
+      ],
+      "pause": 0.4
+    },
+    {
+      "say": "So the long side is the square root of the sum. Here that is the root of twenty five, which is five.",
+      "do": [
+        { "at": "square root", "add": { "id": "root", "type": "math", "x": 920, "y": 340, "textAlign": "center", "fontSize": 36, "tex": "c = \\sqrt{a^2 + b^2}" } },
+        { "at": "twenty five", "update": { "id": "root", "tex": "c = \\sqrt{4^2 + 3^2} = \\sqrt{25}" } },
+        { "at": "is five", "update": { "id": "root", "tex": "c = \\textcolor{#e03131}{5}" } },
+        { "update": { "id": "c", "text": "c = 5" } }
+      ]
+    }
+  ]
+}
