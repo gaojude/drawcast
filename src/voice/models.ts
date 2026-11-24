@@ -9,32 +9,31 @@ import { pipeline } from "node:stream/promises";
 import { cacheDir } from "../paths.ts";
 
 const RELEASES = "https://github.com/k2-fsa/sherpa-onnx/releases/download";
-const ZIPVOICE = "sherpa-onnx-zipvoice-distill-int8-zh-en-emilia";
-/** SHA-256 of the two downloads, so that what runs is what was tested. */
-const SHA256 = {
-  zipvoice: "77219c8b40f4ee8d73a7f902305ff6c1128ef9b54461c41b4ca6ed890b6c2803",
-  vocoder: "bcb3b970e384161c4d634f0bb9e999ff1c471b34c9bc0b1049a5014065ed3cc0",
-};
+/** Kokoro v1.1, the one that speaks Chinese as well as English, as packaged for sherpa-onnx. */
+const KOKORO = "kokoro-multi-lang-v1_1";
+/** SHA-256 of the download, so that what runs is what was tested. */
+const SHA256 = "b78e1ac42b852e839cceaafbe88f66806bf5860992d1d7b9a3f2ad1198427aed";
 
 export interface ModelFiles {
+  model: string;
+  /** the speakers */
+  voices: string;
   tokens: string;
-  encoder: string;
-  decoder: string;
-  vocoder: string;
-  /** the Chinese pronunciation dictionary that comes with the model */
-  lexicon: string;
+  /** the pronunciation dictionaries that come with the model */
+  english: string;
+  chinese: string;
 }
 
 export const modelsDir = () => path.join(cacheDir(), "models");
 
 function modelFiles(): ModelFiles {
-  const dir = path.join(modelsDir(), ZIPVOICE);
+  const dir = path.join(modelsDir(), KOKORO);
   return {
+    model: path.join(dir, "model.onnx"),
+    voices: path.join(dir, "voices.bin"),
     tokens: path.join(dir, "tokens.txt"),
-    encoder: path.join(dir, "encoder.int8.onnx"),
-    decoder: path.join(dir, "decoder.int8.onnx"),
-    lexicon: path.join(dir, "lexicon.txt"),
-    vocoder: path.join(modelsDir(), "vocos_24khz.onnx"),
+    english: path.join(dir, "lexicon-us-en.txt"),
+    chinese: path.join(dir, "lexicon-zh.txt"),
   };
 }
 
@@ -76,19 +75,16 @@ function untar(archive: string, into: string): Promise<void> {
   });
 }
 
-/** The model's files, downloaded (about 180 MB) the first time they are needed. */
+/** The model's files, downloaded (about 365 MB) the first time they are needed. */
 export async function ensureModels(log: (line: string) => void): Promise<ModelFiles> {
   const files = modelFiles();
   if (modelsInstalled()) return files;
   await mkdir(modelsDir(), { recursive: true });
-  log(`Downloading the speech model to ${modelsDir()} (once, about 180 MB)`);
-  if (!existsSync(files.vocoder)) await download(`${RELEASES}/vocoder-models/vocos_24khz.onnx`, files.vocoder, SHA256.vocoder, log);
-  if (!existsSync(files.decoder)) {
-    const archive = path.join(modelsDir(), `${ZIPVOICE}.tar.bz2`);
-    await download(`${RELEASES}/tts-models/${ZIPVOICE}.tar.bz2`, archive, SHA256.zipvoice, log);
-    await untar(archive, modelsDir());
-    await rm(archive);
-  }
+  log(`Downloading the speech model to ${modelsDir()} (once, about 365 MB)`);
+  const archive = path.join(modelsDir(), `${KOKORO}.tar.bz2`);
+  await download(`${RELEASES}/tts-models/${KOKORO}.tar.bz2`, archive, SHA256, log);
+  await untar(archive, modelsDir());
+  await rm(archive);
   if (!modelsInstalled()) throw new Error(`The speech model in ${modelsDir()} is incomplete. Delete that folder and try again.`);
   return files;
 }

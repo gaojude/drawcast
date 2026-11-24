@@ -1,0 +1,174 @@
+{
+  "drawcast": 1,
+  "title": "drawcast promo",
+  "voice": "edge:en-US-EmmaMultilingualNeural",
+  "steps": [
+    {
+      "say": "One command made this video. Its input is a text file, written by a coding agent. Its output is what you are watching. No screen recording, no microphone, no video editor.",
+      "do": [
+        { "at": 0, "enter": "none", "add": [
+          { "id": "shell", "type": "rectangle", "x": 120, "y": 50, "width": 1040, "height": 220, "backgroundColor": "#1e1e1e" },
+          { "id": "mark-2", "type": "text", "x": 2550, "y": 28, "text": "drawcast", "fontSize": 22, "strokeColor": "#868e96" },
+          { "id": "mark-3", "type": "text", "x": 3950, "y": 28, "text": "drawcast", "fontSize": 22, "strokeColor": "#868e96" },
+          { "id": "mark-4", "type": "text", "x": 5350, "y": 28, "text": "drawcast", "fontSize": 22, "strokeColor": "#868e96" },
+          { "id": "mark-5", "type": "text", "x": 6750, "y": 28, "text": "drawcast", "fontSize": 22, "strokeColor": "#868e96" },
+          { "id": "mark-6", "type": "text", "x": 8150, "y": 28, "text": "drawcast", "fontSize": 22, "strokeColor": "#868e96" }
+        ] },
+        { "duration": 0.9, "add": { "id": "command", "type": "text", "x": 155, "y": 78, "text": "$ drawcast render promo.en.drawcast.json", "fontSize": 28, "fontFamily": "code", "strokeColor": "#ffffff" } },
+        { "at": "input", "duration": 0.8, "add": { "id": "input", "type": "text", "x": 155, "y": 148, "text": "# in:  promo.en.drawcast.json, 16 KB of JSON", "fontSize": 22, "fontFamily": "code", "strokeColor": "#ffec99" } },
+        { "at": "output", "duration": 0.8, "add": { "id": "output", "type": "text", "x": 155, "y": 198, "text": "# out: promo.en.mp4, 1920 x 1080, 68 s", "fontSize": 22, "fontFamily": "code", "strokeColor": "#b2f2bb" } },
+        { "at": "screen recording", "duration": 0.5, "add": { "id": "record", "type": "rectangle", "x": 150, "y": 350, "width": 260, "height": 110, "label": "screen recording", "fontSize": 28, "backgroundColor": "#e9ecef" } },
+        { "duration": 0.25, "add": { "id": "no-record", "type": "line", "points": [[175, 440], [385, 370]], "strokeColor": "#e03131", "strokeWidth": 4 } },
+        { "at": "microphone", "duration": 0.5, "add": { "id": "mic", "type": "rectangle", "x": 510, "y": 350, "width": 260, "height": 110, "label": "microphone", "fontSize": 28, "backgroundColor": "#e9ecef" } },
+        { "duration": 0.25, "add": { "id": "no-mic", "type": "line", "points": [[535, 440], [745, 370]], "strokeColor": "#e03131", "strokeWidth": 4 } },
+        { "at": "video editor", "duration": 0.5, "add": { "id": "editor", "type": "rectangle", "x": 870, "y": 350, "width": 260, "height": 110, "label": "video editor", "fontSize": 28, "backgroundColor": "#e9ecef" } },
+        { "duration": 0.25, "add": { "id": "no-editor", "type": "line", "points": [[895, 440], [1105, 370]], "strokeColor": "#e03131", "strokeWidth": 4 } }
+      ],
+      "pause": 0.3
+    },
+    {
+      "say": "A script is a list of steps: what to say, and what to draw. Each drawing is tied to a phrase.",
+      "do": [
+        { "camera": { "x": 1400, "y": 0, "width": 1280 }, "duration": 0.7 },
+        { "at": "list of steps", "duration": 0.5, "add": { "id": "script", "type": "rectangle", "x": 1460, "y": 130, "width": 640, "height": 270, "backgroundColor": "#ffec99" } },
+        { "at": "what to say", "duration": 0.6, "add": { "id": "line-say", "type": "text", "x": 1485, "y": 150, "text": "\"say\": \"When the voice reaches client, …\",", "fontSize": 17, "fontFamily": "code" } },
+        { "at": "what to draw", "duration": 0.35, "add": [
+          { "id": "line-do", "type": "text", "x": 1485, "y": 190, "text": "\"do\": [", "fontSize": 17, "fontFamily": "code" },
+          { "id": "line-1", "type": "text", "x": 1485, "y": 230, "text": "  { \"at\": \"client\", \"add\": { \"label\": \"Client\", … } },", "fontSize": 17, "fontFamily": "code" },
+          { "id": "line-2", "type": "text", "x": 1485, "y": 270, "text": "  { \"at\": \"server\", \"add\": { \"label\": \"Server\", … } },", "fontSize": 17, "fontFamily": "code" },
+          { "id": "line-3", "type": "text", "x": 1485, "y": 310, "text": "  { \"at\": \"request\", \"add\": { \"type\": \"arrow\", … } }", "fontSize": 17, "fontFamily": "code" },
+          { "id": "line-end", "type": "text", "x": 1485, "y": 350, "text": "]", "fontSize": 17, "fontFamily": "code" }
+        ] },
+        { "at": "tied", "add": { "id": "how", "type": "text", "x": 1470, "y": 44, "text": "Each drawing is tied to a phrase", "fontSize": 40 } }
+      ],
+      "pause": 0.2
+    },
+    {
+      "say": "When the voice reaches client, the client is drawn. At server, the server. At request, the arrow.",
+      "do": [
+        { "at": "client", "duration": 0.05, "update": { "id": "line-1", "strokeColor": "#e03131" } },
+        { "duration": 0.5, "add": { "id": "client", "type": "rectangle", "x": 2170, "y": 220, "width": 150, "height": 90, "label": "Client", "fontSize": 24, "backgroundColor": "#a5d8ff" } },
+        { "at": "server", "duration": 0.05, "update": { "id": "line-2", "strokeColor": "#e03131" } },
+        { "duration": 0.5, "add": { "id": "server", "type": "rectangle", "x": 2480, "y": 220, "width": 150, "height": 90, "label": "Server", "fontSize": 24, "backgroundColor": "#b2f2bb" } },
+        { "at": "request", "duration": 0.05, "update": { "id": "line-3", "strokeColor": "#e03131" } },
+        { "duration": 0.5, "add": { "id": "request", "type": "arrow", "from": "client", "to": "server", "label": "request", "strokeWidth": 4, "strokeColor": "#e03131" } },
+        { "enter": "fade", "add": { "id": "timing", "type": "text", "x": 1470, "y": 460, "text": "Sentence starts are exact. A word inside a sentence lands within about 0.25 s.", "fontSize": 20, "strokeColor": "#868e96" } }
+      ],
+      "pause": 0.5
+    },
+    {
+      "say": "For a model, that is cheap. This whole video is about six thousand tokens of script. Its canvas alone, as Excalidraw JSON, is nearly three times that.",
+      "do": [
+        { "camera": { "x": 2800, "y": 0, "width": 1280 }, "duration": 0.7 },
+        { "at": "cheap", "add": { "id": "cost", "type": "text", "x": 2870, "y": 44, "text": "Cheap for a model to write", "fontSize": 40 } },
+        { "at": "whole video", "duration": 0.4, "add": [
+          { "id": "script-label", "type": "text", "x": 2880, "y": 150, "text": "this video, as a drawcast script", "fontSize": 26 },
+          { "id": "script-bar", "type": "rectangle", "x": 2880, "y": 225, "width": 321, "height": 50, "backgroundColor": "#b2f2bb", "strokeColor": "#2f9e44" },
+          { "id": "script-tokens", "type": "text", "x": 3250, "y": 232, "text": "about 6,000 tokens", "fontSize": 28, "strokeColor": "#2f9e44" }
+        ] },
+        { "at": "canvas", "duration": 0.4, "add": [
+          { "id": "scene-label", "type": "text", "x": 2880, "y": 320, "text": "its finished canvas alone, as Excalidraw JSON", "fontSize": 26 },
+          { "id": "scene-bar", "type": "rectangle", "x": 2880, "y": 395, "width": 900, "height": 50, "backgroundColor": "#e9ecef", "strokeColor": "#868e96" },
+          { "id": "scene-tokens", "type": "text", "x": 3826, "y": 402, "text": "about 16,800", "fontSize": 28, "strokeColor": "#868e96" }
+        ] },
+        { "at": "Excalidraw", "enter": "fade", "add": [
+          { "id": "method", "type": "text", "x": 2880, "y": 500, "text": "Counted with the o200k_base tokenizer. The scene is minified, with no narration or timing.", "fontSize": 20, "strokeColor": "#868e96" },
+          { "id": "reproduce", "type": "text", "x": 2880, "y": 545, "text": "node scripts/measure-tokens.mjs promo/promo.en.drawcast.json", "fontSize": 18, "fontFamily": "code", "strokeColor": "#868e96" }
+        ] },
+        { "at": "three times", "point": "scene-tokens" }
+      ],
+      "pause": 0.4
+    },
+    {
+      "say": "Speech is synthesized on your machine by default, in English or Mandarin. An online voice is optional. This video uses one.",
+      "do": [
+        { "camera": { "x": 4200, "y": 0, "width": 1280 }, "duration": 0.7 },
+        { "duration": 0.4, "add": [
+          { "id": "laptop", "type": "rectangle", "x": 4270, "y": 150, "width": 400, "height": 300, "backgroundColor": "#e9ecef" },
+          { "id": "laptop-name", "type": "text", "x": 4296, "y": 168, "text": "Your machine", "fontSize": 26 }
+        ] },
+        { "at": "machine", "duration": 0.8, "add": { "id": "wave", "type": "line", "rounded": true, "strokeColor": "#6741d9", "strokeWidth": 4, "points": [[4310, 320], [4329, 302], [4348, 342], [4367, 274], [4386, 370], [4405, 258], [4424, 382], [4443, 282], [4462, 350], [4481, 300], [4500, 336], [4519, 270], [4538, 374], [4557, 254], [4576, 380], [4595, 288], [4614, 340], [4633, 320]] } },
+        { "at": "default", "duration": 0.35, "add": [
+          { "id": "ok-1", "type": "line", "points": [[4760, 194], [4776, 212], [4804, 172]], "strokeColor": "#2f9e44", "strokeWidth": 4 },
+          { "id": "local", "type": "text", "x": 4850, "y": 170, "text": "runs on your CPU, no API key", "fontSize": 32 }
+        ] },
+        { "at": "English", "duration": 0.35, "add": [
+          { "id": "ok-2", "type": "line", "points": [[4760, 284], [4776, 302], [4804, 262]], "strokeColor": "#2f9e44", "strokeWidth": 4 },
+          { "id": "languages", "type": "text", "x": 4850, "y": 260, "text": "English and Mandarin", "fontSize": 32 }
+        ] },
+        { "at": "online", "duration": 0.35, "add": [
+          { "id": "plus", "type": "text", "x": 4768, "y": 350, "text": "+", "fontSize": 32, "strokeColor": "#1971c2" },
+          { "id": "online", "type": "text", "x": 4850, "y": 350, "text": "or an online voice (used here)", "fontSize": 32, "strokeColor": "#1971c2" }
+        ] },
+        { "at": "uses one", "point": "online" },
+        { "at": 0.9, "add": { "id": "voice", "type": "text", "x": 4270, "y": 44, "text": "A local voice by default", "fontSize": 40 } }
+      ],
+      "pause": 0.3
+    },
+    {
+      "say": "It is a command-line tool and one skill file, so any agent that can run a command can use it.",
+      "do": [
+        { "camera": { "x": 5600, "y": 0, "width": 1280 }, "duration": 0.7 },
+        { "at": "command-line", "duration": 0.3, "add": [
+          { "id": "cli", "type": "rectangle", "x": 6130, "y": 140, "width": 670, "height": 250, "backgroundColor": "#1e1e1e" },
+          { "id": "cli-1", "type": "text", "x": 6160, "y": 165, "text": "drawcast guide       # the format", "fontSize": 21, "fontFamily": "code", "strokeColor": "#b2f2bb" },
+          { "id": "cli-2", "type": "text", "x": 6160, "y": 220, "text": "drawcast check       # problems, as text", "fontSize": 21, "fontFamily": "code", "strokeColor": "#b2f2bb" },
+          { "id": "cli-3", "type": "text", "x": 6160, "y": 275, "text": "drawcast snapshot    # one picture to check", "fontSize": 21, "fontFamily": "code", "strokeColor": "#b2f2bb" },
+          { "id": "cli-4", "type": "text", "x": 6160, "y": 330, "text": "drawcast render      # the video", "fontSize": 21, "fontFamily": "code", "strokeColor": "#b2f2bb" }
+        ] },
+        { "at": "skill file", "add": { "id": "skill", "type": "rectangle", "x": 5670, "y": 350, "width": 300, "height": 70, "label": "SKILL.md", "fontSize": 22, "fontFamily": "code", "backgroundColor": "#ffec99" } },
+        { "at": "any agent", "add": { "id": "agent", "type": "ellipse", "x": 5670, "y": 140, "width": 300, "height": 130, "label": "any agent", "fontSize": 30, "backgroundColor": "#d0bfff", "strokeColor": "#6741d9" } },
+        { "duration": 0.3, "add": [
+          { "id": "reads", "type": "arrow", "from": "skill", "to": "agent", "strokeColor": "#6741d9" },
+          { "id": "runs", "type": "arrow", "from": "agent", "to": "cli", "strokeColor": "#6741d9", "strokeWidth": 4 }
+        ] },
+        { "enter": "fade", "add": { "id": "made-with", "type": "text", "x": 5680, "y": 480, "text": "This video was made with Claude Code.", "fontSize": 22, "strokeColor": "#868e96" } },
+        { "at": 0.9, "add": { "id": "what", "type": "text", "x": 5670, "y": 44, "text": "A CLI and one skill file", "fontSize": 40 } }
+      ],
+      "pause": 0.4
+    },
+    {
+      "say": "The goal: make AI's communication with people more efficient. A model writes faster than you can read, so let it draw and talk instead.",
+      "do": [
+        { "camera": { "x": 7000, "y": 0, "width": 1280 }, "duration": 0.7 },
+        { "duration": 0.4, "add": [
+          { "id": "writer", "type": "ellipse", "x": 7080, "y": 290, "width": 140, "height": 120, "label": "AI", "fontSize": 36, "backgroundColor": "#d0bfff", "strokeColor": "#6741d9" },
+          { "id": "reader", "type": "ellipse", "x": 8060, "y": 290, "width": 140, "height": 120, "label": "People", "fontSize": 28, "backgroundColor": "#ffec99", "strokeColor": "#f08c00" }
+        ] },
+        { "at": "efficient", "add": { "id": "goal", "type": "text", "x": 7070, "y": 44, "text": "The goal: efficient AI-to-human communication", "fontSize": 38 } },
+        { "at": "writes", "duration": 0.12, "add": [
+          { "id": "wall", "type": "rectangle", "x": 7490, "y": 160, "width": 300, "height": 150, "backgroundColor": "#e9ecef", "strokeColor": "#868e96" },
+          { "id": "wall-1", "type": "line", "points": [[7515, 185], [7765, 185]], "strokeColor": "#868e96" },
+          { "id": "wall-2", "type": "line", "points": [[7515, 210], [7740, 210]], "strokeColor": "#868e96" },
+          { "id": "wall-3", "type": "line", "points": [[7515, 235], [7765, 235]], "strokeColor": "#868e96" },
+          { "id": "wall-4", "type": "line", "points": [[7515, 260], [7720, 260]], "strokeColor": "#868e96" },
+          { "id": "wall-5", "type": "line", "points": [[7515, 285], [7600, 285]], "strokeColor": "#868e96" }
+        ] },
+        { "duration": 0.3, "add": [
+          { "id": "text-out", "type": "arrow", "from": "writer", "to": "wall", "strokeColor": "#868e96" },
+          { "id": "text-in", "type": "arrow", "from": "wall", "to": "reader", "strokeColor": "#868e96" }
+        ] },
+        { "at": "draw and talk", "update": { "id": ["wall", "wall-1", "wall-2", "wall-3", "wall-4", "wall-5", "text-out", "text-in"], "opacity": 25 } },
+        { "duration": 0.3, "add": [
+          { "id": "show", "type": "rectangle", "x": 7530, "y": 390, "width": 220, "height": 140, "backgroundColor": "#a5d8ff", "strokeColor": "#1971c2" },
+          { "id": "show-play", "type": "line", "points": [[7622, 430], [7622, 490], [7670, 460]], "closed": true, "backgroundColor": "#1971c2", "strokeColor": "#1971c2" },
+          { "id": "show-out", "type": "arrow", "from": "writer", "to": "show", "strokeColor": "#2f9e44", "strokeWidth": 4 },
+          { "id": "show-in", "type": "arrow", "from": "show", "to": "reader", "strokeColor": "#2f9e44", "strokeWidth": 4 }
+        ] }
+      ],
+      "pause": 0.5
+    },
+    {
+      "say": "drawcast. Open source, MIT licensed. The link is below.",
+      "do": [
+        { "camera": { "x": 8400, "y": 0, "width": 1280 }, "duration": 0.7 },
+        { "add": { "id": "name", "type": "text", "x": 8795, "y": 70, "text": "drawcast", "fontSize": 110 } },
+        { "add": { "id": "tagline", "type": "text", "x": 8640, "y": 245, "text": "Narrated whiteboard videos from a text file", "fontSize": 38 } },
+        { "at": "MIT", "add": { "id": "terms", "type": "text", "x": 8712, "y": 325, "text": "MIT · a CLI and an agent skill · local or online voice", "fontSize": 26, "strokeColor": "#868e96" } },
+        { "at": "link", "duration": 0.6, "add": { "id": "link", "type": "rectangle", "x": 8730, "y": 395, "width": 620, "height": 80, "label": "github.com/gaojude/drawcast", "fontSize": 28, "fontFamily": "code", "backgroundColor": "#ffec99" } },
+        { "duration": 0.4, "add": { "id": "install", "type": "text", "x": 8875, "y": 520, "text": "npm install -g drawcast", "fontSize": 24, "fontFamily": "code", "strokeColor": "#868e96" } }
+      ],
+      "pause": 1.5
+    }
+  ]
+}

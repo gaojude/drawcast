@@ -3,6 +3,9 @@
  *
  * English spelling is too irregular for rules to get every word right, but they get most close enough
  * to recognise ("Kubernetes", "Redis", "Ubuntu"), and the alternative is saying the letters one by one.
+ *
+ * The phonemes are written the way the voice's dictionary writes them: one capital letter for a
+ * diphthong (A as in day, I as in my, O as in go, W as in now, Y as in boy), ʧ and ʤ for ch and j.
  */
 
 /** Tried in order at each position of the word; the first that matches is taken. */
@@ -10,13 +13,13 @@ const RULES: [letters: RegExp, phones: string][] = [
   // endings
   [/tion/y, "ʃ ə n"],
   [/sion/y, "ʒ ə n"],
-  [/ture$/y, "t ʃ ɚ"],
-  [/(?<=[^aeiouy])le$/y, "ə l"],
-  [/(?<=[sxz]|ch|sh)es$/y, "ɪ z"],
+  [/ture$/y, "ʧ ə ɹ"],
+  [/(?<=[^aeiouy])le$/y, "ᵊ l"],
+  [/(?<=[sxz]|ch|sh)es$/y, "ᵻ z"],
   [/(?<=[aeiouy].*)e$/y, ""],
 
   // consonants
-  [/tch|ch/y, "t ʃ"],
+  [/tch|ch/y, "ʧ"],
   [/sh/y, "ʃ"],
   [/th/y, "θ"],
   [/ph/y, "f"],
@@ -32,7 +35,7 @@ const RULES: [letters: RegExp, phones: string][] = [
   [/c(?=[eiy])/y, "s"],
   [/c/y, "k"],
   [/(?<=[aeiouy])gh/y, ""],
-  [/g(?=[eiy])|j/y, "d ʒ"],
+  [/g(?=[eiy])|j/y, "ʤ"],
   [/gg?h?/y, "ɡ"],
   [/y(?=[aeiou])/y, "j"],
   [/(?<=[aeiou])s(?=[aeiou])/y, "z"],
@@ -42,46 +45,46 @@ const RULES: [letters: RegExp, phones: string][] = [
 
   // a vowel and r
   [/ear/y, "ɪ ɹ"],
-  [/ar(?![aeiouy])/y, "ɑ ː ɹ"],
-  [/or(?![aeiouy])/y, "ɔ ː ɹ"],
-  [/[eiu]r(?![aeiouy])/y, "ɚ"],
+  [/ar(?![aeiouy])/y, "ɑ ɹ"],
+  [/or(?![aeiouy])/y, "ɔ ɹ"],
+  [/[eiu]r(?![aeiouy])/y, "ə ɹ"],
 
   // two vowels
-  [/ee|ea|ie(?!$)/y, "i ː"],
-  [/oo|ue|ui/y, "u ː"],
-  [/ow$|oa/y, "o ʊ"],
-  [/ou|ow/y, "a ʊ"],
+  [/ee|ea|ie(?!$)/y, "i"],
+  [/oo|ue|ui/y, "u"],
+  [/ow$|oa/y, "O"],
+  [/ou|ow/y, "W"],
   [/ey$|ie$/y, "i"],
-  [/ai|ay|ei|ey/y, "e ɪ"],
-  [/au|aw/y, "ɔ ː"],
-  [/oi|oy/y, "ɔ ɪ"],
-  [/eu|ew/y, "j u ː"],
+  [/ai|ay|ei|ey/y, "A"],
+  [/au|aw/y, "ɔ"],
+  [/oi|oy/y, "Y"],
+  [/eu|ew/y, "j u"],
   [/i(?=[ao])/y, "i"],
 
   // a vowel made long by a final e: vite, base
-  [/a(?=[^aeiouy]e$)/y, "e ɪ"],
-  [/[iy](?=[^aeiouy]e$)/y, "a ɪ"],
-  [/o(?=[^aeiouy]e$)/y, "o ʊ"],
-  [/u(?=[^aeiouy]e$)/y, "u ː"],
-  [/e(?=[^aeiouy]e$)/y, "i ː"],
+  [/a(?=[^aeiouy]e$)/y, "A"],
+  [/[iy](?=[^aeiouy]e$)/y, "I"],
+  [/o(?=[^aeiouy]e$)/y, "O"],
+  [/u(?=[^aeiouy]e$)/y, "u"],
+  [/e(?=[^aeiouy]e$)/y, "i"],
 
   // a vowel at the end, or before one consonant and another vowel
   [/a$/y, "ə"],
-  [/o$|o(?=[^aeiouy][aeiouy])/y, "o ʊ"],
-  [/u$|u(?=[^aeiouy][aeiouy])/y, "u ː"],
+  [/o$|o(?=[^aeiouy][aeiouy])/y, "O"],
+  [/u$|u(?=[^aeiouy][aeiouy])/y, "u"],
   [/i$|(?<=[aeiou].*)y$/y, "i"],
-  [/(?<=^[^aeiouy]+)y/y, "a ɪ"],
+  [/(?<=^[^aeiouy]+)y/y, "I"],
 
   [/a/y, "æ"],
   [/e/y, "ɛ"],
   [/[iy]/y, "ɪ"],
-  [/o/y, "ɑ ː"],
+  [/o/y, "ɑ"],
   [/u/y, "ʌ"],
 ];
 
-const VOWEL = /^[æɛɪɑʌəɚiueaoɔ]/;
+const VOWEL = /^[AIOWYæɛɪɑʌəiuɔᵊ]/;
 /** Vowels that rarely carry the stress. */
-const WEAK = new Set(["ə", "ɚ", "i", "ə l"]);
+const WEAK = new Set(["ə", "ə ɹ", "i", "ᵊ l"]);
 
 /** The phones of `word` (lower-case letters), space separated, or null if it has no vowel to say. */
 export function guess(word: string): string | null {
@@ -107,6 +110,7 @@ export function guess(word: string): string | null {
   let stressed = syllables.length < 3 ? 0 : syllables.length - 2;
   while (stressed > 0 && WEAK.has(parts[syllables[stressed]])) stressed--;
   const at = syllables[stressed];
-  parts[at] = `ˈ ${parts[at] === "ɚ" ? "ɜ ː" : parts[at]}`;
+  // a stressed "er" is the vowel of "bird"
+  parts[at] = `ˈ ${parts[at] === "ə ɹ" ? "ɜ ɹ" : parts[at]}`;
   return parts.join(" ");
 }

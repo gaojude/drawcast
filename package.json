@@ -1,6 +1,6 @@
 {
   "name": "drawcast",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Turn a narrated Excalidraw script into a video. Local text-to-speech, no screen recording.",
   "license": "MIT",
   "repository": {
@@ -13,7 +13,6 @@
   },
   "files": [
     "dist",
-    "assets",
     "docs",
     "skills",
     "examples",
@@ -46,6 +45,7 @@
     "@excalidraw/excalidraw": "^0.18.1",
     "@types/node": "^22.0.0",
     "esbuild": "^0.28.2",
+    "gpt-tokenizer": "^4.1.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "typescript": "^7.0.2"

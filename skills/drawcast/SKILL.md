@@ -11,7 +11,7 @@ locally synthesized voice. You write the script; the `drawcast` command checks a
 ## Running the command
 
 Use `drawcast` if it is on the PATH, otherwise `npx -y drawcast@latest`. It needs Node.js 20 or newer.
-The first render downloads a speech model (about 180 MB), which can take a few minutes.
+The first render downloads a speech model (about 365 MB), which can take a few minutes.
 
 ## Steps
 
@@ -27,8 +27,10 @@ The first render downloads a speech model (about 180 MB), which can take a few m
 
 ## Notes
 
-- `drawcast voices` lists the voices. The script's `voice` picks one; by default the voice follows the
-  language of the narration.
+- `drawcast voices` lists the voices. Leave `voice` unset unless the user asks for one: by default the
+  narration goes to Microsoft's online voice for its language, and to the built-in voice if `edge-tts`
+  or a connection is missing. If the user wants nothing sent online, set a built-in voice (`lin`,
+  `chen`, `maple`, `sol`).
 - Rendering takes roughly as long as the video is. Speech is cached, so rendering again after changing
   only the drawing is faster.
 - If a command fails, read its message: it says what is missing. `drawcast setup` downloads everything

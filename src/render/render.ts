@@ -4,7 +4,7 @@ import path from "node:path";
 import { check, type Report } from "../format/check.ts";
 import { cacheDir } from "../paths.ts";
 import type { LoadRequest } from "../player/main.ts";
-import { DEFAULT_CANVAS, OUTPUT_SCALE, type Script, type VoiceSpec } from "../shared/types.ts";
+import { DEFAULT_CANVAS, OUTPUT_SCALE, type Script } from "../shared/types.ts";
 import { type Narration, SAMPLE_RATE, estimateNarration, narrate } from "../voice/narrate.ts";
 import { resolveVoice } from "../voice/voice.ts";
 import { writeWav } from "../voice/wav.ts";
@@ -67,7 +67,7 @@ export interface RenderOptions {
   fps: number;
   /** output width in pixels; the height follows from the canvas */
   width?: number;
-  voice?: VoiceSpec;
+  voice?: string;
   speed?: number;
   captions?: boolean;
   ttsCommand?: string;
@@ -75,10 +75,9 @@ export interface RenderOptions {
 }
 
 export async function renderVideo(loaded: Loaded, o: RenderOptions): Promise<{ duration: number }> {
-  const { script, baseDir } = loaded;
+  const { script } = loaded;
   const voice = await resolveVoice({
     spec: o.voice ?? script.voice,
-    baseDir,
     narration: script.steps.map((s) => s.say ?? "").join(" "),
     ttsCommand: o.ttsCommand,
     log: o.log,
