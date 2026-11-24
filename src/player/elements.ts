@@ -1,6 +1,6 @@
 /** Building Excalidraw elements from the specs in a script. */
 import { convertToExcalidrawElements } from "@excalidraw/excalidraw";
-import type { ElementSpec, Point, Style } from "../shared/types.ts";
+import { type ElementSpec, MATH_PIXELS_PER_EM, type Point, type Style, alignOffset } from "../shared/types.ts";
 import { type Pt, smooth } from "./motion.ts";
 
 /** An Excalidraw element. Its shape is Excalidraw's business; we only touch the fields we set. */
@@ -183,6 +183,22 @@ export function makeImage(spec: ElementSpec, fileId: string): El {
     opacity: spec.opacity ?? 100,
     angle: spec.angle ?? 0,
   })[0];
+}
+
+/**
+ * A formula, which to Excalidraw is an image: `file` is its picture in the element's colour, with its size
+ * in em. The image is cropped to the whole picture, which changes nothing until the crop is narrowed to
+ * show the formula being written.
+ */
+export function makeMath(spec: ElementSpec, file: { fileId: string; width: number; height: number }): El {
+  const fontSize = spec.fontSize ?? 20;
+  const width = file.width * fontSize;
+  const natural = { width: Math.round(file.width * MATH_PIXELS_PER_EM), height: Math.round(file.height * MATH_PIXELS_PER_EM) };
+  return {
+    ...makeImage({ ...spec, x: spec.x! - alignOffset(width, spec.textAlign), width, height: file.height * fontSize }, file.fileId),
+    strokeColor: spec.strokeColor ?? DEFAULT_STROKE,
+    crop: { x: 0, y: 0, ...natural, naturalWidth: natural.width, naturalHeight: natural.height },
+  };
 }
 
 /** Halfway along a path, where an arrow's label sits. */

@@ -27,6 +27,8 @@ The first render downloads a speech model (about 365 MB), which can take a few m
 
 ## Notes
 
+- Formulas are supported: a `math` element typesets LaTeX, and Greek letters and maths symbols can be
+  typed straight into text and labels. The guide has the details; narration says a formula in words.
 - `drawcast voices` lists the voices. Leave `voice` unset unless the user asks for one: by default the
   narration goes to Microsoft's online voice for its language, and to the built-in voice if `edge-tts`
   or a connection is missing. If the user wants nothing sent online, set a built-in voice (`lin`,

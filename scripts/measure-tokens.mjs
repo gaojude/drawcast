@@ -10,7 +10,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { encode } from "gpt-tokenizer/encoding/o200k_base";
 import { openPlayer } from "../src/render/player.ts";
-import { loadScript } from "../src/render/render.ts";
+import { loadScript, typesetFormulas } from "../src/render/render.ts";
 import { estimateNarration } from "../src/voice/narrate.ts";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -22,7 +22,7 @@ for (const file of process.argv.slice(2)) {
   const { script } = await loadScript(file);
   const narration = script.steps.map((s) => s.say ?? "").join(" ");
 
-  const player = await openPlayer({ script, images: {}, audio: estimateNarration(script).steps, output: { width: 1920, height: 1080 } }, () => {});
+  const player = await openPlayer({ script, images: {}, math: await typesetFormulas(script), audio: estimateNarration(script).steps, output: { width: 1920, height: 1080 } }, () => {});
   const elements = await player.elements(player.info.duration);
   await player.close();
   // minified, which is the cheapest way to write it

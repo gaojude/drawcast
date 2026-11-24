@@ -71,6 +71,11 @@ updates or removes an Excalidraw element, moves the camera, or points at somethi
 the phrase of the narration it starts on. The renderer finds when the voice reaches that phrase: the
 start of a sentence exactly, a word inside a sentence to within about a quarter of a second.
 
+Besides Excalidraw's shapes, text, arrows and images there is a `math` element, which typesets a
+formula from LaTeX: `{ "type": "math", "tex": "\\frac{n(n+1)}{2}" }`. It is written out as it
+appears, and an update can replace it with the next line of a derivation.
+[`examples/pythagoras.drawcast.json`](examples/pythagoras.drawcast.json) uses one.
+
 `check` exists because whoever writes a script usually cannot see it. It catches references to
 elements that are not there, phrases the narration never says, shapes that half overlap, labels that
 will not fit and drawings hidden under the captions. `snapshot` renders a still in a second or two, with
@@ -107,8 +112,8 @@ The last column is the canvas as it stands when the video ends, saved the way Ex
 scene and minified. It has no narration and no timing in it, and it is still two to four times the
 size of the script that draws it, narrates it and times it.
 
-What an agent reads first does not grow with the video: the skill is about 500 tokens and
-`drawcast guide` about 3,400. Layout problems come back from `check` as text, so finding them costs
+What an agent reads first does not grow with the video: the skill is about 600 tokens and
+`drawcast guide` about 4,100. Layout problems come back from `check` as text, so finding them costs
 no screenshots, and one `snapshot` is usually enough to look at before rendering.
 
 These are counts from `o200k_base`, a tokenizer from OpenAI that runs offline; another model's
@@ -185,6 +190,8 @@ drawcast is MIT licensed. How it works inside, and how to build and test it, is 
 [CONTRIBUTING.md](CONTRIBUTING.md). It builds on:
 
 - [Excalidraw](https://github.com/excalidraw/excalidraw) (MIT), bundled into the player with its fonts.
+- [MathJax](https://github.com/mathjax/MathJax-src) (Apache-2.0), bundled into the command with its
+  TeX font, which typesets the formulas.
 - [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (Apache-2.0), which runs the speech model.
 - [Kokoro v1.1](https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh) (Apache-2.0), the speech model,
   downloaded at run time in sherpa-onnx's packaging of it. The pronunciation dictionaries that come

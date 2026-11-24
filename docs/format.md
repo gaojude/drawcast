@@ -85,7 +85,7 @@ Puts one element on the canvas, or several in turn when given a list.
 ```
 
 `enter` chooses how it appears: `"draw"` (the default: shapes are dragged out, lines grow from their
-start, text is typed), `"fade"`, or `"none"` (it is simply there).
+start, text is typed, formulas are written out), `"fade"`, or `"none"` (it is simply there).
 
 ### update
 
@@ -97,8 +97,8 @@ Changes an element that is on the canvas, animated over 0.4 s. `id` is one id or
 ```
 
 It can set `x`, `y`, `width`, `height` (shapes, text and images), `dx`, `dy` (a move relative to where
-the element is; works on everything), any style property, and `text` (text elements). Labels move with
-their shape, and arrows attached to a shape follow it.
+the element is; works on everything), any style property, `text` (text elements) and `tex` (math
+elements). Labels move with their shape, and arrows attached to a shape follow it.
 
 ### remove
 
@@ -139,12 +139,15 @@ Every element needs an `id`, unique in the script, and a `type`. Property names 
 | --- | --- | --- |
 | `rectangle`, `ellipse`, `diamond` | `x`, `y`, `width`, `height` | `label`, `rounded` (rectangle and diamond; default true) |
 | `text` | `x`, `y`, `text` (`\n` breaks lines) | `fontSize`, `fontFamily`, `textAlign` |
+| `math` | `x`, `y`, `tex` (a formula in LaTeX; see Math) | `fontSize`, `textAlign` |
 | `arrow` | `from`, `to`: each an element id or a point `[x, y]` | `via`, `rounded`, `label`, `startArrowhead`, `endArrowhead` |
 | `line` | `points`: `[[x, y], ...]` | `closed` (joins the ends, so `backgroundColor` fills it), `rounded` |
 | `freedraw` | `points`: `[[x, y], ...]`, drawn as a smooth pen stroke through them | |
 | `image` | `x`, `y`, `src` (PNG, JPEG, GIF, WebP or SVG; path relative to the script) | `width`, `height` (default: the file's size and proportions) |
 
-`x`, `y` is the top left corner. Points are in canvas coordinates.
+`x`, `y` is the top left corner. Points are in canvas coordinates. On a `text` or `math` element,
+`"textAlign": "center"` makes `x` its middle and `"right"` its right edge, which places it without
+knowing how wide it will be.
 
 An arrow whose `from` or `to` is an id attaches to that element: it starts at the element's outline,
 facing the other end, and follows when the element moves. `via` lists points the arrow passes through,
@@ -154,6 +157,34 @@ and `"rounded": true` turns the corners at those points into a curve. Arrowheads
 A `label` is typed in the middle of a shape and wraps to its width, or sits on the middle of an arrow.
 `fontSize` (default 20; 16 on arrows) and `fontFamily` apply to labels too. Fonts are `"hand"` (the
 default handwriting, which covers Chinese), `"normal"` and `"code"`.
+
+### Math
+
+A `math` element is a formula written in LaTeX, typeset the way a textbook prints it:
+
+```json
+{ "at": "sum", "add": { "id": "sum", "type": "math", "x": 640, "y": 200, "textAlign": "center", "fontSize": 32, "tex": "\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}" } }
+```
+
+- Write every backslash twice. JSON takes a single one as an escape, so `"\frac"` and `"\theta"`
+  are not what they look like. `drawcast check` names a formula it cannot typeset and says why.
+- `tex` is the formula alone, with no `$` around it, set as a displayed equation. LaTeX's maths and
+  the AMS additions are understood: fractions, roots, sums and integrals with limits, Greek letters,
+  `\mathbb`, `\mathbf`, `\text{words}`, matrices, `cases`, and `aligned` or `\\` for several lines.
+  `\textcolor{#e03131}{...}` colours one part. There are no equation numbers.
+- `fontSize` is the size (default 20, which matches text; 28 to 40 suits a formula that is the
+  subject of a step) and `strokeColor` the colour.
+- `update` moves and recolours a formula like anything else, and `"tex"` replaces it, fading one
+  formula into the next: a derivation is one element updated line by line.
+
+```json
+{ "at": "so", "update": { "id": "sum", "tex": "1 + 2 + \\dots + 100 = 5050", "strokeColor": "#2f9e44" } }
+```
+
+Text and labels are not LaTeX: `"label": "$\\alpha$"` is drawn as typed, and `check` warns about it.
+Type the symbol itself instead, which works in any text, label and font: `α β θ λ π σ Δ Σ Ω`,
+`→ ← ↔ ⇒`, `≤ ≥ ≠ ≈ ± × ÷ √ ∞ ∈ ∑ ∫ ∂ ∇`, `x² xₙ ½`. Use a `math` element when the notation
+needs layout: a fraction, limits on a sum, a root over an expression, a matrix.
 
 ### Style
 
@@ -190,11 +221,16 @@ Excalidraw's palette, which looks right together:
   size, plus 20 of padding. Ellipses and diamonds hold less than their width suggests.
 - A shape that contains other elements should not have a label, because the label sits in its middle.
   Put a `text` element near its top instead.
+- A formula takes more room than its LaTeX suggests. At the default size a symbol is about 12 units
+  wide; a line is about 20 tall, and 40 to 55 with a fraction or a sum in it. `check` measures the
+  real thing, so its warnings about a formula are exact.
 - Text is for names, values and short phrases. The narration is in the captions already.
 
 ## Narration
 
 - Write for the ear: short sentences, plain words. What is said is also what the captions show.
+- The voice does not read LaTeX, or symbols such as `=` and `²`. Say a formula in words ("x squared",
+  "the sum from one to n") and show it in a `math` element.
 - Numbers, percentages and years are read out. A short word in capitals (`API`, `DNS`, `JSON`) is
   spelled letter by letter; write it the way it sounds (`jason`) to have it read as a word. An English
   word the voice does not know is read by its spelling, which is usually close and sometimes wrong.

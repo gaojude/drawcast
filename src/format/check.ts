@@ -9,7 +9,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { findPhrase, tokens, widthEm } from "../shared/text.ts";
-import { DEFAULT_CANVAS, type ElementSpec, type Script } from "../shared/types.ts";
+import { DEFAULT_CANVAS, type ElementSpec, type Formula, type Script, type TextAlign, alignOffset } from "../shared/types.ts";
 
 export interface Report {
   errors: string[];
@@ -28,16 +28,20 @@ interface Live {
   type: string;
   /** null for paths, whose extent is their points */
   box: Box | null;
+  /** text, math: which point of the box `x` is */
+  align?: TextAlign;
+  fontSize?: number;
 }
 
 const SHAPES = ["rectangle", "ellipse", "diamond"];
-const TYPES = [...SHAPES, "text", "arrow", "line", "freedraw", "image"];
+const TYPES = [...SHAPES, "text", "math", "arrow", "line", "freedraw", "image"];
 const STYLE = ["strokeColor", "backgroundColor", "fillStyle", "strokeWidth", "strokeStyle", "roughness", "opacity", "angle"];
 const ELEMENT_KEYS: Record<string, string[]> = {
   rectangle: ["x", "y", "width", "height", "rounded", "label", "fontSize", "fontFamily"],
   ellipse: ["x", "y", "width", "height", "label", "fontSize", "fontFamily"],
   diamond: ["x", "y", "width", "height", "rounded", "label", "fontSize", "fontFamily"],
   text: ["x", "y", "text", "fontSize", "fontFamily", "textAlign"],
+  math: ["x", "y", "tex", "fontSize", "textAlign"],
   arrow: ["from", "to", "via", "rounded", "label", "fontSize", "fontFamily", "startArrowhead", "endArrowhead"],
   line: ["points", "closed", "rounded"],
   freedraw: ["points"],
@@ -71,7 +75,22 @@ function textBox(text: string, fontSize: number): { w: number; h: number } {
 /** How much of a shape's width a label can use before it wraps. */
 const LABEL_ROOM: Record<string, number> = { rectangle: 1, ellipse: 0.7, diamond: 0.5 };
 
-export function check(input: unknown, baseDir: string): Report {
+/**
+ * LaTeX where it is shown or spoken letter for letter: a common command, a group raised or lowered, or a
+ * pair of dollar signs around something. Prices do not count: "$5 to $10" has a space before its second sign.
+ */
+const TEX_COMMANDS =
+  "frac|sqrt|sum|prod|lim|cdot|times|pm|leq?|geq?|neq?|approx|equiv|infty|partial|nabla|rightarrow|leftarrow|Rightarrow|Leftarrow|leftrightarrow|mapsto|forall|exists|" +
+  "alpha|beta|gamma|delta|epsilon|varepsilon|zeta|theta|lambda|mu|nu|xi|pi|rho|sigma|tau|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Pi|Sigma|Phi|Psi|Omega|" +
+  "mathbf|mathbb|mathcal|mathrm|ldots|cdots";
+const LATEX = new RegExp(`\\\\(?:${TEX_COMMANDS})(?![a-zA-Z])|[\\^_]\\{|\\$(?![\\s$])[^$\\n]*(?<![\\s$])\\$(?!\\d)`);
+
+/** A tab, line break or other control character: what JSON makes of `\t`, `\n`, `\f`, `\b` and `\r`. */
+const CONTROL = /[\u0000-\u001f]/;
+
+export async function check(input: unknown, baseDir: string): Promise<Report> {
+  // MathJax is large and most scripts have no formulas, so it is loaded only for those that do
+  const typeset: ((tex: string) => Formula) | null = JSON.stringify(input ?? null).includes('"type":"math"') ? (await import("../math/typeset.ts")).typeset : null;
   const errors: string[] = [];
   const warnings: string[] = [];
   const fail = (where: string, message: string) => errors.push(`${where}: ${message}`);
@@ -79,6 +98,27 @@ export function check(input: unknown, baseDir: string): Report {
 
   const unknownKeys = (where: string, value: Record<string, unknown>, allowed: string[]) => {
     for (const key of Object.keys(value)) if (!allowed.includes(key)) fail(where, `unknown property ${quote(key)}. Allowed: ${allowed.join(", ")}.`);
+  };
+
+  /** Text and labels are drawn as typed, so LaTeX in one is a formula in the wrong place. */
+  const plainText = (where: string, name: string, value: unknown) => {
+    if (typeof value === "string" && LATEX.test(value)) {
+      warn(where, `the ${name} ${quote(value)} looks like LaTeX, which is drawn there as typed. Put the formula in a "math" element, or type the symbol itself (α, ≤, →, x²).`);
+    }
+  };
+
+  /** The size of a formula at a font size, or null (and an error) when its LaTeX cannot be typeset. */
+  const formulaBox = (where: string, tex: unknown, fontSize: number): { w: number; h: number } | null => {
+    if (typeof tex !== "string" || !tex.trim()) return fail(where, `needs "tex", the formula in LaTeX.`), null;
+    if (CONTROL.test(tex)) {
+      return fail(where, `"tex" has a tab, line break or other control character in it, which is what JSON makes of "\\t", "\\n", "\\f", "\\b" and "\\r". Write every backslash of the LaTeX twice: "\\\\theta", "\\\\frac{a}{b}".`), null;
+    }
+    try {
+      const formula = typeset!(tex);
+      return { w: formula.width * fontSize, h: formula.height * fontSize };
+    } catch (e) {
+      return fail(where, `the formula ${quote(tex)} could not be typeset: ${(e as Error).message}.`), null;
+    }
   };
 
   if (!isObject(input)) return { errors: ["The file must hold a JSON object."], warnings };
@@ -129,7 +169,7 @@ export function check(input: unknown, baseDir: string): Report {
     return true;
   };
 
-  const place = (where: string, id: string, type: string, box: Box | null) => {
+  const place = (where: string, id: string, type: string, box: Box | null, anchor: Pick<Live, "align" | "fontSize"> = {}) => {
     if (box && !movesCamera) {
       if (box.x < 0 || box.y < 0 || box.x + box.w > canvas.width || box.y + box.h > canvas.height) {
         warn(where, `extends past the canvas (${canvas.width} x ${canvas.height}); it spans ${span(box)}.`);
@@ -147,7 +187,7 @@ export function check(input: unknown, baseDir: string): Report {
         if (overlaps && !inside(a, o) && !inside(o, a)) warn(where, `partly overlaps ${quote(otherId)} (${span(o)}); this one spans ${span(a)}. Separate them, or put one fully inside the other.`);
       }
     }
-    live.set(id, { type, box });
+    live.set(id, { type, box, ...anchor });
   };
 
   const addElement = (where: string, value: unknown) => {
@@ -167,6 +207,8 @@ export function check(input: unknown, baseDir: string): Report {
       return !missing.length;
     };
     let box: Box | null = null;
+    let anchor: Pick<Live, "align" | "fontSize"> = {};
+    plainText(where, "label", el.label);
 
     if (SHAPES.includes(type)) {
       if (!need(["x", "y", "width", "height"])) return;
@@ -183,7 +225,16 @@ export function check(input: unknown, baseDir: string): Report {
     } else if (type === "text") {
       if (typeof el.text !== "string" || !el.text.trim()) return fail(where, `needs "text".`);
       if (!need(["x", "y"])) return;
-      box = { x: el.x!, y: el.y!, ...textBox(el.text, el.fontSize ?? 20) };
+      plainText(where, "text", el.text);
+      const size = textBox(el.text, el.fontSize ?? 20);
+      anchor = { align: el.textAlign };
+      box = { x: el.x! - alignOffset(size.w, el.textAlign), y: el.y!, ...size };
+    } else if (type === "math") {
+      const fontSize = isNumber(el.fontSize) ? el.fontSize : 20;
+      const size = formulaBox(where, el.tex, fontSize);
+      if (!need(["x", "y"]) || !size) return;
+      anchor = { align: el.textAlign, fontSize };
+      box = { x: el.x! - alignOffset(size.w, el.textAlign), y: el.y!, ...size };
     } else if (type === "image") {
       if (typeof el.src !== "string") return fail(where, `needs "src", the path of an image file.`);
       if (!IMAGE_TYPES.includes(path.extname(el.src).toLowerCase())) return fail(where, `src must be one of ${IMAGE_TYPES.join(", ")}.`);
@@ -199,7 +250,7 @@ export function check(input: unknown, baseDir: string): Report {
       const min = el.closed ? 3 : 2;
       if (!Array.isArray(el.points) || el.points.length < min || !el.points.every(isPoint)) return fail(where, `needs "points": at least ${min} points [[x, y], ...] in canvas coordinates.`);
     }
-    place(where, el.id, type, box);
+    place(where, el.id, type, box, anchor);
   };
 
   steps.forEach((value, si) => {
@@ -208,6 +259,9 @@ export function check(input: unknown, baseDir: string): Report {
     unknownKeys(at, value, ["say", "do", "pause", "duration"]);
     const say = value.say;
     if (say !== undefined && (typeof say !== "string" || !tokens(say).length)) fail(at, `"say" must be text with at least one word.`);
+    else if (typeof say === "string" && LATEX.test(say)) {
+      warn(at, `"say" has LaTeX in it: the voice says only the letters and numbers of it, and the captions show it as typed. Write the formula the way it is said ("x squared"), and show it in a "math" element.`);
+    }
     if (value.do !== undefined && !Array.isArray(value.do)) fail(at, `"do" must be a list of actions.`);
     for (const key of ["pause", "duration"]) {
       if (value[key] !== undefined && !(isNumber(value[key]) && value[key] >= 0 && value[key] <= 60)) fail(at, `"${key}" must be a number of seconds from 0 to 60.`);
@@ -249,8 +303,9 @@ export function check(input: unknown, baseDir: string): Report {
       } else if (raw.update !== undefined) {
         const u = raw.update;
         if (!isObject(u)) return fail(where, `"update" must be an object with an "id".`);
-        unknownKeys(where, u, ["id", "x", "y", "dx", "dy", "width", "height", "text", ...STYLE]);
+        unknownKeys(where, u, ["id", "x", "y", "dx", "dy", "width", "height", "text", "tex", ...STYLE]);
         checkStyle(where, u);
+        plainText(where, "text", u.text);
         const ids = Array.isArray(u.id) ? u.id : [u.id];
         for (const key of ["x", "y", "dx", "dy", "width", "height"]) if (u[key] !== undefined && !isNumber(u[key])) fail(where, `${key} must be a number.`);
         for (const target of ids) {
@@ -259,14 +314,22 @@ export function check(input: unknown, baseDir: string): Report {
           if (!el.box && ["x", "y", "width", "height"].some((k) => u[k] !== undefined) && !["text", "image"].includes(el.type)) {
             fail(where, `${quote(target)} is a ${el.type}; move it with dx and dy (x, y, width and height are for shapes, text and images).`);
           }
-          if (u.text !== undefined && el.type !== "text") fail(where, `"text" can only replace the content of a text element; ${quote(target)} is a ${el.type}.`);
+          if (u.text !== undefined && el.type !== "text") {
+            fail(where, `"text" can only replace the content of a text element; ${quote(target)} is a ${el.type}${el.type === "math" ? `, whose formula is replaced with "tex"` : ""}.`);
+          }
+          if (u.tex !== undefined && el.type !== "math") fail(where, `"tex" can only replace the formula of a math element; ${quote(target)} is a ${el.type}.`);
+          if (el.type === "math" && (u.width !== undefined || u.height !== undefined)) fail(where, `${quote(target)} is a formula, which cannot be stretched: its size is the fontSize it was added with.`);
+          const formula = el.type === "math" && u.tex !== undefined ? formulaBox(where, u.tex, el.fontSize ?? 20) : null;
           if (el.box) {
             const b = el.box;
+            const w = formula?.w ?? (isNumber(u.width) ? u.width : b.w);
+            // `x` is the point the element was placed by, which for centred text is its middle
+            const x = isNumber(u.x) ? u.x : b.x + alignOffset(b.w, el.align);
             el.box = {
-              x: (isNumber(u.x) ? u.x : b.x) + (isNumber(u.dx) ? u.dx : 0),
+              x: x - alignOffset(w, el.align) + (isNumber(u.dx) ? u.dx : 0),
               y: (isNumber(u.y) ? u.y : b.y) + (isNumber(u.dy) ? u.dy : 0),
-              w: isNumber(u.width) ? u.width : b.w,
-              h: isNumber(u.height) ? u.height : b.h,
+              w,
+              h: formula?.h ?? (isNumber(u.height) ? u.height : b.h),
             };
           }
         }

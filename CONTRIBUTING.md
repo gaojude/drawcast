@@ -10,14 +10,18 @@ node dist/cli.js render examples/dns.drawcast.json
 ```
 
 `src/player` runs in the browser and turns a script into frames. `src/voice` is the speech pipeline,
-`src/format/check.ts` the checker, and `src/render` drives the browser and ffmpeg.
+`src/format/check.ts` the checker, `src/math` typesets formulas, and `src/render` drives the browser
+and ffmpeg.
 
 `docs/format.md` is what `drawcast guide` prints, so a change to the format is a change to that file
 too.
 
 ## How a script becomes a video
 
-1. **Check.** The script is validated, with layout estimated from the element sizes.
+1. **Check.** The script is validated, with layout estimated from the element sizes. A `math`
+   element is typeset here, by MathJax in Node, into an SVG of glyph outlines: that gives the checker
+   its exact size and the LaTeX errors, and the same SVG is later handed to the browser as an image.
+   MathJax is bundled into `dist/cli.js` and loaded only for a script that has a formula.
 2. **Speak.** Narration is split into sentences and each is synthesized and cached. For the built-in
    voice, numbers and acronyms are written out, then English words are turned into phonemes and
    Chinese into syllables with the model's two pronunciation dictionaries. A word the English one
