@@ -12,7 +12,8 @@
     "assets",
     "docs",
     "skills",
-    "examples"
+    "examples",
+    "!examples/*.mp4"
   ],
   "engines": {
     "node": ">=20"
