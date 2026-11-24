@@ -39,11 +39,16 @@ Work in this loop:
 | `voice` | A voice name from `drawcast voices`. Default: the online voice for the narration's language, or the first built-in one if it cannot be had. A name starting with `edge:` is an online voice (see Narration). |
 | `speed` | Speaking rate, 0.5 to 2. Default 1. |
 | `captions` | `false` leaves the narration out of the picture. Default `true`. |
+| `cover` | The number of the step whose finished canvas is the cover. Default `1`. `false` for no cover. |
 
 The canvas is 1280 x 720 units and the video is 1920 x 1080 pixels, so everything is drawn 1.5 times
 its size. Excalidraw's own defaults (20 px text, 2 px lines) are the right size at this scale. `x` grows
 to the right and `y` grows downward, from the top left corner. Captions cover the bottom 14% of the
 picture (below y 620 on the default canvas), so keep drawings above that.
+
+The first frame of the video is the cover: the canvas as the `cover` step ends, without captions. It
+is what a player or a feed shows before the video plays. From the second frame on the canvas starts
+empty and everything is drawn in. `drawcast snapshot file --step 1` shows the default cover.
 
 ## Steps
 

@@ -123,7 +123,7 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
 
   if (!isObject(input)) return { errors: ["The file must hold a JSON object."], warnings };
   const script = input as Partial<Script> & Record<string, unknown>;
-  unknownKeys("script", script, ["drawcast", "title", "canvas", "voice", "speed", "captions", "steps"]);
+  unknownKeys("script", script, ["drawcast", "title", "canvas", "voice", "speed", "captions", "cover", "steps"]);
   if (script.drawcast !== 1) fail("script", `"drawcast" must be 1, the version of the format (got ${quote(script.drawcast)}).`);
   if (script.speed !== undefined && !(isNumber(script.speed) && script.speed >= 0.5 && script.speed <= 2)) fail("script", `"speed" must be between 0.5 and 2.`);
   if (script.captions !== undefined && typeof script.captions !== "boolean") fail("script", `"captions" must be true or false.`);
@@ -137,6 +137,10 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
     if (!COLOR.test(String(canvas.background))) fail("canvas", `background must be a hex colour like "#ffffff".`);
   }
   if (!Array.isArray(script.steps) || !script.steps.length) return { errors: [...errors, `script: "steps" must be a list with at least one step.`], warnings };
+
+  if (script.cover !== undefined && script.cover !== false && !(Number.isInteger(script.cover) && script.cover >= 1 && script.cover <= script.steps.length)) {
+    fail("script", `"cover" must be the number of a step, 1 to ${script.steps.length}, or false for no cover (got ${quote(script.cover)}).`);
+  }
 
   const live = new Map<string, Live>();
   const used = new Set<string>();

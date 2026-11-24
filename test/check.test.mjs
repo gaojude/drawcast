@@ -23,6 +23,16 @@ test("the script in the guide is valid", async () => {
   for (const s of scripts) assert.deepEqual(await check(s, examples), { errors: [], warnings: [] });
 });
 
+test("the cover is a step of the script, or false", async () => {
+  const steps = [{ say: "One box.", do: [{ add: box("a", 100) }] }, { say: "Another box.", do: [{ add: box("b", 700) }] }];
+  for (const cover of [1, 2, false]) assert.deepEqual((await check({ drawcast: 1, cover, steps }, examples)).errors, [], String(cover));
+  for (const cover of [0, 3, 1.5, true, "end"]) {
+    const { errors } = await check({ drawcast: 1, cover, steps }, examples);
+    assert.equal(errors.length, 1, String(cover));
+    assert.match(errors[0], /"cover" must be the number of a step, 1 to 2, or false/);
+  }
+});
+
 test("an `at` phrase must be spoken, and in order", async () => {
   const { errors } = await report({
     say: "The client calls the server.",

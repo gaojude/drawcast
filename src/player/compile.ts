@@ -17,6 +17,8 @@ const STEP_GAP = 0.35;
 const TAIL = 1.0;
 /** A step may start while the previous one's last stroke is finishing. */
 const OVERLAP = 0.3;
+/** A step is looked at this long before the next one begins, when its strokes have landed. */
+const STEP_END = 0.05;
 const SECONDS_PER_CHAR = 0.04;
 const FADE = 0.4;
 const POINTER_TRAIL = 0.22;
@@ -69,6 +71,8 @@ export interface Frame {
 export interface Schedule {
   /** When the narration of each step scheduled so far starts. */
   stepStarts: number[];
+  /** When each of those steps ends: just before the next one begins, and for the last step the end of the video. */
+  stepEnds: number[];
   /**
    * No frame before this time changes, whatever the steps still to come turn out to be: it is when the
    * next of them starts. Once the last step is in, it is the length of the video.
@@ -469,6 +473,7 @@ export function timeline(script: Script, images: Map<string, ImageInfo>, formula
   const canvas: Rect = { x: 0, y: 0, w: size.width, h: size.height };
   const b = new Builder(canvas, images, formula);
   const stepStarts: number[] = [];
+  const stepEnds: number[] = [];
   const captions: { t0: number; t1: number; text: string }[] = [];
   let free = LEAD_IN; // when the next step may start speaking
   let busy = 0; // when the last animation ends
@@ -499,11 +504,13 @@ export function timeline(script: Script, images: Map<string, ImageInfo>, formula
       }
       const length = voice?.duration ?? step.duration ?? 0;
       free = (voice ? start + length + STEP_GAP : Math.max(start + length, next)) + (step.pause ?? 0);
+      stepEnds.push(Math.max(free, busy - OVERLAP) - STEP_END);
     }
     tracks = b.order.map((id) => b.tracks.get(id)!.sort((x, y) => x.t0 - y.t0));
     const duration = stepStarts.length === script.steps.length ? Math.max(free, busy) + TAIL : null;
+    if (duration !== null) stepEnds[stepEnds.length - 1] = duration;
     // Nothing a step does comes before its own start, and the next one starts here.
-    return { stepStarts: [...stepStarts], settled: duration ?? Math.max(free, busy - OVERLAP), duration };
+    return { stepStarts: [...stepStarts], stepEnds: [...stepEnds], settled: duration ?? Math.max(free, busy - OVERLAP), duration };
   };
 
   const viewAt = (t: number): Rect => {

@@ -39,11 +39,13 @@ too.
    spoken, which is the slowest part of a first render.
 4. **Draw.** A headless browser loads Excalidraw. Every element has a track of animated segments, so
    the canvas at any time is a pure function of that time; each frame is rendered with Excalidraw's
-   own export and has the pointer and captions painted on top.
+   own export and has the pointer and captions painted on top. The first frame is the exception: in
+   place of the empty canvas at time zero it shows the cover, the canvas as the script's `cover` step
+   ends, with nothing painted on top. No frame is added, so the timing and the sound are unchanged.
 5. **Encode.** The browser's own H.264 encoder (WebCodecs) takes each frame straight from the canvas,
    so the pictures never leave the page. The video is cut into segments of a few seconds that each
    start with a key frame, and two encoders share them; a segment is made once all of its frames are
-   settled. ffmpeg copies the finished H.264 into an MP4 beside the narration, which reaches it on a
+   settled. The cover is a segment of one frame, made when its step has been spoken. ffmpeg copies the finished H.264 into an MP4 beside the narration, which reaches it on a
    second pipe as it settles and is encoded as AAC: 1920 x 1080 at 30 frames per second by default.
 
    An encoder is tried before it is trusted: it is given a test card, the result is decoded again,

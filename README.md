@@ -72,6 +72,10 @@ updates or removes an Excalidraw element, moves the camera, or points at somethi
 the phrase of the narration it starts on. The renderer finds when the voice reaches that phrase: the
 start of a sentence exactly, a word inside a sentence to within about a quarter of a second.
 
+The first frame of the video is a cover, the canvas as step 1 ends, so a feed that takes its
+thumbnail from that frame does not show an empty canvas. `"cover": 3` in the script picks another
+step and `"cover": false` leaves the cover out.
+
 Besides Excalidraw's shapes, text, arrows and images there is a `math` element, which typesets a
 formula from LaTeX: `{ "type": "math", "tex": "\\frac{n(n+1)}{2}" }`. It is written out as it
 appears, and an update can replace it with the next line of a derivation.

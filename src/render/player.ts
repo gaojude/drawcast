@@ -43,8 +43,8 @@ export interface Player {
   schedule(audio: (StepAudio | null)[]): Promise<Schedule>;
   /** Forgets every step scheduled so far: the script is to be scheduled again, against another voice's audio. */
   startOver(): Promise<void>;
-  /** PNG of the frame at `t`, or null when it equals the one before. */
-  frame(t: number): Promise<Buffer | null>;
+  /** PNG of the frame at `t`, or null when it equals the one before. `bare` leaves the pointer and the caption out. */
+  frame(t: number, bare?: boolean): Promise<Buffer | null>;
   /** The Excalidraw elements on the canvas at `t`. */
   elements(t: number): Promise<unknown[]>;
   /**
@@ -55,8 +55,9 @@ export interface Player {
   /**
    * Frames `first` to `first + count - 1` as an H.264 stream that starts with a key frame, made by the
    * encoder numbered `lane`. Each lane makes one segment at a time; different lanes work side by side.
+   * With `cover`, the first of the frames is the canvas at that time, without pointer or caption.
    */
-  encodeSegment(lane: number, first: number, count: number): Promise<Buffer>;
+  encodeSegment(lane: number, first: number, count: number, cover?: number): Promise<Buffer>;
   stopEncoding(): Promise<void>;
   close(): Promise<void>;
 }
@@ -89,14 +90,14 @@ export async function openPlayer(request: PrepareRequest, log: (line: string) =>
       load: (audio) => page.evaluate((a) => drawcast.load(a), audio as any),
       schedule: (audio) => page.evaluate((a) => drawcast.schedule(a), audio as any),
       startOver: () => page.evaluate(() => drawcast.startOver()),
-      async frame(t) {
-        const url = await page.evaluate((time) => drawcast.frame(time), t);
+      async frame(t, bare) {
+        const url = await page.evaluate((time, b) => drawcast.frame(time, b), t, bare ?? false);
         return url ? Buffer.from(url.slice(url.indexOf(",") + 1), "base64") : null;
       },
       elements: (t) => page.evaluate((time) => drawcast.elements(time), t),
       encoder: () => page.evaluate(() => drawcast.encoder()),
-      async encodeSegment(lane, first, count) {
-        return Buffer.from(await page.evaluate((l, f, c) => drawcast.encodeSegment(l, f, c), lane, first, count), "base64");
+      async encodeSegment(lane, first, count, cover) {
+        return Buffer.from(await page.evaluate((l, f, c, at) => drawcast.encodeSegment(l, f, c, at ?? undefined), lane, first, count, cover ?? null), "base64");
       },
       stopEncoding: () => page.evaluate(() => drawcast.stopEncoding()),
     };

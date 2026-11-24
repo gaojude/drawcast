@@ -123,6 +123,8 @@ export interface Script {
   speed?: number;
   /** Burn the narration into the picture as captions (default true). */
   captions?: boolean;
+  /** The step whose finished canvas is the first frame of the video (default 1), or false for no cover. */
+  cover?: number | false;
   steps: Step[];
 }
 
