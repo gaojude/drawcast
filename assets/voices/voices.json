@@ -1,12 +1,12 @@
 {
-  "lin": {
-    "language": "zh",
-    "description": "Mandarin, female",
-    "transcript": "嗨，大家好！今天我们来聊一个特别有意思的话题，你准备好了吗？"
-  },
   "chen": {
     "language": "zh",
     "description": "Mandarin, male",
+    "transcript": "嗨，大家好！今天我们来聊一个特别有意思的话题，你准备好了吗？"
+  },
+  "lin": {
+    "language": "zh",
+    "description": "Mandarin, female",
     "transcript": "嗨，大家好！今天我们来聊一个特别有意思的话题，你准备好了吗？"
   },
   "maple": {

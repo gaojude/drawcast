@@ -23,8 +23,8 @@ const PACE = { zh: 0.9, en: 0.78 };
 
 // name -> Kokoro speaker
 const VOICES = {
+  chen: { speaker: "zm_061", language: "zh", description: "Mandarin, male", transcript: ZH },
   lin: { speaker: "zf_001", language: "zh", description: "Mandarin, female", transcript: ZH },
-  chen: { speaker: "zm_010", language: "zh", description: "Mandarin, male", transcript: ZH },
   maple: { speaker: "af_maple", language: "en", description: "American English, female", transcript: EN },
   sol: { speaker: "af_sol", language: "en", description: "American English, female, lower", transcript: EN },
 };
