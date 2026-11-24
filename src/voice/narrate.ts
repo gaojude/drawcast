@@ -88,10 +88,17 @@ export async function narrate(script: Script, voice: Voice, speed: number, log: 
 
   const missing = all.filter((s) => !existsSync(fileOf(s)));
   if (missing.length) {
-    const say = await voice.open();
-    for (const [i, sentence] of missing.entries()) {
-      log(`  speaking ${i + 1}/${missing.length}: ${sentence.length > 60 ? `${sentence.slice(0, 57)}...` : sentence}`);
-      await writeWav(fileOf(sentence), trimSilence(await say(sentence)));
+    try {
+      const say = await voice.open();
+      for (const [i, sentence] of missing.entries()) {
+        log(`  speaking ${i + 1}/${missing.length}: ${sentence.length > 60 ? `${sentence.slice(0, 57)}...` : sentence}`);
+        await writeWav(fileOf(sentence), trimSilence(await say(sentence)));
+      }
+    } catch (e) {
+      if (!voice.fallback) throw e;
+      // the whole script goes to the other voice, so that one video never has two voices in it
+      log(`  the online voice could not speak, so the built-in voice will: ${(e as Error).message.split("\n")[0]}`);
+      return narrate(script, voice.fallback, speed, log);
     }
   }
 

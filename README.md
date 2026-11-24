@@ -51,8 +51,9 @@ Rendering uses three things, and `drawcast setup` reports on each:
 - **ffmpeg**, which comes with the `ffmpeg-static` dependency. If your npm is set to skip install
   scripts, install ffmpeg yourself or point `DRAWCAST_FFMPEG` at one.
 
-Nothing is sent anywhere: speech, drawing and encoding all happen locally. The one exception is
-opt-in: an [online voice](#online-voices), if a script asks for one.
+Drawing and encoding happen locally. Speech does too, except for one thing: when
+[`edge-tts`](#online-voices) is installed and a script does not name a voice, the narration goes to
+Microsoft's online voice. Name a built-in voice (`--voice lin`) to keep it all on your machine.
 
 ## Use
 
@@ -60,7 +61,7 @@ opt-in: an [online voice](#online-voices), if a script asks for one.
 drawcast guide                 the script format, with examples
 drawcast check <script>        errors and layout warnings, without rendering
 drawcast snapshot <script>     one moment of the canvas as a PNG (--step 2, --at 12.5)
-drawcast render <script>       the MP4 (-o out.mp4, --voice chen, --speed 1.1, --no-captions)
+drawcast render <script>       the MP4 (-o out.mp4, --voice lin, --speed 1.1, --no-captions)
 drawcast voices                the voices
 ```
 
@@ -117,12 +118,19 @@ the repository and run `npm install && npm run build && node scripts/measure-tok
 
 ## Voices
 
+Left unset, a script is narrated by an [online voice](#online-voices) for the language of its
+narration: `edge:zh-CN-XiaoxiaoNeural` for Chinese and `edge:en-US-EmmaMultilingualNeural` for
+English. If that cannot be had (no `edge-tts`, no connection), the built-in voice says the whole
+script instead, so one video never has two voices in it. A voice the script or `--voice` names is
+used as it is, with no fallback.
+
 The built-in voice is [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh), a small speech
 model run on the CPU by [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). It speaks Mandarin and
 English several times faster than real time on a laptop, and the model is Apache-2.0 licensed.
 
-`drawcast voices` lists four voices: `chen` and `lin` for Chinese, `maple` and `sol` for English. Left
-unset, a script gets the first one for the language of its narration.
+`drawcast voices` lists four built-in voices: `lin` (female) and `chen` (male) for Chinese, `maple`
+and `sol` for English. The fallback is the first one for the language of the narration: `lin` or
+`maple`.
 
 The four are made from the model's 103 speakers. `maple` and `sol` are two of them as they are.
 `chen` and `lin` are each a Chinese speaker with a third of an English one mixed in, because the
@@ -131,18 +139,19 @@ model's own name for it, such as `"voice": "zf_001"`.
 
 ### Online voices
 
-The built-in voice is good and not great. For narration that sounds closer to a person, a script can
-name one of Microsoft's online neural voices, the ones behind Read Aloud in Edge:
+The built-in voice is good and not great. Microsoft's online neural voices, the ones behind Read
+Aloud in Edge, sound closer to a person, so they are the default. A script can also name one:
 
 ```json
-{ "drawcast": 1, "voice": "edge:en-US-EmmaMultilingualNeural", "steps": [] }
+{ "drawcast": 1, "voice": "edge:en-US-AvaMultilingualNeural", "steps": [] }
 ```
 
-or `drawcast render talk.drawcast.json --voice edge:zh-CN-XiaoxiaoNeural`. `drawcast voices` lists a
-few, and `edge-tts --list-voices` has them all. This is optional and works differently from the rest:
+or `drawcast render talk.drawcast.json --voice edge:zh-CN-YunxiNeural`. `drawcast voices` lists a
+few, and `edge-tts --list-voices` has them all. They work differently from the built-in voice:
 
-- It needs the [`edge-tts`](https://github.com/rany2/edge-tts) program (`pipx install edge-tts` or
-  `uv tool install edge-tts`) and a connection. The speech model is not downloaded for it.
+- They need the [`edge-tts`](https://github.com/rany2/edge-tts) program (`pipx install edge-tts` or
+  `uv tool install edge-tts`) and a connection. Without them, a script that names no voice falls back
+  to the built-in one.
 - The narration is sent to Microsoft. The built-in voice sends nothing anywhere.
 - Microsoft runs this service for its browser and does not offer it as an API, so it can change or
   stop without notice, and it comes with no licence to use the voices elsewhere. For something you

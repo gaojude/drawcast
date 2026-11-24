@@ -1,9 +1,10 @@
 /**
  * The voices. A voice says one sentence at a time and returns the audio.
  *
- * The built-in engine is Kokoro (run by sherpa-onnx, on the CPU), a small model with a fixed set of
- * speakers for Chinese and English. A voice named `edge:...` is one of Microsoft's online voices instead,
- * and `--tts-command` swaps the engine for any program that turns text into a WAV file.
+ * By default a script is spoken by one of Microsoft's online voices (`edge:...`), and by the built-in
+ * engine when that cannot be had. The built-in engine is Kokoro (run by sherpa-onnx, on the CPU), a small
+ * model with a fixed set of speakers for Chinese and English. `--tts-command` swaps the engine for any
+ * program that turns text into a WAV file.
  */
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -14,7 +15,7 @@ import os from "node:os";
 import path from "node:path";
 import { cacheDir } from "../paths.ts";
 import { isCjk } from "../shared/text.ts";
-import { EDGE_PREFIX, openEdgeVoice } from "./edge.ts";
+import { EDGE_PREFIX, EDGE_VOICES, openEdgeVoice } from "./edge.ts";
 import { type ModelFiles, ensureModels } from "./models.ts";
 import { normalize } from "./normalize.ts";
 import { type Dictionaries, parseDictionary, toTokens } from "./tokenize.ts";
@@ -25,6 +26,8 @@ export interface Voice {
   key: string;
   /** Gets ready to speak (loads the model). Returns the function that says one sentence. */
   open(): Promise<(sentence: string) => Promise<Audio>>;
+  /** The voice that says the whole script instead if this one cannot (no edge-tts, no connection). */
+  fallback?: Voice;
 }
 
 interface BuiltIn {
@@ -44,8 +47,9 @@ interface BuiltIn {
  * about three in four, and the Chinese stayed as clear.
  */
 const BUILT_IN: Record<string, BuiltIn> = {
-  chen: { speaker: "zm_061", mix: ["af_sol", 0.35], language: "zh", description: "Mandarin, male" },
+  // the first voice of each language is the one a script gets when its online voice cannot be had
   lin: { speaker: "zf_071", mix: ["af_maple", 0.35], language: "zh", description: "Mandarin, female" },
+  chen: { speaker: "zm_061", mix: ["af_sol", 0.35], language: "zh", description: "Mandarin, male" },
   maple: { speaker: "af_maple", language: "en", description: "American English, female" },
   sol: { speaker: "af_sol", language: "en", description: "American English, female, lower" },
 };
@@ -199,15 +203,26 @@ export interface VoiceOptions {
   log: (line: string) => void;
 }
 
+const edgeVoice = (name: string): Voice => ({ key: sha("edge", name), open: () => openEdgeVoice(name) });
+
+/**
+ * Left unset, a script gets the first online voice of its language, and the first built-in one if the
+ * online voice cannot speak. A voice the script names is used as it is, with nothing to fall back on.
+ */
 export async function resolveVoice(o: VoiceOptions): Promise<Voice> {
   if (o.ttsCommand) return commandVoice(o.ttsCommand);
   if (o.spec?.startsWith(EDGE_PREFIX)) {
     const name = o.spec.slice(EDGE_PREFIX.length).trim();
     if (!name) throw new Error(`"${EDGE_PREFIX}" needs the name of a voice after it, such as "${EDGE_PREFIX}en-US-EmmaMultilingualNeural".`);
-    return { key: sha("edge", name), open: () => openEdgeVoice(name) };
+    return edgeVoice(name);
   }
   const language = isCjk(o.narration) ? "zh" : "en";
-  const name = o.spec ?? Object.keys(BUILT_IN).find((v) => BUILT_IN[v].language === language)!;
+  if (!o.spec) {
+    const builtIn = Object.keys(BUILT_IN).find((v) => BUILT_IN[v].language === language)!;
+    const online = EDGE_VOICES.find((v) => v.language === language)!;
+    return { ...edgeVoice(online.name), fallback: await resolveVoice({ ...o, spec: builtIn }) };
+  }
+  const name = o.spec;
   // a built-in voice, or one of the model's speakers by its own name
   const voice = BUILT_IN[name] ?? (SPEAKERS.includes(name) ? { speaker: name } : undefined);
   if (!voice) throw new Error(`There is no voice called "${name}". Built-in voices: ${Object.keys(BUILT_IN).join(", ")}. Online voices start with "${EDGE_PREFIX}".`);

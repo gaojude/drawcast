@@ -22,7 +22,9 @@ too.
    voice, numbers and acronyms are written out, then English words are turned into phonemes and
    Chinese into syllables with the model's two pronunciation dictionaries. A word the English one
    lacks is built from words it has or read by spelling rules, and Chinese gets the tone changes of
-   connected speech. An `edge:` voice hands the sentence to the `edge-tts` program instead. `--speed`
+   connected speech. An `edge:` voice, the default, hands the sentence to the `edge-tts` program
+   instead; if that fails and the script named no voice, the whole script is spoken again by the
+   built-in voice. `--speed`
    changes the tempo of the finished audio, not the voice.
 3. **Schedule.** Each `at` phrase is located in its sentence. Sentence boundaries are exact; a word's
    position inside its sentence is estimated from syllable counts, which lands within about a quarter
