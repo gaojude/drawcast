@@ -1,6 +1,4 @@
 import { existsSync, readFileSync } from "node:fs";
-import { cp, mkdir } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { cacheDir, packageRoot } from "./paths.ts";
@@ -20,7 +18,6 @@ Usage
   drawcast render <script>            speak the narration and render the MP4
   drawcast voices                     list the voices
   drawcast setup                      download what rendering needs, and report what is installed
-  drawcast skill [--install]          where the agent skill is; --install copies it to ~/.claude/skills
 
 Options
   -o, --output <file>     where to write (default: the script's name with .mp4 or .png)
@@ -66,7 +63,6 @@ async function main(): Promise<number> {
       "tts-command": { type: "string" },
       at: { type: "string" },
       step: { type: "string" },
-      install: { type: "boolean" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
     },
@@ -98,16 +94,6 @@ async function main(): Promise<number> {
       console.log(`browser       ${browser ?? "missing: install Chrome, Chromium or Edge"}`);
       console.log(`ffmpeg        ${findFfmpeg() ?? "missing: install ffmpeg, or reinstall drawcast with install scripts allowed"}`);
       return browser && findFfmpeg() ? 0 : 1;
-    }
-
-    case "skill": {
-      const skill = path.join(packageRoot, "skills", "drawcast");
-      if (!values.install) return console.log(skill), 0;
-      const target = path.join(os.homedir(), ".claude", "skills", "drawcast");
-      await mkdir(path.dirname(target), { recursive: true });
-      await cp(skill, target, { recursive: true });
-      console.log(`Installed the skill to ${target}`);
-      return 0;
     }
 
     case "check":

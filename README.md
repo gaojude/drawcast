@@ -36,7 +36,27 @@ are shorter scripts in [`examples`](examples).
 
 ## Install
 
-Node.js 20 or newer.
+You do not run drawcast yourself; your coding agent does. So the way to install it is to ask the
+agent. Paste this into Claude Code, Codex, Cursor, Gemini CLI or any other agent that can run a shell
+command:
+
+```text
+Install the drawcast skill with `npx skills add gaojude/drawcast -g -y`, then make me a video explaining how DNS works.
+```
+
+After that, just ask for a video. [skills.sh](https://skills.sh) puts the skill where each agent on
+your machine looks for skills, and the skill runs the `drawcast` command through `npx`, so there is
+nothing else to install. It needs Node.js 20 or newer.
+
+To try it once without installing anything:
+
+```text
+Run `npx -y drawcast@latest guide`, then make me a video explaining how DNS works.
+```
+
+### By hand
+
+The command also works on its own:
 
 ```sh
 npm install -g drawcast
@@ -88,12 +108,13 @@ drawcast is a command-line program, and its skill is one Markdown file of instru
 [`skills/drawcast/SKILL.md`](skills/drawcast/SKILL.md). Nothing in either is specific to one agent.
 Any agent that can run a shell command can make a video:
 
-- **Claude Code:** `drawcast skill --install` copies the skill to `~/.claude/skills/drawcast`. This
-  repository is also a plugin, so its `skills` folder is picked up when the repository is installed
-  as one.
-- **An agent that reads skills from another folder:** `drawcast skill` prints where the skill is;
-  copy that folder to where your agent looks.
-- **Any other agent:** tell it to run `drawcast guide` and make a video of what you want explained.
+- **An agent that reads skills:** `npx skills add gaojude/drawcast` installs the skill for the agents
+  it finds, in this project, or for every project with `-g`. `-a <agent>` picks the agents. This is
+  the command the prompt under [Install](#install) has the agent run for you.
+- **Claude Code, as a plugin:** this repository is also a plugin, so its `skills` folder is picked up
+  when the repository is installed as one.
+- **Any other agent:** tell it to run `npx -y drawcast@latest guide` and make a video of what you
+  want explained.
 
 The skill only says what to run: read `drawcast guide`, write a script, `check`, `snapshot`,
 `render`. The format reference lives in the command, so the skill does not go out of date with it.

@@ -1,0 +1,115 @@
+{
+  "drawcast": 1,
+  "title": "How to use drawcast",
+  "voice": "edge:en-US-EmmaMultilingualNeural",
+  "steps": [
+    {
+      "say": "How do you use drawcast? You don't. Your coding agent does. Install the skill, ask for a video, and watch it.",
+      "do": [
+        { "at": 0, "duration": 0.7, "add": { "id": "title", "type": "text", "x": 640, "y": 60, "textAlign": "center", "text": "How to use drawcast", "fontSize": 84 } },
+        { "at": "Your coding agent", "duration": 0.8, "add": { "id": "tagline", "type": "text", "x": 640, "y": 205, "textAlign": "center", "text": "You don't run it. Your agent does.", "fontSize": 36, "strokeColor": "#868e96" } },
+        { "at": "Install", "duration": 0.4, "add": { "id": "card-1", "type": "rectangle", "x": 100, "y": 350, "width": 320, "height": 150, "label": "1 · Install", "fontSize": 40, "backgroundColor": "#d0bfff", "strokeColor": "#6741d9" } },
+        { "at": "ask", "duration": 0.4, "add": { "id": "card-2", "type": "rectangle", "x": 480, "y": 350, "width": 320, "height": 150, "label": "2 · Ask", "fontSize": 40, "backgroundColor": "#a5d8ff", "strokeColor": "#1971c2" } },
+        { "at": "watch", "duration": 0.4, "add": { "id": "card-3", "type": "rectangle", "x": 860, "y": 350, "width": 320, "height": 150, "label": "3 · Watch", "fontSize": 40, "backgroundColor": "#b2f2bb", "strokeColor": "#2f9e44" } }
+      ],
+      "pause": 0.3
+    },
+    {
+      "say": "Step one. No terminal needed. Paste one line into your coding agent, and it installs the skill for you. It works for Claude Code, Codex, Cursor, and many more. All you need is Node 20 or newer.",
+      "do": [
+        { "camera": { "x": 1400, "y": 0, "width": 1280 }, "duration": 0.6 },
+        { "at": "Step one", "add": { "id": "h-1", "type": "text", "x": 1470, "y": 40, "text": "1 · Ask your agent to install it", "fontSize": 40, "strokeColor": "#6741d9" } },
+        { "at": "Paste", "duration": 1.6, "add": { "id": "term", "type": "rectangle", "x": 1470, "y": 120, "width": 1140, "height": 84, "label": "“Install the drawcast skill: npx skills add gaojude/drawcast -g -y”", "fontSize": 26, "backgroundColor": "#d0bfff", "strokeColor": "#6741d9" } },
+        { "at": "Claude Code", "duration": 1.2, "add": { "id": "out", "type": "text", "x": 1470, "y": 224, "text": "→ Claude Code · Codex · Cursor · Gemini CLI · and more", "fontSize": 20, "strokeColor": "#868e96" } },
+        { "at": "Node", "enter": "fade", "add": { "id": "node", "type": "text", "x": 2610, "y": 224, "textAlign": "right", "text": "needs Node.js 20+", "fontSize": 20, "strokeColor": "#868e96" } }
+      ],
+      "pause": 0.3
+    },
+    {
+      "say": "The skill is a single Markdown file, about six hundred tokens. The program is not inside it. It only tells your agent which commands to run.",
+      "do": [
+        { "at": "single", "duration": 0.5, "add": { "id": "page", "type": "rectangle", "x": 1470, "y": 290, "width": 460, "height": 300, "backgroundColor": "#ffec99", "strokeColor": "#f08c00" } },
+        { "duration": 0.4, "add": { "id": "page-name", "type": "text", "x": 1495, "y": 306, "text": "SKILL.md", "fontSize": 28, "fontFamily": "code" } },
+        { "at": "six hundred", "enter": "fade", "add": { "id": "page-size", "type": "text", "x": 1495, "y": 545, "text": "one Markdown file · about 600 tokens", "fontSize": 18, "strokeColor": "#868e96" } },
+        { "at": "tells", "duration": 2.2, "add": { "id": "page-steps", "type": "text", "x": 1495, "y": 360, "text": "1. drawcast guide\n2. write a script\n3. drawcast check\n4. drawcast snapshot\n5. drawcast render", "fontSize": 24 } }
+      ],
+      "pause": 0.2
+    },
+    {
+      "say": "So where does the program come from? The skill takes care of that too. If drawcast is not installed, your agent runs it through npx, which downloads it from npm the first time.",
+      "do": [
+        { "at": "program", "duration": 0.5, "add": { "id": "cli", "type": "rectangle", "x": 2150, "y": 290, "width": 420, "height": 100, "label": "drawcast CLI", "fontSize": 30, "backgroundColor": "#a5d8ff", "strokeColor": "#1971c2" } },
+        { "at": "takes care", "duration": 0.5, "add": { "id": "runs", "type": "arrow", "from": "page", "to": "cli", "label": "runs" } },
+        { "at": "downloads", "duration": 0.4, "add": { "id": "npm", "type": "ellipse", "x": 2230, "y": 490, "width": 260, "height": 100, "label": "npm", "fontSize": 28, "backgroundColor": "#e9ecef", "strokeColor": "#868e96" } },
+        { "duration": 0.5, "add": { "id": "fetch", "type": "arrow", "from": "npm", "to": "cli", "strokeStyle": "dashed", "label": "npx, on first use" } }
+      ],
+      "pause": 0.4
+    },
+    {
+      "say": "Step two. Just ask. Open Claude Code and say: make a video explaining how DNS works.",
+      "do": [
+        { "camera": { "x": 2800, "y": 0, "width": 1280 }, "duration": 0.6 },
+        { "at": "Step two", "add": { "id": "h-2", "type": "text", "x": 2870, "y": 40, "text": "2 · Ask for a video", "fontSize": 40, "strokeColor": "#1971c2" } },
+        { "at": "say", "duration": 0.4, "add": { "id": "bubble", "type": "rectangle", "x": 2870, "y": 120, "width": 800, "height": 90, "label": "“Make a video explaining how DNS works”", "fontSize": 28, "backgroundColor": "#a5d8ff", "strokeColor": "#1971c2" } }
+      ],
+      "pause": 0.2
+    },
+    {
+      "say": "The skill kicks in. Your agent reads the guide, writes a script, checks the layout, looks at a snapshot, and renders. You get an MP4, drawn and narrated.",
+      "do": [
+        { "at": "kicks in", "enter": "fade", "add": { "id": "p-note", "type": "text", "x": 2870, "y": 250, "text": "the skill tells the agent what to run:", "fontSize": 22, "strokeColor": "#868e96" } },
+        { "at": "reads", "duration": 0.3, "add": { "id": "p1", "type": "rectangle", "x": 2870, "y": 320, "width": 190, "height": 80, "label": "guide", "fontSize": 24, "backgroundColor": "#e9ecef" } },
+        { "at": "writes", "duration": 0.3, "add": [
+          { "id": "p2", "type": "rectangle", "x": 3105, "y": 320, "width": 190, "height": 80, "label": "script", "fontSize": 24, "backgroundColor": "#e9ecef" },
+          { "id": "a12", "type": "arrow", "from": "p1", "to": "p2" }
+        ] },
+        { "at": "checks", "duration": 0.3, "add": [
+          { "id": "p3", "type": "rectangle", "x": 3340, "y": 320, "width": 190, "height": 80, "label": "check", "fontSize": 24, "backgroundColor": "#e9ecef" },
+          { "id": "a23", "type": "arrow", "from": "p2", "to": "p3" }
+        ] },
+        { "at": "looks", "duration": 0.3, "add": [
+          { "id": "p4", "type": "rectangle", "x": 3575, "y": 320, "width": 190, "height": 80, "label": "snapshot", "fontSize": 24, "backgroundColor": "#e9ecef" },
+          { "id": "a34", "type": "arrow", "from": "p3", "to": "p4" }
+        ] },
+        { "at": "renders", "duration": 0.3, "add": [
+          { "id": "p5", "type": "rectangle", "x": 3810, "y": 320, "width": 190, "height": 80, "label": "render", "fontSize": 24, "backgroundColor": "#e9ecef" },
+          { "id": "a45", "type": "arrow", "from": "p4", "to": "p5" }
+        ] },
+        { "at": "MP4", "duration": 0.4, "add": [
+          { "id": "mp4", "type": "rectangle", "x": 3780, "y": 480, "width": 250, "height": 90, "label": "dns.mp4", "fontSize": 28, "fontFamily": "code", "backgroundColor": "#b2f2bb", "strokeColor": "#2f9e44" },
+          { "id": "a5m", "type": "arrow", "from": "p5", "to": "mp4", "strokeColor": "#2f9e44" }
+        ] }
+      ],
+      "pause": 0.2
+    },
+    {
+      "say": "The very first render downloads a speech model. That happens once.",
+      "do": [
+        { "at": "downloads", "duration": 0.8, "add": { "id": "model", "type": "text", "x": 2870, "y": 510, "text": "First render only: downloads a 365 MB speech model", "fontSize": 22, "strokeColor": "#868e96" } }
+      ],
+      "pause": 0.4
+    },
+    {
+      "say": "Just want to try it first? Skip the install. Tell your agent to run the drawcast guide, then ask for your video. The guide has everything it needs, and it works in any agent that can run a command.",
+      "do": [
+        { "camera": { "x": 4200, "y": 0, "width": 1280 }, "duration": 0.6 },
+        { "at": "Just", "add": { "id": "h-3", "type": "text", "x": 4270, "y": 40, "text": "Just trying it? Install nothing", "fontSize": 40, "strokeColor": "#f08c00" } },
+        { "at": "Tell", "duration": 1.6, "add": { "id": "t-a", "type": "rectangle", "x": 4270, "y": 140, "width": 1140, "height": 120, "label": "“Run npx -y drawcast@latest guide,\nthen make me a video about …”", "fontSize": 28, "backgroundColor": "#ffec99", "strokeColor": "#f08c00" } },
+        { "at": "everything", "duration": 1, "add": { "id": "d-a", "type": "text", "x": 4270, "y": 320, "text": "the guide is the whole format, in one command", "fontSize": 26 } },
+        { "at": "any agent", "duration": 1, "add": { "id": "d-b", "type": "text", "x": 4270, "y": 380, "text": "works in any agent that can run a command", "fontSize": 26 } }
+      ],
+      "pause": 0.4
+    },
+    {
+      "say": "That's it. Install once, then just ask. This video was made the same way.",
+      "do": [
+        { "camera": { "x": 5600, "y": 0, "width": 1280 }, "duration": 0.6 },
+        { "duration": 0.7, "add": { "id": "end", "type": "text", "x": 6240, "y": 70, "textAlign": "center", "text": "Install once. Then just ask.", "fontSize": 60 } },
+        { "at": "Install once", "duration": 0.7, "add": { "id": "end-cmd", "type": "rectangle", "x": 5830, "y": 230, "width": 820, "height": 90, "label": "npx skills add gaojude/drawcast -g -y", "fontSize": 28, "fontFamily": "code", "backgroundColor": "#ffec99" } },
+        { "at": "just ask", "duration": 0.6, "add": { "id": "end-ask", "type": "text", "x": 6240, "y": 375, "textAlign": "center", "text": "“Make a video about …”", "fontSize": 36, "strokeColor": "#6741d9" } },
+        { "at": "This video", "duration": 0.4, "add": { "id": "end-link", "type": "text", "x": 6240, "y": 480, "textAlign": "center", "text": "github.com/gaojude/drawcast", "fontSize": 24, "fontFamily": "code", "strokeColor": "#868e96" } }
+      ],
+      "pause": 1.5
+    }
+  ]
+}
