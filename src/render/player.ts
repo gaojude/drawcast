@@ -35,6 +35,8 @@ export interface Player {
   info: LoadResult;
   /** PNG of the frame at `t`, or null when it equals the one before. */
   frame(t: number): Promise<Buffer | null>;
+  /** The Excalidraw elements on the canvas at `t`. */
+  elements(t: number): Promise<unknown[]>;
   close(): Promise<void>;
 }
 
@@ -63,6 +65,7 @@ export async function openPlayer(request: LoadRequest, log: (line: string) => vo
         const url = await page.evaluate((time) => drawcast.frame(time), t);
         return url ? Buffer.from(url.slice(url.indexOf(",") + 1), "base64") : null;
       },
+      elements: (t) => page.evaluate((time) => drawcast.elements(time), t),
     };
   } catch (e) {
     await close();

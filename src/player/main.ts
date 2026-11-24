@@ -193,6 +193,9 @@ async function frame(t: number): Promise<string | null> {
   return stage.toDataURL("image/png");
 }
 
-const api = { load, frame };
+/** The Excalidraw elements on the canvas at time `t`, as Excalidraw itself would save them. */
+const elements = (t: number): unknown[] => compiled.frameAt(t).elements as unknown[];
+
+const api = { load, frame, elements };
 export type PlayerApi = typeof api;
 (window as any).drawcast = api;
