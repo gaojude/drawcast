@@ -25,6 +25,7 @@ export interface PrepareRequest {
 export interface LoadResult {
   duration: number;
   stepStarts: number[];
+  stepEnds: number[];
 }
 
 const CAPTION_FONT = 'Nunito, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", Xiaolai, sans-serif';
@@ -202,8 +203,8 @@ function startOver(): void {
 function load(audio: (StepAudio | null)[]): LoadResult {
   if (audio.length !== request.script.steps.length) throw new Error(`The script has ${request.script.steps.length} steps, and audio came for ${audio.length}.`);
   startOver();
-  const { stepStarts, settled } = line.extend(audio);
-  return { duration: settled, stepStarts };
+  const { stepStarts, stepEnds, settled } = line.extend(audio);
+  return { duration: settled, stepStarts, stepEnds };
 }
 
 function drawPointer(g: CanvasRenderingContext2D, p: NonNullable<Frame["pointer"]>, view: Rect) {
@@ -262,9 +263,13 @@ function drawCaption(g: CanvasRenderingContext2D, text: string) {
   g.restore();
 }
 
-/** Paints the frame at time `t` on a surface. False when the surface shows that very picture already. */
-async function paint(s: Surface, t: number): Promise<boolean> {
-  const f = line.frameAt(t);
+/**
+ * Paints the frame at time `t` on a surface. False when the surface shows that very picture already.
+ * `bare` leaves the pointer and the caption out, which is how a cover shows the canvas.
+ */
+async function paint(s: Surface, t: number, bare = false): Promise<boolean> {
+  const at = line.frameAt(t);
+  const f = bare ? { ...at, pointer: null, caption: null } : at;
   const key = JSON.stringify([f.elements, f.view]);
   const overlay = JSON.stringify([f.pointer, f.caption]);
   if (key === s.boardKey && overlay === s.frameKey) return false;
@@ -284,8 +289,8 @@ async function paint(s: Surface, t: number): Promise<boolean> {
 }
 
 /** The frame at time `t` as a PNG data URL, or null when it is identical to the frame rendered before it. */
-async function frame(t: number): Promise<string | null> {
-  return (await paint(still, t)) ? still.stage.toDataURL("image/png") : null;
+async function frame(t: number, bare = false): Promise<string | null> {
+  return (await paint(still, t, bare)) ? still.stage.toDataURL("image/png") : null;
 }
 
 /** The Excalidraw elements on the canvas at time `t`, as Excalidraw itself would save them. */
@@ -613,12 +618,14 @@ function base64(bytes: Uint8Array): string {
 /**
  * Frames `first` to `first + count - 1` as H.264 (Annex B, in base64), starting with a key frame, so that
  * segments put end to end are one stream whichever lane made them. A lane takes one segment at a time.
+ * With `cover`, the first of these frames is the cover: the canvas at that time, in place of its own.
  */
-async function encodeSegment(index: number, first: number, count: number): Promise<string> {
+async function encodeSegment(index: number, first: number, count: number, cover?: number): Promise<string> {
   const lane = lanes[index];
   if (!lane) throw new Error("encoding has not been started");
   for (let i = first; i < first + count; i++) {
-    await paint(lane.surface, i / encodeFps);
+    if (i === first && cover !== undefined) await paint(lane.surface, cover, true);
+    else await paint(lane.surface, i / encodeFps);
     await push(lane, i, i === first);
   }
   return base64(await collect(lane, count));

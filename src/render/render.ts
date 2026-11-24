@@ -127,6 +127,8 @@ export interface Telling {
   readonly samples: number;
   /** the length of the video in seconds; null until the last step has been spoken */
   readonly duration: number | null;
+  /** the moment whose canvas is the cover; null until the step it shows has been spoken, and when there is no cover */
+  readonly cover: number | null;
   /**
    * Which telling this is. A voice that cannot go on hands the whole script to another, and the video
    * is then told again from the start: this goes up, nothing is settled any more, and whatever was made
@@ -145,9 +147,9 @@ export interface Telling {
 
 /**
  * Starts the narration (`narrate` is given who to report each step to), tells the page of the steps as
- * they arrive, and keeps account of what that settles.
+ * they arrive, and keeps account of what that settles. `cover` is the step (1-based) the cover shows.
  */
-export function tell(opening: Promise<Player>, script: Script, narrate: (listener: Listener) => Promise<unknown>, o: { fps: number; captions: boolean; log: Log }): Telling {
+export function tell(opening: Promise<Player>, script: Script, narrate: (listener: Listener) => Promise<unknown>, o: { fps: number; captions: boolean; cover?: number | null; log: Log }): Telling {
   let steps: (StepAudio | null)[] = [];
   let clips: (Audio | null)[] = [];
   const spoken = signal();
@@ -156,6 +158,7 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (listene
   let frames = 0;
   let samples = 0;
   let duration: number | null = null;
+  let cover: number | null = null;
   let round = 0;
   let failure: unknown = null;
 
@@ -172,7 +175,7 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (listene
       clips = [];
       stepStarts = [];
       frames = samples = 0;
-      duration = null;
+      duration = cover = null;
       spoken.fire();
       settled.fire();
     },
@@ -208,6 +211,8 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (listene
       frames = Math.ceil(schedule.settled * o.fps);
       samples = schedule.duration === null ? Math.floor(schedule.settled * SAMPLE_RATE) : Math.ceil(schedule.duration * SAMPLE_RATE);
       duration = schedule.duration;
+      // the canvas as that step ends, which is settled as soon as the step is scheduled
+      cover = o.cover ? (schedule.stepEnds[o.cover - 1] ?? null) : null;
       if (duration !== null) o.log(`Video: ${duration.toFixed(1)} s, ${frames} frames`);
       settled.fire();
     }
@@ -227,6 +232,9 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (listene
     },
     get duration() {
       return duration;
+    },
+    get cover() {
+      return cover;
     },
     get round() {
       return round;
@@ -255,12 +263,13 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (listene
  * The quick way to the file: the browser's own encoder makes the H.264 in the page, in segments that
  * several encoders share, and ffmpeg only wraps the result, taking the narration in as it is spoken.
  * A segment is made as soon as all of its frames are settled. `guess` is about how many frames there
- * will be, to choose the length of a segment before the length of the video is known.
+ * will be, to choose the length of a segment before the length of the video is known. With `cover`, the
+ * first frame is the telling's cover instead of the empty canvas.
  *
  * False when this browser cannot do it, and then the player is still open for the other way. Either way
  * closes the player once the frames are out.
  */
-export async function recordInBrowser(player: Player, telling: Telling, o: Output & { guess: number; log: Log }): Promise<boolean> {
+export async function recordInBrowser(player: Player, telling: Telling, o: Output & { guess: number; cover: boolean; log: Log }): Promise<boolean> {
   if (!browserMayEncode()) return false;
   // the page has been looking for its encoder since it opened
   const { encoder: info, tried } = await player.encoder().catch((e: Error) => ({ encoder: null, tried: [e.message.split("\n")[0]] }));
@@ -285,18 +294,25 @@ export async function recordInBrowser(player: Player, telling: Telling, o: Outpu
     // how long a segment is: a guess while the length of the video is unknown
     let size = segmentFrames(o.guess, o.fps, info.lanes);
     let sized = false;
+    // The cover is a segment of its own, the first frame alone. It shows the end of a step that may be
+    // spoken late, and the segments after it need not wait for that.
+    let covered = !o.cover;
     /** the frames of each segment handed out so far */
-    const counts: number[] = [];
-    let next = 0; // the first frame that is in no segment yet
+    const counts: number[] = o.cover ? [1] : [];
+    let next = counts.length; // the first frame that is in no segment yet
     const made = new Map<number, Buffer>();
     let written = 0;
     let done = 0;
     let report: ((done: number) => void) | undefined;
 
     /** The next segment to make, once every frame of it is settled; null when there are no more to make. */
-    const take = async (): Promise<{ index: number; first: number; count: number } | null> => {
+    const take = async (): Promise<{ index: number; first: number; count: number; cover?: number } | null> => {
       for (;;) {
         if (ended()) return null;
+        if (!covered && telling.cover !== null) {
+          covered = true;
+          return { index: 0, first: 0, count: 1, cover: telling.cover };
+        }
         const total = telling.duration === null ? null : telling.frames;
         if (total !== null) {
           if (next >= total) return null;
@@ -328,7 +344,7 @@ export async function recordInBrowser(player: Player, telling: Telling, o: Outpu
     };
     const work = async (lane: number) => {
       for (let segment; (segment = await take()); ) {
-        made.set(segment.index, await player.encodeSegment(lane, segment.first, segment.count));
+        made.set(segment.index, await player.encodeSegment(lane, segment.first, segment.count, segment.cover));
         await (writing = writing.then(write));
       }
     };
@@ -374,14 +390,18 @@ export async function recordInBrowser(player: Player, telling: Telling, o: Outpu
   }
 }
 
-/** The way that always works: every frame leaves the browser as a PNG and ffmpeg encodes the lot. */
-export async function recordWithFfmpeg(player: Player, o: Output & { audio: string; frames: number; log: Log }): Promise<void> {
+/**
+ * The way that always works: every frame leaves the browser as a PNG and ffmpeg encodes the lot. With
+ * `cover`, the first frame is the canvas at that time instead of the empty one.
+ */
+export async function recordWithFfmpeg(player: Player, o: Output & { audio: string; frames: number; cover: number | null; log: Log }): Promise<void> {
   const encoder = startEncoder(o);
   const report = progress(o.frames, o.log);
   try {
     let last: Buffer | null = null;
     for (let i = 0; i < o.frames; i++) {
-      last = (await player.frame(i / o.fps)) ?? last;
+      const cover = i === 0 && o.cover !== null;
+      last = (await (cover ? player.frame(o.cover!, true) : player.frame(i / o.fps))) ?? last;
       await encoder.write(last!);
       report(i + 1);
     }
@@ -413,6 +433,8 @@ export async function renderVideo(loaded: Loaded, o: RenderOptions): Promise<{ d
     log: o.log,
   });
   await mkdir(path.dirname(path.resolve(o.output)), { recursive: true });
+  // The first frame is a cover, the canvas as this step ends: the empty canvas makes a poor thumbnail.
+  const cover = script.cover === false ? null : (script.cover ?? 1);
   // The browser starts, and loads the page with its fonts and images, while the narration is spoken.
   const opening = openPlayer(await playerRequest(loaded, o.width, o.fps), o.log);
   opening.catch(() => {});
@@ -421,6 +443,7 @@ export async function renderVideo(loaded: Loaded, o: RenderOptions): Promise<{ d
   const telling = tell(opening, script, (listener) => narrate(script, voice, o.speed ?? script.speed ?? 1, o.log, listener), {
     fps: o.fps,
     captions: o.captions ?? script.captions ?? true,
+    cover,
     log: o.log,
   });
 
@@ -428,12 +451,12 @@ export async function renderVideo(loaded: Loaded, o: RenderOptions): Promise<{ d
   const audioFile = path.join(cacheDir(), "tmp", `narration-${process.pid}.wav`);
   try {
     const job = { output: o.output, fps: o.fps, log: o.log };
-    if (!(await recordInBrowser(player, telling, { ...job, guess: guessFrames(script, o.fps) }))) {
+    if (!(await recordInBrowser(player, telling, { ...job, guess: guessFrames(script, o.fps), cover: cover !== null }))) {
       // the slow way takes the narration whole, from a file
       const { duration, frames } = await telling.whole;
       await mkdir(path.dirname(audioFile), { recursive: true });
       await writeWav(audioFile, { samples: telling.sound(0, telling.samples), sampleRate: SAMPLE_RATE });
-      await recordWithFfmpeg(player, { ...job, audio: audioFile, frames });
+      await recordWithFfmpeg(player, { ...job, audio: audioFile, frames, cover: telling.cover });
     }
     return { duration: (await telling.whole).duration };
   } finally {
@@ -463,12 +486,11 @@ export async function renderSnapshot(loaded: Loaded, o: SnapshotOptions): Promis
   const player = await openPlayer(await playerRequest(loaded, o.width), o.log);
   try {
     const captions = loaded.script.captions ?? true;
-    const { duration, stepStarts } = await player.load(estimateNarration(loaded.script).steps.map((step) => timing(step, captions)));
+    const { duration, stepEnds } = await player.load(estimateNarration(loaded.script).steps.map((step) => timing(step, captions)));
     let at = Math.min(o.at ?? duration, duration);
     if (o.step !== undefined) {
-      if (o.step < 1 || o.step > stepStarts.length) throw new Error(`--step must be between 1 and ${stepStarts.length}.`);
-      // just before the next step begins, when this one's strokes have landed
-      at = o.step < stepStarts.length ? stepStarts[o.step] - 0.05 : duration;
+      if (o.step < 1 || o.step > stepEnds.length) throw new Error(`--step must be between 1 and ${stepEnds.length}.`);
+      at = stepEnds[o.step - 1];
     }
     const png = await player.frame(at);
     await mkdir(path.dirname(path.resolve(o.output)), { recursive: true });

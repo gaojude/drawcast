@@ -216,6 +216,7 @@ test("a voice that cannot start hands over before anything is reported, so nothi
 /** A player that schedules like the page does, but simply: a step lasts as long as its audio (a silent one a second), plus half a second. */
 function toyPlayer(steps) {
   let starts = [];
+  let ends = [];
   let at = 0.5;
   const player = {
     sent: [],
@@ -225,13 +226,16 @@ function toyPlayer(steps) {
       for (const a of audio) {
         starts.push(at);
         at += (a?.duration ?? 1) + 0.5;
+        ends.push(at - 0.05);
       }
       const duration = starts.length === steps ? at + 1 : null;
-      return { stepStarts: [...starts], settled: duration ?? at, duration };
+      if (duration !== null) ends[ends.length - 1] = duration;
+      return { stepStarts: [...starts], stepEnds: [...ends], settled: duration ?? at, duration };
     },
     async startOver() {
       player.startedOver++;
       starts = [];
+      ends = [];
       at = 0.5;
     },
   };
@@ -303,6 +307,44 @@ test("when the narration starts over in another voice, nothing is settled any mo
   listener.spoken(2, audioOf(1), tone(1, 0.125));
   await more;
   assert.deepEqual(await telling.whole, { duration: 9, frames: 90 });
+});
+
+test("the cover is known as soon as the step it shows is spoken", async () => {
+  const telling = (cover) => {
+    let listener;
+    const t = tell(Promise.resolve(toyPlayer(3)), script, (l) => new Promise(() => (listener = l)), { fps: 10, captions: true, cover, log: () => {} });
+    const hear = async (...steps) => {
+      const more = t.more();
+      for (const [index, seconds] of steps) listener.spoken(index, seconds && audioOf(seconds), seconds && tone(seconds, 0.5));
+      await more;
+    };
+    return { t, hear, listener: () => listener };
+  };
+
+  // the first step ends just before the second starts at 3 s, which is settled with the first step
+  const first = telling(1);
+  assert.equal(first.t.cover, null);
+  await first.hear([0, 2]);
+  assert.equal(first.t.cover, 2.95);
+  assert.ok(first.t.cover * 10 < first.t.frames, "the cover is of a moment that is settled");
+  // another voice starts over, and its first step ends elsewhere
+  const more = first.t.more();
+  first.listener().startOver();
+  await more;
+  assert.equal(first.t.cover, null);
+  await first.hear([0, 4]);
+  assert.equal(first.t.cover, 4.95);
+
+  // a later step's cover waits for that step, and the last step ends with the video
+  const last = telling(3);
+  await last.hear([0, 2]);
+  assert.equal(last.t.cover, null);
+  await last.hear([1, null], [2, 1]);
+  assert.deepEqual([last.t.cover, last.t.duration], [7, 7]);
+
+  const none = telling(null);
+  await none.hear([0, 2]);
+  assert.equal(none.t.cover, null);
 });
 
 test("a narration that fails stops the telling", async () => {
