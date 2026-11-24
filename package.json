@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "description": "Turn a narrated Excalidraw script into a video. Local text-to-speech, no screen recording.",
   "license": "MIT",
-  "repository": "github:gaojude/drawcast",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gaojude/drawcast.git"
+  },
   "type": "module",
   "bin": {
     "drawcast": "dist/cli.js"
