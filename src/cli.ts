@@ -8,6 +8,7 @@ import { findBrowser } from "./render/browser.ts";
 import { findFfmpeg } from "./render/encode.ts";
 import { ScriptError, loadScript, renderSnapshot, renderVideo } from "./render/render.ts";
 import { ensureModels, modelsDir, modelsInstalled } from "./voice/models.ts";
+import { EDGE_PREFIX, EDGE_VOICES, findEdgeTts } from "./voice/edge.ts";
 import { builtInVoices } from "./voice/voice.ts";
 
 const HELP = `drawcast: turn a narrated Excalidraw script into a video
@@ -17,13 +18,13 @@ Usage
   drawcast check <script>             find problems in a script without rendering it
   drawcast snapshot <script>          save one moment as a PNG, to look at the layout
   drawcast render <script>            speak the narration and render the MP4
-  drawcast voices                     list the built-in voices
+  drawcast voices                     list the voices
   drawcast setup                      download what rendering needs, and report what is installed
   drawcast skill [--install]          where the agent skill is; --install copies it to ~/.claude/skills
 
 Options
   -o, --output <file>     where to write (default: the script's name with .mp4 or .png)
-  --voice <name>          render: a built-in voice, instead of the script's
+  --voice <name>          render: a voice from "drawcast voices", instead of the script's
   --speed <n>             render: speaking rate, 1 = normal
   --no-captions           render: leave the captions out
   --fps <n>               render: frames per second (default 30)
@@ -80,10 +81,15 @@ async function main(): Promise<number> {
       process.stdout.write(readFileSync(path.join(packageRoot, "docs", "format.md"), "utf8"));
       return 0;
 
-    case "voices":
-      for (const [name, v] of Object.entries(builtInVoices())) console.log(`${name.padEnd(8)} ${v.language}  ${v.description}`);
+    case "voices": {
+      const width = Math.max(...EDGE_VOICES.map((v) => EDGE_PREFIX.length + v.name.length));
+      for (const [name, v] of Object.entries(builtInVoices())) console.log(`${name.padEnd(width)}  ${v.language}  ${v.description}`);
       console.log(`\nLeft unset, a script gets the first voice of its language. A script can also bring its own:\n  "voice": { "clip": "me.wav", "transcript": "the words spoken in me.wav" }`);
+      console.log(`\nOnline voices, from Microsoft. They sound more natural, send the narration to Microsoft, and need\nthe edge-tts program (${findEdgeTts() ? "installed" : 'not found: "pipx install edge-tts" or "uv tool install edge-tts"'}):`);
+      for (const v of EDGE_VOICES) console.log(`${(EDGE_PREFIX + v.name).padEnd(width)}  ${v.language}  ${v.description}`);
+      console.log(`"edge-tts --list-voices" lists the rest; put "${EDGE_PREFIX}" in front of a name.`);
       return 0;
+    }
 
     case "setup": {
       await ensureModels(log);

@@ -28,7 +28,9 @@ The first render downloads a speech model (about 180 MB), which can take a few m
 ## Notes
 
 - `drawcast voices` lists the voices. The script's `voice` picks one; by default the voice follows the
-  language of the narration.
+  language of the narration. The `edge:` voices in that list sound more natural but send the narration
+  to Microsoft and need the `edge-tts` program, so use one only when the user asks for an online or
+  better voice.
 - Rendering takes roughly as long as the video is. Speech is cached, so rendering again after changing
   only the drawing is faster.
 - If a command fails, read its message: it says what is missing. `drawcast setup` downloads everything

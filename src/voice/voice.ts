@@ -3,7 +3,8 @@
  *
  * The built-in engine is ZipVoice (run by sherpa-onnx, on the CPU), which speaks Chinese and English in
  * the manner of a short reference clip. The clips in `assets/voices` are the built-in voices; a script can
- * bring its own. `--tts-command` swaps the engine for any program that turns text into a WAV file.
+ * bring its own. A voice named `edge:...` is one of Microsoft's online voices instead, and `--tts-command`
+ * swaps the engine for any program that turns text into a WAV file.
  */
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -16,6 +17,7 @@ import { gunzipSync } from "node:zlib";
 import { cacheDir, packageRoot } from "../paths.ts";
 import { isCjk } from "../shared/text.ts";
 import type { VoiceSpec } from "../shared/types.ts";
+import { EDGE_PREFIX, openEdgeVoice } from "./edge.ts";
 import { ensureModels } from "./models.ts";
 import { normalize } from "./normalize.ts";
 import { type Dictionaries, parseDictionary, toTokens } from "./tokenize.ts";
@@ -147,10 +149,15 @@ export async function resolveVoice(o: VoiceOptions): Promise<Voice> {
     if (seconds < 2 || seconds > 15) throw new Error(`The voice clip is ${seconds.toFixed(1)} s long; use 3 to 10 seconds of clear speech.`);
     return zipVoice(clip, o.spec.transcript, o.log);
   }
+  if (o.spec?.startsWith(EDGE_PREFIX)) {
+    const name = o.spec.slice(EDGE_PREFIX.length).trim();
+    if (!name) throw new Error(`"${EDGE_PREFIX}" needs the name of a voice after it, such as "${EDGE_PREFIX}en-US-EmmaMultilingualNeural".`);
+    return { key: sha("edge", name), open: () => openEdgeVoice(name) };
+  }
   const voices = builtInVoices();
   const language = isCjk(o.narration) ? "zh" : "en";
   const name = o.spec ?? Object.keys(voices).find((v) => voices[v].language === language)!;
   const voice = voices[name];
-  if (!voice) throw new Error(`There is no voice called "${name}". Built-in voices: ${Object.keys(voices).join(", ")}.`);
+  if (!voice) throw new Error(`There is no voice called "${name}". Built-in voices: ${Object.keys(voices).join(", ")}. Online voices start with "${EDGE_PREFIX}".`);
   return zipVoice(await readWav(path.join(voicesDir, `${name}.wav`)), voice.transcript, o.log);
 }
