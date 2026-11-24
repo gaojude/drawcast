@@ -46,10 +46,11 @@ drawcast setup        # optional: download the speech model now instead of on th
 Rendering uses three things, and `drawcast setup` reports on each:
 
 - **A speech model**, about 365 MB, downloaded on first use to a cache folder.
-- **A Chromium-family browser** to draw the frames. An installed Chrome, Chromium or Edge is used;
-  if there is none, a headless Chrome is downloaded.
-- **ffmpeg**, which comes with the `ffmpeg-static` dependency. If your npm is set to skip install
-  scripts, install ffmpeg yourself or point `DRAWCAST_FFMPEG` at one.
+- **A Chromium-family browser** to draw the frames and encode the video. An installed Chrome,
+  Chromium or Edge is used; if there is none, a headless Chrome is downloaded. A browser built
+  without an H.264 encoder still works, several times more slowly.
+- **ffmpeg**, to put picture and sound in one file. It comes with the `ffmpeg-static` dependency. If
+  your npm is set to skip install scripts, install ffmpeg yourself or point `DRAWCAST_FFMPEG` at one.
 
 Nothing is sent anywhere: speech, drawing and encoding all happen locally. The one exception is
 opt-in: an [online voice](#online-voices), if a script asks for one.
@@ -73,7 +74,7 @@ start of a sentence exactly, a word inside a sentence to within about a quarter 
 `check` exists because whoever writes a script usually cannot see it. It catches references to
 elements that are not there, phrases the narration never says, shapes that half overlap, labels that
 will not fit and drawings hidden under the captions. `snapshot` renders a still in a second or two, with
-no speech, to look at the layout before spending a minute on the video.
+no speech, to look at the layout before rendering the video.
 
 ## With an agent
 

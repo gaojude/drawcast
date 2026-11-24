@@ -22,8 +22,9 @@ for (const file of process.argv.slice(2)) {
   const { script } = await loadScript(file);
   const narration = script.steps.map((s) => s.say ?? "").join(" ");
 
-  const player = await openPlayer({ script, images: {}, audio: estimateNarration(script).steps, output: { width: 1920, height: 1080 } }, () => {});
-  const elements = await player.elements(player.info.duration);
+  const player = await openPlayer({ script, images: {}, output: { width: 1920, height: 1080 } }, () => {});
+  const { duration } = await player.load(estimateNarration(script).steps);
+  const elements = await player.elements(duration);
   await player.close();
   // minified, which is the cheapest way to write it
   const scene = JSON.stringify({ type: "excalidraw", version: 2, source: "https://excalidraw.com", elements, appState: { viewBackgroundColor: "#ffffff" }, files: {} });

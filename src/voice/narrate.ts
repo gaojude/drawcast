@@ -6,7 +6,7 @@
  * the estimate within a fraction of a second.
  */
 import { existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import { mkdir, rename } from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { cacheDir } from "../paths.ts";
@@ -78,8 +78,19 @@ export function estimateNarration(script: Script): Narration {
   return { steps, clips: steps.map(() => null) };
 }
 
-/** `speed` is applied to the finished speech, so a sentence is spoken once whatever speeds it is played at. */
-export async function narrate(script: Script, voice: Voice, speed: number, log: (line: string) => void): Promise<Narration> {
+/**
+ * `speed` is applied to the finished speech, so a sentence is spoken once whatever speeds it is played at.
+ *
+ * `spoken` hears of each step as soon as it and every step before it are spoken, in order, which lets
+ * the start of a video be made while the rest of it is still being said.
+ */
+export async function narrate(
+  script: Script,
+  voice: Voice,
+  speed: number,
+  log: (line: string) => void,
+  spoken?: (index: number, step: StepAudio | null, clip: Audio | null) => void,
+): Promise<Narration> {
   const perStep = script.steps.map((step) => (step.say?.trim() ? sentences(step.say) : []));
   const all = [...new Set(perStep.flat())];
   const dir = path.join(cacheDir(), "speech", voice.key);
@@ -87,25 +98,57 @@ export async function narrate(script: Script, voice: Voice, speed: number, log: 
   const fileOf = (sentence: string) => path.join(dir, `${createHash("sha256").update(sentence).digest("hex").slice(0, 24)}.wav`);
 
   const missing = all.filter((s) => !existsSync(fileOf(s)));
-  if (missing.length) {
-    const say = await voice.open();
-    for (const [i, sentence] of missing.entries()) {
-      log(`  speaking ${i + 1}/${missing.length}: ${sentence.length > 60 ? `${sentence.slice(0, 57)}...` : sentence}`);
-      await writeWav(fileOf(sentence), trimSilence(await say(sentence)));
-    }
-  }
-
+  /** the sentences whose speech is in the cache */
+  const have = new Set(all.filter((s) => !missing.includes(s)));
   const clips: (Audio | null)[] = [];
   const steps: (StepAudio | null)[] = [];
-  for (const list of perStep) {
-    if (!list.length) {
-      clips.push(null);
-      steps.push(null);
-      continue;
+  /** Puts together the steps whose sentences are all there, in order, up to the first that is not. */
+  const assemble = async () => {
+    while (steps.length < perStep.length && perStep[steps.length].every((s) => have.has(s))) {
+      const list = perStep[steps.length];
+      const parts = await Promise.all(list.map(async (s) => changeTempo(resample(await readWav(fileOf(s)), SAMPLE_RATE), speed)));
+      clips.push(list.length ? concat(parts, SENTENCE_GAP) : null);
+      steps.push(list.length ? stepAudio(list.map((sentence, i) => ({ sentence, seconds: parts[i].samples.length / SAMPLE_RATE }))) : null);
+      spoken?.(steps.length - 1, steps[steps.length - 1], clips[clips.length - 1]);
     }
-    const parts = await Promise.all(list.map(async (s) => changeTempo(resample(await readWav(fileOf(s)), SAMPLE_RATE), speed)));
-    clips.push(concat(parts, SENTENCE_GAP));
-    steps.push(stepAudio(list.map((sentence, i) => ({ sentence, seconds: parts[i].samples.length / SAMPLE_RATE }))));
+  };
+  // one run after another: each takes up where the last one stopped
+  let assembling = Promise.resolve();
+  const more = () => {
+    assembling = assembling.then(assemble);
+    // a failure is reported where `assembling` is awaited, below
+    assembling.catch(() => {});
+  };
+  more();
+
+  if (missing.length) {
+    const say = await voice.open();
+    // Sentences do not depend on each other, so a voice that can says several at once.
+    let next = 0;
+    let failed = false;
+    const speak = async () => {
+      // once a sentence has failed the render is over, and no more are started
+      while (!failed && next < missing.length) {
+        const i = next++;
+        const sentence = missing[i];
+        log(`  speaking ${i + 1}/${missing.length}: ${sentence.length > 60 ? `${sentence.slice(0, 57)}...` : sentence}`);
+        try {
+          const audio = trimSilence(await say(sentence));
+          // written beside the target and renamed, so an interrupted render leaves no half a sentence in the cache
+          const part = `${fileOf(sentence)}.${process.pid}.part`;
+          await writeWav(part, audio);
+          await rename(part, fileOf(sentence));
+        } catch (e) {
+          failed = true;
+          throw e;
+        }
+        have.add(sentence);
+        more();
+      }
+    };
+    await Promise.all(Array.from({ length: Math.max(1, Math.min(voice.parallel ?? 1, missing.length)) }, speak));
   }
+
+  await assembling;
   return { steps, clips };
 }

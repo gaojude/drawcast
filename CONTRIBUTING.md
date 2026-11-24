@@ -18,7 +18,8 @@ too.
 ## How a script becomes a video
 
 1. **Check.** The script is validated, with layout estimated from the element sizes.
-2. **Speak.** Narration is split into sentences and each is synthesized and cached. For the built-in
+2. **Speak.** Narration is split into sentences and each is synthesized and cached, several at a time
+   when the machine has the cores for it. The browser of step 4 starts meanwhile. For the built-in
    voice, numbers and acronyms are written out, then English words are turned into phonemes and
    Chinese into syllables with the model's two pronunciation dictionaries. A word the English one
    lacks is built from words it has or read by spelling rules, and Chinese gets the tone changes of
@@ -26,12 +27,29 @@ too.
    changes the tempo of the finished audio, not the voice.
 3. **Schedule.** Each `at` phrase is located in its sentence. Sentence boundaries are exact; a word's
    position inside its sentence is estimated from syllable counts, which lands within about a quarter
-   of a second.
+   of a second. A step is scheduled as soon as it and the steps before it are spoken: where it falls
+   depends on their audio and its own, never on what comes after. So everything up to the start of
+   the next step is settled, and steps 4 and 5 work on that much while the rest is still being
+   spoken, which is the slowest part of a first render.
 4. **Draw.** A headless browser loads Excalidraw. Every element has a track of animated segments, so
    the canvas at any time is a pure function of that time; each frame is rendered with Excalidraw's
    own export and has the pointer and captions painted on top.
-5. **Encode.** Frames and the narration track are piped to ffmpeg: H.264 and AAC, 1920 x 1080 at 30
-   frames per second by default.
+5. **Encode.** The browser's own H.264 encoder (WebCodecs) takes each frame straight from the canvas,
+   so the pictures never leave the page. The video is cut into segments of a few seconds that each
+   start with a key frame, and two encoders share them; a segment is made once all of its frames are
+   settled. ffmpeg copies the finished H.264 into an MP4 beside the narration, which reaches it on a
+   second pipe as it settles and is encoded as AAC: 1920 x 1080 at 30 frames per second by default.
+
+   An encoder is tried before it is trusted: it is given a test card, the result is decoded again,
+   and the two are compared. Chrome's software encoder stretches a picture from the graphics card by
+   two pixels when the width is not a multiple of four, and an encoder may store colours in one range
+   and report another; neither says so. One that fails is passed over for the next (software first,
+   then whatever the machine has).
+
+   A browser with no encoder that passes (Chromium can be built without H.264) gets the slow way
+   instead, as does a render whose quick way fails partway: every frame leaves the page as a PNG and
+   ffmpeg encodes them with x264. That takes several times as long, most of it spent making PNGs.
+   `DRAWCAST_ENCODER=ffmpeg` forces it, to compare the two or to work around a misbehaving encoder.
 
 ## The token figures in the README
 

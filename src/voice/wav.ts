@@ -52,6 +52,13 @@ export async function readWav(file: string): Promise<Audio> {
   throw new Error(`${file} has no audio data.`);
 }
 
+/** Samples as 16-bit numbers, low byte first: what a WAV file holds, and what ffmpeg calls `s16le`. */
+export function pcm16(samples: Float32Array): Buffer {
+  const buf = Buffer.alloc(samples.length * 2);
+  for (let i = 0; i < samples.length; i++) buf.writeInt16LE(Math.round(Math.max(-1, Math.min(1, samples[i])) * 32767), i * 2);
+  return buf;
+}
+
 export function encodeWav({ samples, sampleRate }: Audio): Buffer {
   const buf = Buffer.alloc(44 + samples.length * 2);
   buf.write("RIFF", 0, "ascii");
@@ -66,7 +73,7 @@ export function encodeWav({ samples, sampleRate }: Audio): Buffer {
   buf.writeUInt16LE(16, 34);
   buf.write("data", 36, "ascii");
   buf.writeUInt32LE(samples.length * 2, 40);
-  for (let i = 0; i < samples.length; i++) buf.writeInt16LE(Math.round(Math.max(-1, Math.min(1, samples[i])) * 32767), 44 + i * 2);
+  pcm16(samples).copy(buf, 44);
   return buf;
 }
 
