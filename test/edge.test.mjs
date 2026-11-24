@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { resolveVoice } from "../src/voice/voice.ts";
 
-const resolve = (spec) => resolveVoice({ spec, baseDir: ".", narration: "hello", log: () => {} });
+const resolve = (spec) => resolveVoice({ spec, narration: "hello", log: () => {} });
 
 test("an edge: voice is an online voice, cached under its own name", async () => {
   const emma = await resolve("edge:en-US-EmmaMultilingualNeural");

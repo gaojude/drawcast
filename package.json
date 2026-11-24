@@ -13,7 +13,6 @@
   },
   "files": [
     "dist",
-    "assets",
     "docs",
     "skills",
     "examples",

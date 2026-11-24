@@ -87,10 +87,7 @@ export function check(input: unknown, baseDir: string): Report {
   if (script.drawcast !== 1) fail("script", `"drawcast" must be 1, the version of the format (got ${quote(script.drawcast)}).`);
   if (script.speed !== undefined && !(isNumber(script.speed) && script.speed >= 0.5 && script.speed <= 2)) fail("script", `"speed" must be between 0.5 and 2.`);
   if (script.captions !== undefined && typeof script.captions !== "boolean") fail("script", `"captions" must be true or false.`);
-  if (isObject(script.voice)) {
-    if (typeof script.voice.clip !== "string" || typeof script.voice.transcript !== "string") fail("voice", `a custom voice needs "clip" (a WAV file) and "transcript" (exactly what the clip says).`);
-    else if (!existsSync(path.resolve(baseDir, script.voice.clip))) fail("voice", `the clip ${quote(script.voice.clip)} was not found (paths are relative to the script).`);
-  } else if (script.voice !== undefined && typeof script.voice !== "string") fail("voice", "must be a voice name or { clip, transcript }.");
+  if (script.voice !== undefined && typeof script.voice !== "string") fail("voice", `must be a voice name from "drawcast voices". A voice made from a recording is no longer supported.`);
 
   const canvas = { ...DEFAULT_CANVAS, ...(isObject(script.canvas) ? script.canvas : {}) };
   if (script.canvas !== undefined) {

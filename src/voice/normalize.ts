@@ -79,14 +79,23 @@ const SYMBOLS: Record<string, [english: string, chinese: string]> = {
   "@": ["at", "at"],
 };
 
-const SUFFIXES: [suffix: string, phones: string][] = [
-  ["'s", "z"],
-  ["s", "z"],
-  ["es", "ɪ z"],
-  ["ed", "d"],
-  ["ing", "ɪ ŋ"],
-  ["ly", "l i"],
-  ["er", "ɚ"],
+const VOICELESS = new Set(["p", "t", "k", "f", "θ"]);
+const HISSING = new Set(["s", "z", "ʃ", "ʒ", "ʧ", "ʤ"]);
+
+/** What -s adds after a sound: boxes, bakes, runs. */
+const plural = (last: string) => (HISSING.has(last) ? "ᵻ z" : VOICELESS.has(last) ? "s" : "z");
+/** What -ed adds: narrated, baked, played. */
+const past = (last: string) => (last === "t" || last === "d" ? "ᵻ d" : VOICELESS.has(last) || HISSING.has(last) ? "t" : "d");
+
+/** An ending and the sounds it adds, given the last sound of the word it is added to. */
+const SUFFIXES: [suffix: string, phones: (last: string) => string][] = [
+  ["'s", plural],
+  ["s", plural],
+  ["es", plural],
+  ["ed", past],
+  ["ing", () => "ɪ ŋ"],
+  ["ly", () => "l i"],
+  ["er", () => "ə ɹ"],
 ];
 
 /** A pronunciation for a word the dictionary lacks, from the words it has. */
@@ -97,7 +106,7 @@ function derive(word: string, lexicon: Lexicon): string | null {
     // running -> run, baked -> bake
     for (const base of [stem, stem.replace(/(.)\1$/, "$1"), `${stem}e`]) {
       const known = lexicon.get(base);
-      if (known) return `${known} ${phones}`;
+      if (known) return `${known} ${phones(known.split(" ").at(-1)!)}`;
     }
   }
   // codebase -> code + base, readme -> read + me

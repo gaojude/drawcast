@@ -11,7 +11,7 @@ locally synthesized voice. You write the script; the `drawcast` command checks a
 ## Running the command
 
 Use `drawcast` if it is on the PATH, otherwise `npx -y drawcast@latest`. It needs Node.js 20 or newer.
-The first render downloads a speech model (about 180 MB), which can take a few minutes.
+The first render downloads a speech model (about 365 MB), which can take a few minutes.
 
 ## Steps
 

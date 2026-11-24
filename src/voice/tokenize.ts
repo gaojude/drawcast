@@ -1,19 +1,20 @@
 /**
- * Text -> the model's input tokens: IPA symbols for English, initials and finals for Chinese.
+ * Text -> the model's input tokens: phonemes for English, bopomofo with tone numbers for Chinese.
  *
- * sherpa-onnx can do this itself from a dictionary file, but it leaves out the space between English
- * words, which the model was trained with; without it words run into each other ("it asks a" comes out
- * as "it tasks a"). So the lookup is done here and the model gets finished tokens.
+ * sherpa-onnx can do this itself from the model's dictionaries, but it leaves out any English word they
+ * lack without saying so, and it has no tone changes for Chinese words they do not list. So the lookup
+ * is done here, where a missing word can be given a pronunciation first, and the model gets finished
+ * tokens.
  *
- * Its Chinese dictionary gives a word its spoken tones (你好 is ni2 hao3) but covers only the words it
+ * The Chinese dictionary gives a word its spoken tones (你好 is ni2 hao3) but covers only the words it
  * lists. Everything else is looked up character by character, and the tone changes inside a word are
- * worked out here. Only inside a word, because that is how the model's training text was marked.
+ * worked out here.
  */
 
 export interface Dictionaries {
-  /** English word -> IPA symbols */
+  /** English word -> phonemes, e.g. voice -> v ˈ Y s */
   english: Map<string, string[]>;
-  /** Chinese character or word -> initials and finals with tones, e.g. 你好 -> n i3 h ao3 */
+  /** Chinese character or word -> syllables that each end in a tone number, e.g. 你好 -> ㄋ ㄧ 2 ㄏ ㄠ 3 */
   chinese: Map<string, string[]>;
 }
 
@@ -31,31 +32,42 @@ const PUNCTUATION: Record<string, string> = { "，": ",", "、": ",", "；": ";"
 const PIECE = /[a-z]+(?:'[a-z]+)*|[㐀-鿿]+|[，、；：:。？！,.;?!]/g;
 /** The longest Chinese word worth looking up; longer dictionary entries are rare. */
 const MAX_WORD = 6;
+const VOWEL = /^[AIOWYaeiouæɐɑɔəɛɜɪʊʌᵊᵻ]/;
 
 export function toTokens(text: string, dict: Dictionaries): string[] {
+  const pieces = text.toLowerCase().match(PIECE) ?? [];
   const out: string[] = [];
   let before: "english" | "chinese" | null = null;
-  for (const piece of text.toLowerCase().match(PIECE) ?? []) {
+  pieces.forEach((piece, i) => {
     if (PUNCTUATION[piece]) {
       out.push(PUNCTUATION[piece]);
       before = null;
     } else if (piece.charCodeAt(0) < 128) {
-      const symbols = dict.english.get(piece);
-      if (!symbols) continue;
-      // The model's training text had a space where English follows English or Chinese, and none
-      // where Chinese follows English.
-      if (before) out.push(" ");
-      out.push(...symbols);
+      const phones = english(piece, pieces[i + 1], dict.english);
+      if (!phones) return;
+      // English words are a space apart, from each other and from the Chinese around them
+      if (out.length) out.push(" ");
+      out.push(...phones);
       before = "english";
     } else {
+      if (before === "english") out.push(" ");
       out.push(...chinese(piece, dict.chinese));
       before = "chinese";
     }
-  }
+  });
   return out;
 }
 
-/** One syllable: its tokens (an initial, if it has one, and a final that ends in the tone). */
+function english(word: string, next: string | undefined, words: Map<string, string[]>): string[] | undefined {
+  // "the" is "thee" before a vowel: the arrow, the end
+  if (word === "the") {
+    const first = next === undefined ? undefined : words.get(next)?.find((p) => p !== "ˈ" && p !== "ˌ");
+    if (first && VOWEL.test(first)) return ["ð", "i"];
+  }
+  return words.get(word);
+}
+
+/** One syllable: its tokens, the last of which is the tone. */
 interface Syllable {
   character: string;
   /** which word of the sentence it belongs to */
@@ -63,16 +75,21 @@ interface Syllable {
   tokens: string[];
   /** part of a dictionary word, whose tones are already the spoken ones */
   inWord: boolean;
+  /** the first character of a dictionary word */
+  startsWord: boolean;
 }
 
-const tone = (s: Syllable) => Number(s.tokens.at(-1)!.at(-1));
-const setTone = (s: Syllable, t: number) => (s.tokens[s.tokens.length - 1] = s.tokens.at(-1)!.slice(0, -1) + t);
+const tone = (s: Syllable) => Number(s.tokens.at(-1));
+const setTone = (s: Syllable, t: number) => (s.tokens[s.tokens.length - 1] = String(t));
 
-/** Characters whose commonest reading, when they stand alone, is not the dictionary's first. */
-const ALONE: Record<string, string[]> = { 长: ["ch0", "ang2"], 得: ["d0", "e5"], 地: ["d0", "e5"] };
+/** Characters whose commonest reading, when they stand alone, is not the dictionary's. */
+const ALONE: Record<string, string[]> = { 长: ["ㄔ", "ㄤ", "2"] };
 /** 一 keeps its first tone in a number or a date: before one of these, or after one of the others. */
 const AFTER_ONE = "二三四五六七八九零月日号";
 const BEFORE_ONE = "一二三四五六七八九零十百千万亿第";
+/** After one of these, 行 is a line being counted (hang2): 一行代码, 第三行, 这行. The dictionary has the verb (xing2). */
+const COUNTS_LINES = "一二两三四五六七八九十百千万几每多数这那";
+const LINE = ["ㄏ", "ㄤ", "2"];
 
 const segmenter = new Intl.Segmenter("zh", { granularity: "word" });
 
@@ -89,17 +106,25 @@ function chinese(run: string, words: Map<string, string[]>): string[] {
     while (length > 1 && !words.has(run.slice(i, i + length))) length--;
     const word = run.slice(i, i + length);
     const tokens = (length === 1 && ALONE[word]) || words.get(word) || [];
-    // a syllable ends at its final, which carries the tone
+    // a syllable ends at its tone
     let start = 0;
     let n = 0;
     tokens.forEach((token, at) => {
-      if (!/[1-5]$/.test(token)) return;
-      syllables.push({ character: word[n] ?? "", word: wordAt[i + n], tokens: tokens.slice(start, at + 1), inWord: length > 1 });
+      if (!/^[1-5]$/.test(token)) return;
+      syllables.push({ character: word[n] ?? "", word: wordAt[i + n], tokens: tokens.slice(start, at + 1), inWord: length > 1, startsWord: length > 1 && n === 0 });
       n++;
       start = at + 1;
     });
     i += length;
   }
+
+  syllables.forEach((s, i) => {
+    const [previous, next] = [syllables[i - 1]?.character, syllables[i + 1]?.character];
+    // not 行动, not 一行人, and not "这行吗"
+    if (s.character !== "行" || s.startsWord || !previous || !COUNTS_LINES.includes(previous) || next === "人") return;
+    if ("这那".includes(previous) && (!next || "不吗吧了的".includes(next))) return;
+    s.tokens = [...LINE];
+  });
 
   // Tone sandhi, for the words the dictionary does not list.
   const tones = syllables.map(tone);

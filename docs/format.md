@@ -36,7 +36,7 @@ Work in this loop:
 | `steps` | The list of steps, played in order. Required. |
 | `title` | A name for the video. Not drawn. |
 | `canvas` | `{ "width": 1280, "height": 720, "background": "#ffffff" }`, which is the default. |
-| `voice` | A voice name from `drawcast voices`, or `{ "clip": "me.wav", "transcript": "..." }` to speak in the voice of a 3 to 10 second recording. Default: the first built-in voice for the narration's language. A name starting with `edge:` is an online voice (see Narration). |
+| `voice` | A voice name from `drawcast voices`. Default: the first built-in voice for the narration's language. A name starting with `edge:` is an online voice (see Narration). |
 | `speed` | Speaking rate, 0.5 to 2. Default 1. |
 | `captions` | `false` leaves the narration out of the picture. Default `true`. |
 
@@ -198,8 +198,9 @@ Excalidraw's palette, which looks right together:
 - Numbers, percentages and years are read out. A short word in capitals (`API`, `DNS`, `JSON`) is
   spelled letter by letter; write it the way it sounds (`jason`) to have it read as a word. An English
   word the voice does not know is read by its spelling, which is usually close and sometimes wrong.
-- English inside a Chinese sentence is the voice's weak point: a word now and then comes out slurred.
-  Use few such words and common ones, or say the term in Chinese and write the English on the canvas.
+- English inside a Chinese sentence is less reliable than either language alone: about one such word
+  in four comes out unclear. Keep to common terms, or say the term in Chinese and write the English
+  on the canvas.
 - A word's time within its sentence is estimated, so an `at` lands within about a quarter of a second
   of the word. The start of each sentence is exact.
 - The built-in voices run on this machine. `"voice": "edge:en-US-EmmaMultilingualNeural"` (or

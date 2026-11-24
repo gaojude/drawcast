@@ -1,24 +1,21 @@
 /**
  * The voices. A voice says one sentence at a time and returns the audio.
  *
- * The built-in engine is ZipVoice (run by sherpa-onnx, on the CPU), which speaks Chinese and English in
- * the manner of a short reference clip. The clips in `assets/voices` are the built-in voices; a script can
- * bring its own. A voice named `edge:...` is one of Microsoft's online voices instead, and `--tts-command`
- * swaps the engine for any program that turns text into a WAV file.
+ * The built-in engine is Kokoro (run by sherpa-onnx, on the CPU), a small model with a fixed set of
+ * speakers for Chinese and English. A voice named `edge:...` is one of Microsoft's online voices instead,
+ * and `--tts-command` swaps the engine for any program that turns text into a WAV file.
  */
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
-import { mkdir, readFile, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
-import { gunzipSync } from "node:zlib";
-import { cacheDir, packageRoot } from "../paths.ts";
+import { cacheDir } from "../paths.ts";
 import { isCjk } from "../shared/text.ts";
-import type { VoiceSpec } from "../shared/types.ts";
 import { EDGE_PREFIX, openEdgeVoice } from "./edge.ts";
-import { ensureModels } from "./models.ts";
+import { type ModelFiles, ensureModels } from "./models.ts";
 import { normalize } from "./normalize.ts";
 import { type Dictionaries, parseDictionary, toTokens } from "./tokenize.ts";
 import { type Audio, readWav } from "./wav.ts";
@@ -31,34 +28,95 @@ export interface Voice {
 }
 
 interface BuiltIn {
+  /** the model's name for the speaker */
+  speaker: string;
+  /** another speaker mixed into this one, and how much of it */
+  mix?: [speaker: string, share: number];
   language: "zh" | "en";
   description: string;
-  transcript: string;
 }
 
-const voicesDir = path.join(packageRoot, "assets", "voices");
+/**
+ * The voices `drawcast voices` lists, made from the model's speakers.
+ *
+ * The model's Chinese speakers say English words poorly: in our tests a speech recogniser made out
+ * about half of those inside a Chinese sentence. With a third of an English speaker mixed in it made out
+ * about three in four, and the Chinese stayed as clear.
+ */
+const BUILT_IN: Record<string, BuiltIn> = {
+  chen: { speaker: "zm_061", mix: ["af_sol", 0.35], language: "zh", description: "Mandarin, male" },
+  lin: { speaker: "zf_071", mix: ["af_maple", 0.35], language: "zh", description: "Mandarin, female" },
+  maple: { speaker: "af_maple", language: "en", description: "American English, female" },
+  sol: { speaker: "af_sol", language: "en", description: "American English, female, lower" },
+};
 
-export const builtInVoices = (): Record<string, BuiltIn> => JSON.parse(readFileSync(path.join(voicesDir, "voices.json"), "utf8"));
+export const builtInVoices = (): Record<string, BuiltIn> => BUILT_IN;
 
-const sha = (...parts: (string | Uint8Array)[]) => parts.reduce((h, p) => h.update(p).update("\0"), createHash("sha256")).digest("hex").slice(0, 20);
+const numbered = (prefix: string, ids: number[]) => ids.map((n) => `${prefix}_${String(n).padStart(3, "0")}`);
+/** All of the model's speakers, in the order it numbers them. A script can name any of them. */
+export const SPEAKERS = [
+  "af_maple", "af_sol", "bf_vale",
+  ...numbered("zf", [1, 2, 3, 4, 5, 6, 7, 8, 17, 18, 19, 21, 22, 23, 24, 26, 27, 28, 32, 36, 38, 39, 40, 42, 43, 44, 46, 47, 48, 49, 51, 59, 60, 67, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 83, 84, 85, 86, 87, 88, 90, 92, 93, 94, 99]),
+  ...numbered("zm", [9, 10, 11, 12, 13, 14, 15, 16, 20, 25, 29, 30, 31, 33, 34, 35, 37, 41, 45, 50, 52, 53, 54, 55, 56, 57, 58, 61, 62, 63, 64, 65, 66, 68, 69, 80, 81, 82, 89, 91, 95, 96, 97, 98, 100]),
+];
 
-/** Sampling steps of the model: more is slower and a little cleaner. */
-const STEPS = 8;
+const sha = (...parts: string[]) => parts.reduce((h, p) => h.update(p).update("\0"), createHash("sha256")).digest("hex").slice(0, 20);
+
+/** The model's own speed is quick for narration, in English most of all. */
+const PACE = { zh: 1, en: 0.9 };
 /** Changed whenever the text is turned into tokens differently, so that cached speech is made again. */
-const TOKENS = "tokens-2";
+const TOKENS = "tokens-1";
+/** The model takes about 510 tokens at a time. A sentence is far shorter unless it has no commas at all. */
+const MAX_TOKENS = 480;
 
-async function dictionaries(chineseFile: string): Promise<Dictionaries> {
-  const english = gunzipSync(await readFile(path.join(packageRoot, "assets", "lexicon-en.txt.gz"))).toString("utf8");
-  return { english: parseDictionary(english), chinese: parseDictionary(await readFile(chineseFile, "utf8")) };
+async function dictionaries(model: ModelFiles): Promise<Dictionaries> {
+  const english = parseDictionary(await readFile(model.english, "utf8"));
+  // Letter names get entries of their own (ltra .. ltrz) for spelling out acronyms, which frees "a" to be
+  // the article. The dictionary gives both articles their stressed forms.
+  for (const letter of "abcdefghijklmnopqrstuvwxyz") english.set(`ltr${letter}`, english.get(letter) ?? []);
+  english.set("a", ["ɐ"]);
+  english.set("the", ["ð", "ə"]);
+  return { english, chinese: parseDictionary(await readFile(model.chinese, "utf8")) };
 }
 
-function zipVoice(clip: Audio, transcript: string, log: (line: string) => void): Voice {
-  const key = sha("zipvoice-distill-zh-en", TOKENS, String(STEPS), transcript, new Uint8Array(clip.samples.buffer, clip.samples.byteOffset, clip.samples.byteLength));
+/**
+ * Writes a copy of the model's speakers to `target` in which some are mixed with another one.
+ *
+ * To the model a speaker is a table of numbers, and a mix of two tables sounds like something between
+ * the two speakers. `mixes` maps a speaker to the one mixed into it and that one's share.
+ */
+export async function mixSpeakers(source: string, target: string, speakers: string[], mixes: Record<string, [speaker: string, share: number]>): Promise<void> {
+  const file = await readFile(source);
+  const floats = new Float32Array(file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength));
+  const size = floats.length / speakers.length;
+  if (!Number.isInteger(size)) throw new Error(`${source} does not hold ${speakers.length} speakers.`);
+  const of = (speaker: string) => floats.subarray(speakers.indexOf(speaker) * size, (speakers.indexOf(speaker) + 1) * size);
+  // every mix is made from the speakers as the model has them, whatever order they are written in
+  const mixed = Object.entries(mixes).map(([speaker, [other, share]]) => {
+    const added = of(other);
+    return [speaker, of(speaker).map((v, i) => v * (1 - share) + added[i] * share)] as const;
+  });
+  for (const [speaker, table] of mixed) of(speaker).set(table);
+  // write beside the target and rename, so an interrupted write is never mistaken for the finished file
+  await writeFile(`${target}.part`, Buffer.from(floats.buffer));
+  await rename(`${target}.part`, target);
+}
+
+const MIXES: Record<string, [speaker: string, share: number]> = Object.fromEntries(Object.values(BUILT_IN).flatMap((v) => (v.mix ? [[v.speaker, v.mix]] : [])));
+
+/** The speakers file with the built-in mixes in it, made the first time it is needed. */
+async function mixedSpeakers(model: ModelFiles): Promise<string> {
+  const target = path.join(path.dirname(model.voices), `voices-${sha(JSON.stringify(MIXES))}.bin`);
+  if (!existsSync(target)) await mixSpeakers(model.voices, target, SPEAKERS, MIXES);
+  return target;
+}
+
+function kokoro(speaker: string, mix: BuiltIn["mix"], log: (line: string) => void): Voice {
   return {
-    key,
+    key: sha("kokoro-v1.1", TOKENS, speaker, mix?.join(" ") ?? "", String(PACE.zh), String(PACE.en)),
     async open() {
       const model = await ensureModels(log);
-      const dict = await dictionaries(model.lexicon);
+      const dict = await dictionaries(model);
       const lexicon = { get: (word: string) => dict.english.get(word)?.join(" ") };
       const tokensOf = (text: string) => {
         const normalized = normalize(text, lexicon);
@@ -70,30 +128,31 @@ function zipVoice(clip: Audio, transcript: string, log: (line: string) => void):
       const sherpa = createRequire(import.meta.url)("sherpa-onnx-node");
       const tts = new sherpa.OfflineTts({
         model: {
-          zipvoice: { tokens: model.tokens, encoder: model.encoder, decoder: model.decoder, vocoder: model.vocoder, lexicon: model.lexicon },
+          kokoro: { model: model.model, voices: mix ? await mixedSpeakers(model) : model.voices, tokens: model.tokens },
           numThreads: Math.max(1, Math.min(8, os.availableParallelism() - 1)),
           provider: "cpu",
         },
       });
-      const reference = tokensOf(transcript);
+      if (tts.numSpeakers !== SPEAKERS.length) throw new Error(`The speech model in ${path.dirname(model.model)} is not the one drawcast expects. Delete that folder and try again.`);
+      const sid = SPEAKERS.indexOf(speaker);
 
       return async (sentence) => {
         const tokens = tokensOf(sentence);
         if (!tokens.some((t) => /[^,.;?! ]/.test(t))) throw new Error(`There is nothing the voice can say in: "${sentence}"`);
+        const speed = PACE[isCjk(sentence) ? "zh" : "en"];
         const out = await tts.generateAsync({
           text: "",
-          sid: 0,
-          speed: 1,
+          sid,
+          speed,
           enableExternalBuffer: false,
           generationConfig: new sherpa.GenerationConfig({
-            referenceAudio: clip.samples,
-            referenceSampleRate: clip.sampleRate,
-            referenceText: transcript,
-            numSteps: STEPS,
-            // the engine garbles speech when asked to go faster, so speed is applied afterwards
-            speed: 1,
-            // the first list is the clip's transcript, the second what to say
-            tokens: [reference, tokens],
+            sid,
+            speed,
+            tokens: [tokens],
+            // left alone, the engine shortens every pause to a fifth
+            silenceScale: 1,
+            // and says each clause on its own; a sentence sounds better said whole
+            extra: { min_words_in_sentence: tokens.length <= MAX_TOKENS ? MAX_TOKENS : 5 },
           }),
         });
         if (!out.samples?.length) throw new Error(`The voice could not say: "${sentence}"`);
@@ -102,6 +161,7 @@ function zipVoice(clip: Audio, transcript: string, log: (line: string) => void):
     },
   };
 }
+
 /** A voice that runs a program: the text arrives on stdin, and the program writes a WAV to $DRAWCAST_OUT. */
 function commandVoice(command: string): Voice {
   return {
@@ -132,9 +192,7 @@ function commandVoice(command: string): Voice {
 
 export interface VoiceOptions {
   /** the script's `voice`, or the `--voice` flag */
-  spec?: VoiceSpec;
-  /** the folder the script is in; a voice clip's path is relative to it */
-  baseDir: string;
+  spec?: string;
   /** everything the script says, to pick a voice by language */
   narration: string;
   ttsCommand?: string;
@@ -143,21 +201,15 @@ export interface VoiceOptions {
 
 export async function resolveVoice(o: VoiceOptions): Promise<Voice> {
   if (o.ttsCommand) return commandVoice(o.ttsCommand);
-  if (typeof o.spec === "object") {
-    const clip = await readWav(path.resolve(o.baseDir, o.spec.clip));
-    const seconds = clip.samples.length / clip.sampleRate;
-    if (seconds < 2 || seconds > 15) throw new Error(`The voice clip is ${seconds.toFixed(1)} s long; use 3 to 10 seconds of clear speech.`);
-    return zipVoice(clip, o.spec.transcript, o.log);
-  }
   if (o.spec?.startsWith(EDGE_PREFIX)) {
     const name = o.spec.slice(EDGE_PREFIX.length).trim();
     if (!name) throw new Error(`"${EDGE_PREFIX}" needs the name of a voice after it, such as "${EDGE_PREFIX}en-US-EmmaMultilingualNeural".`);
     return { key: sha("edge", name), open: () => openEdgeVoice(name) };
   }
-  const voices = builtInVoices();
   const language = isCjk(o.narration) ? "zh" : "en";
-  const name = o.spec ?? Object.keys(voices).find((v) => voices[v].language === language)!;
-  const voice = voices[name];
-  if (!voice) throw new Error(`There is no voice called "${name}". Built-in voices: ${Object.keys(voices).join(", ")}. Online voices start with "${EDGE_PREFIX}".`);
-  return zipVoice(await readWav(path.join(voicesDir, `${name}.wav`)), voice.transcript, o.log);
+  const name = o.spec ?? Object.keys(BUILT_IN).find((v) => BUILT_IN[v].language === language)!;
+  // a built-in voice, or one of the model's speakers by its own name
+  const voice = BUILT_IN[name] ?? (SPEAKERS.includes(name) ? { speaker: name } : undefined);
+  if (!voice) throw new Error(`There is no voice called "${name}". Built-in voices: ${Object.keys(BUILT_IN).join(", ")}. Online voices start with "${EDGE_PREFIX}".`);
+  return kokoro(voice.speaker, voice.mix, o.log);
 }

@@ -103,14 +103,12 @@ export interface Step {
   duration?: number;
 }
 
-export type VoiceSpec = string | { clip: string; transcript: string };
-
 export interface Script {
   drawcast: 1;
   title?: string;
   canvas?: { width?: number; height?: number; background?: string };
-  /** A built-in voice name, or a short clip of a voice to imitate. */
-  voice?: VoiceSpec;
+  /** A voice name from `drawcast voices`. */
+  voice?: string;
   /** Speaking rate, 1 = normal. */
   speed?: number;
   /** Burn the narration into the picture as captions (default true). */

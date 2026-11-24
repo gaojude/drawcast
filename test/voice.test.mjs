@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { test } from "node:test";
 import { guess } from "../src/voice/guess.ts";
 import { normalize } from "../src/voice/normalize.ts";
 import { parseDictionary, toTokens } from "../src/voice/tokenize.ts";
+import { mixSpeakers, resolveVoice } from "../src/voice/voice.ts";
 import { changeTempo, encodeWav, resample, trimSilence } from "../src/voice/wav.ts";
 
 // a dictionary that knows every word but these, and "pronounces" a word as itself
@@ -35,39 +39,94 @@ test("an unknown word is built from known ones, read by its spelling, or spelled
   assert.equal(out.entries.get("kafka"), "k ˈ æ f k ə");
 });
 
+test("an ending takes its sound from the one before it", () => {
+  const words = new Map([["narrate", "n ˈ ɛ ɹ ˌ A t"], ["bake", "b ˈ A k"], ["play", "p l ˈ A"], ["box", "b ˈ ɑ k s"]]);
+  const { entries } = normalize("narrated, baked, played, boxes, bakes, plays", { get: (word) => words.get(word) });
+  assert.equal(entries.get("narrated"), "n ˈ ɛ ɹ ˌ A t ᵻ d");
+  assert.equal(entries.get("baked"), "b ˈ A k t");
+  assert.equal(entries.get("played"), "p l ˈ A d");
+  assert.equal(entries.get("boxes"), "b ˈ ɑ k s ᵻ z");
+  assert.equal(entries.get("bakes"), "b ˈ A k s");
+  assert.equal(entries.get("plays"), "p l ˈ A z");
+});
+
 test("spelling rules give a recognisable reading", () => {
   const read = (word) => guess(word)?.replaceAll(" ", "");
   assert.equal(read("redis"), "ɹˈɛdɪs");
-  assert.equal(read("ubuntu"), "uːbˈʌntuː");
-  assert.equal(read("vite"), "vˈaɪt");
-  assert.equal(read("tokio"), "tˈoʊkioʊ");
-  assert.equal(read("vercel"), "vˈɜːsɛl");
+  assert.equal(read("ubuntu"), "ubˈʌntu");
+  assert.equal(read("vite"), "vˈIt");
+  assert.equal(read("tokio"), "tˈOkiO");
+  assert.equal(read("vercel"), "vˈɜɹsɛl");
   assert.equal(read("grpc"), undefined);
 });
 
-test("tokens keep a space between English words and none around Chinese", () => {
+test("tokens put a space around English words and none inside Chinese", () => {
   const dict = {
-    english: parseDictionary("it ɪ t\nasks æ s k s\nreact ɹ i æ k t"),
-    chinese: parseDictionary("银 y in2\n行 x ing2\n银行 y in2 h ang2\n用 y ong4"),
+    english: parseDictionary("it ɪ t\nasks æ s k s\nreact ɹ i ˈ æ k t\nthe ð ə\narrow ˈ ɛ ɹ O\nserver s ˈ ɜ ɹ v ə ɹ"),
+    chinese: parseDictionary("银 阴 2\n行 ㄒ 应 2\n银行 阴 2 ㄏ ㄤ 2\n用 用 4"),
   };
   assert.deepEqual(toTokens("It asks.", dict), ["ɪ", "t", " ", "æ", "s", "k", "s", "."]);
-  assert.deepEqual(toTokens("银行用 react，行", dict), ["y", "in2", "h", "ang2", "y", "ong4", " ", "ɹ", "i", "æ", "k", "t", ",", "x", "ing2"]);
-  assert.deepEqual(toTokens("react用", dict), ["ɹ", "i", "æ", "k", "t", "y", "ong4"]);
+  assert.deepEqual(toTokens("银行用 react，行", dict), ["阴", "2", "ㄏ", "ㄤ", "2", "用", "4", " ", "ɹ", "i", "ˈ", "æ", "k", "t", ",", "ㄒ", "应", "2"]);
+  assert.deepEqual(toTokens("react用", dict), ["ɹ", "i", "ˈ", "æ", "k", "t", " ", "用", "4"]);
+  // a word the dictionary lacks is left out, which is why normalize() gives every word an entry first
+  assert.deepEqual(toTokens("it plugh asks", dict), ["ɪ", "t", " ", "æ", "s", "k", "s"]);
+  // "the" is "thee" before a vowel
+  assert.equal(toTokens("the arrow, the server", dict).join(""), "ði ˈɛɹO, ðə sˈɜɹvəɹ");
 });
 
 test("tones change inside a word as they do in speech", () => {
-  const chinese = parseDictionary("所 s0 uo3\n以 y0 i3\n我 w0 o3\n一 y0 i1\n下 x0 ia4\n百 b0 ai3\n月 y0 ue4\n不 b0 u4\n对 d0 ui4\n行 x0 ing2\n你好 n0 i2 h0 ao3\n地 d0 i4\n走 z0 ou3\n里 l0 i3\n找 zh0 ao3");
-  const tones = (text) => toTokens(text, { english: new Map(), chinese }).filter((t) => /[1-5]$/.test(t)).join(" ");
+  const chinese = parseDictionary("所 ㄙ 我 3\n以 ㄧ 3\n我 我 3\n一 ㄧ 1\n下 ㄒ 压 4\n百 ㄅ ㄞ 3\n月 月 4\n不 ㄅ ㄨ 4\n对 ㄉ 为 4\n行 ㄒ 应 2\n你好 ㄋ ㄧ 2 ㄏ ㄠ 3\n长 ㄓ ㄤ 3\n里 ㄌ ㄧ 3\n找 ㄓ ㄠ 3");
+  const say = (text) => toTokens(text, { english: new Map(), chinese });
+  const tones = (text) => say(text).filter((t) => /^[1-5]$/.test(t)).join(" ");
   // two third tones in a row: the first rises
-  assert.equal(tones("所以"), "uo2 i3");
-  assert.equal(tones("你好"), "i2 ao3");
+  assert.equal(tones("所以"), "2 3");
+  assert.equal(tones("你好"), "2 3");
   // but not from one word to the next
-  assert.equal(tones("里，找"), "i3 ao3");
+  assert.equal(tones("里，找"), "3 3");
   // 一 and 不 rise before a fourth tone; 一 falls before any other, and stays level in a date
-  assert.equal(tones("一下，一百，一月"), "i2 ia4 i4 ai3 i1 ue4");
-  assert.equal(tones("不对，不行"), "u2 ui4 u4 ing2");
-  // 地 on its own is the particle
-  assert.equal(tones("走地"), "ou3 e5");
+  assert.equal(tones("一下，一百，一月"), "2 4 4 3 1 4");
+  assert.equal(tones("不对，不行"), "2 4 4 2");
+  // 长 on its own is "long", not "to grow"
+  assert.deepEqual(say("长"), ["ㄔ", "ㄤ", "2"]);
+});
+
+test("行 is a line when lines are counted, and the verb otherwise", () => {
+  const chinese = parseDictionary("一 ㄧ 1\n行 ㄒ 应 2\n一行 ㄧ 4 ㄒ 应 2\n不行 ㄅ ㄨ 4 ㄒ 应 2\n行动 ㄒ 应 2 ㄉ 用 4\n这 ㄓ ㄜ 4\n几 ㄐ ㄧ 3\n代 ㄉ ㄞ 4\n人 ㄖ ㄣ 2\n吗 ㄇ ㄚ 5");
+  const reading = (text) => toTokens(text, { english: new Map(), chinese }).join("");
+  assert.equal(reading("一行代"), "ㄧ4ㄏㄤ2ㄉㄞ4");
+  assert.equal(reading("几行"), "ㄐㄧ3ㄏㄤ2");
+  assert.equal(reading("这行代"), "ㄓㄜ4ㄏㄤ2ㄉㄞ4");
+  assert.equal(reading("不行"), "ㄅㄨ4ㄒ应2");
+  assert.equal(reading("一行人"), "ㄧ4ㄒ应2ㄖㄣ2");
+  assert.equal(reading("这行动"), "ㄓㄜ4ㄒ应2ㄉ用4");
+  assert.equal(reading("这行吗"), "ㄓㄜ4ㄒ应2ㄇㄚ5");
+});
+
+test("a voice is a built-in name or one of the model's speakers", async () => {
+  const resolve = (spec, narration = "Hello.") => resolveVoice({ spec, narration, log: () => {} });
+  // left unset, it follows the language of the narration
+  assert.equal((await resolve(undefined, "你好。")).key, (await resolve("chen")).key);
+  assert.equal((await resolve(undefined)).key, (await resolve("maple")).key);
+  // maple is a name for the speaker af_maple; chen is zm_061 with another speaker mixed in
+  assert.equal((await resolve("maple")).key, (await resolve("af_maple")).key);
+  assert.notEqual((await resolve("chen")).key, (await resolve("zm_061")).key);
+  assert.notEqual((await resolve("chen")).key, (await resolve("lin")).key);
+  await assert.rejects(resolve("nobody"), /no voice called "nobody"/);
+});
+
+test("mixing speakers blends their tables and leaves the others alone", async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "drawcast-"));
+  try {
+    const [source, target] = [path.join(dir, "voices.bin"), path.join(dir, "mixed.bin")];
+    // three speakers of two numbers each
+    writeFileSync(source, Buffer.from(Float32Array.of(0, 0, 8, 4, 100, 100).buffer));
+    await mixSpeakers(source, target, ["a", "b", "c"], { a: ["b", 0.25], b: ["a", 0.5] });
+    const out = readFileSync(target);
+    assert.deepEqual([...new Float32Array(out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength))], [2, 1, 4, 2, 100, 100]);
+    await assert.rejects(mixSpeakers(source, target, ["a", "b", "c", "d"], {}), /does not hold 4 speakers/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("wav helpers", () => {

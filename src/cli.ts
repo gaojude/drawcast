@@ -9,7 +9,7 @@ import { findFfmpeg } from "./render/encode.ts";
 import { ScriptError, loadScript, renderSnapshot, renderVideo } from "./render/render.ts";
 import { ensureModels, modelsDir, modelsInstalled } from "./voice/models.ts";
 import { EDGE_PREFIX, EDGE_VOICES, findEdgeTts } from "./voice/edge.ts";
-import { builtInVoices } from "./voice/voice.ts";
+import { SPEAKERS, builtInVoices } from "./voice/voice.ts";
 
 const HELP = `drawcast: turn a narrated Excalidraw script into a video
 
@@ -84,7 +84,7 @@ async function main(): Promise<number> {
     case "voices": {
       const width = Math.max(...EDGE_VOICES.map((v) => EDGE_PREFIX.length + v.name.length));
       for (const [name, v] of Object.entries(builtInVoices())) console.log(`${name.padEnd(width)}  ${v.language}  ${v.description}`);
-      console.log(`\nLeft unset, a script gets the first voice of its language. A script can also bring its own:\n  "voice": { "clip": "me.wav", "transcript": "the words spoken in me.wav" }`);
+      console.log(`\nLeft unset, a script gets the first voice of its language. The model has ${SPEAKERS.length} speakers and these are\nnames for four of them; any other works by its own name, such as zf_001 or zm_100:\n  https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh/tree/main/voices`);
       console.log(`\nOnline voices, from Microsoft. They sound more natural, send the narration to Microsoft, and need\nthe edge-tts program (${findEdgeTts() ? "installed" : 'not found: "pipx install edge-tts" or "uv tool install edge-tts"'}):`);
       for (const v of EDGE_VOICES) console.log(`${(EDGE_PREFIX + v.name).padEnd(width)}  ${v.language}  ${v.description}`);
       console.log(`"edge-tts --list-voices" lists the rest; put "${EDGE_PREFIX}" in front of a name.`);

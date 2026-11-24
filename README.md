@@ -45,7 +45,7 @@ drawcast setup        # optional: download the speech model now instead of on th
 
 Rendering uses three things, and `drawcast setup` reports on each:
 
-- **A speech model**, about 180 MB, downloaded on first use to a cache folder.
+- **A speech model**, about 365 MB, downloaded on first use to a cache folder.
 - **A Chromium-family browser** to draw the frames. An installed Chrome, Chromium or Edge is used;
   if there is none, a headless Chrome is downloaded.
 - **ffmpeg**, which comes with the `ffmpeg-static` dependency. If your npm is set to skip install
@@ -97,9 +97,9 @@ A script says what to draw and leaves how to the renderer, so there is little of
 
 | Script | Video | The script | Its finished canvas as an Excalidraw scene |
 | --- | --- | --- | --- |
-| [`examples/cache.drawcast.json`](examples/cache.drawcast.json) | 18 s | 549 tokens | about 2,000 |
-| [`examples/dns.drawcast.json`](examples/dns.drawcast.json) | 27 s | 716 tokens | about 2,550 |
-| [`examples/binary-search.drawcast.json`](examples/binary-search.drawcast.json) | 27 s | 685 tokens | about 1,260 |
+| [`examples/cache.drawcast.json`](examples/cache.drawcast.json) | 16 s | 549 tokens | about 2,000 |
+| [`examples/dns.drawcast.json`](examples/dns.drawcast.json) | 23 s | 716 tokens | about 2,550 |
+| [`examples/binary-search.drawcast.json`](examples/binary-search.drawcast.json) | 25 s | 685 tokens | about 1,260 |
 | [`promo/promo.en.drawcast.json`](promo/promo.en.drawcast.json) | 68 s | 5,995 tokens | about 16,800 |
 
 The last column is the canvas as it stands when the video ends, saved the way Excalidraw saves a
@@ -117,17 +117,17 @@ the repository and run `npm install && npm run build && node scripts/measure-tok
 
 ## Voices
 
-The built-in voice is [ZipVoice](https://github.com/k2-fsa/ZipVoice), run on the CPU by
-[sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). It speaks Mandarin, English, and sentences that
-mix the two, at about real-time speed on a laptop CPU. It imitates a short reference clip, and that is
-all a drawcast voice is:
+The built-in voice is [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh), a small speech
+model run on the CPU by [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). It speaks Mandarin and
+English several times faster than real time on a laptop, and the model is Apache-2.0 licensed.
 
-- The four built-in voices are synthetic clips, generated with Kokoro. No real person's voice is
-  included.
-- A script can narrate in any voice from a 3 to 10 second recording of it:
-  `"voice": { "clip": "me.wav", "transcript": "exactly what the clip says" }`. A lively clip gives
-  lively narration; the model follows the clip's pace and intonation. Only use voices you have the
-  right to use.
+`drawcast voices` lists four voices: `chen` and `lin` for Chinese, `maple` and `sol` for English. Left
+unset, a script gets the first one for the language of its narration.
+
+The four are made from the model's 103 speakers. `maple` and `sol` are two of them as they are.
+`chen` and `lin` are each a Chinese speaker with a third of an English one mixed in, because the
+Chinese speakers on their own say English terms poorly. A script can also ask for any speaker by the
+model's own name for it, such as `"voice": "zf_001"`.
 
 ### Online voices
 
@@ -163,9 +163,9 @@ drawcast render talk.drawcast.json --tts-command "python my_tts.py"
 - The built-in voice's English dictionary has about 178,000 words. An unknown word is assembled from
   known ones or read by spelling rules, which is sometimes wrong for names. Respell a name the way it
   sounds if it comes out badly.
-- With the built-in voice, English words inside a Chinese sentence are less reliable than either
-  language alone. In our tests a speech recogniser made out about two in three of them; the rest were
-  slurred or dropped. The online voices do not have this problem.
+- English words inside a Chinese sentence are less reliable than either language alone. In our tests
+  a speech recogniser made out about four in five of them with `chen` and two in three with `lin`. It
+  made out seven in ten with an online voice, and half with the model's Chinese speakers as they are.
 - A word's time inside its sentence is an estimate, good to about a quarter of a second. Sentence
   starts are exact.
 - There is no audio besides the narration.
@@ -176,11 +176,10 @@ drawcast is MIT licensed. How it works inside, and how to build and test it, is 
 [CONTRIBUTING.md](CONTRIBUTING.md). It builds on:
 
 - [Excalidraw](https://github.com/excalidraw/excalidraw) (MIT), bundled into the player with its fonts.
-- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (Apache-2.0) and the ZipVoice model its authors
-  publish, downloaded at run time. Check the model's own terms before commercial use.
-- `assets/lexicon-en.txt.gz`, derived from the English dictionary of
-  [misaki](https://github.com/hexgrad/misaki) (Apache-2.0) as shipped with sherpa-onnx's Kokoro model.
-- `assets/voices`, spoken by [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh) (Apache-2.0).
+- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (Apache-2.0), which runs the speech model.
+- [Kokoro v1.1](https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh) (Apache-2.0), the speech model,
+  downloaded at run time in sherpa-onnx's packaging of it. The pronunciation dictionaries that come
+  with it are from [misaki](https://github.com/hexgrad/misaki) (Apache-2.0).
 - ffmpeg, through [`ffmpeg-static`](https://github.com/eugeneware/ffmpeg-static), which downloads a
   GPL build and runs it as a separate program.
 

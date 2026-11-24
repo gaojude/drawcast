@@ -53,6 +53,12 @@ test("typos in property names and values are caught", () => {
   assert.match(errors[2], /fillStyle must be one of/);
 });
 
+test("a voice is a name", () => {
+  const withVoice = (voice) => check({ ...script({ say: "Hello there." }), voice }, examples).errors;
+  assert.deepEqual(withVoice("maple"), []);
+  assert.match(withVoice({ clip: "me.wav", transcript: "Hello." })[0], /must be a voice name/);
+});
+
 test("layout problems are warnings", () => {
   const { errors, warnings } = report({
     do: [
