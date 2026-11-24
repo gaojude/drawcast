@@ -65,10 +65,28 @@ export interface Frame {
   caption: string | null;
 }
 
-export interface Compiled {
-  duration: number;
-  /** When each step's narration starts. */
+/** How far a timeline has got. */
+export interface Schedule {
+  /** When the narration of each step scheduled so far starts. */
   stepStarts: number[];
+  /**
+   * No frame before this time changes, whatever the steps still to come turn out to be: it is when the
+   * next of them starts. Once the last step is in, it is the length of the video.
+   */
+  settled: number;
+  /** How long the video is. Null until the last step is scheduled. */
+  duration: number | null;
+}
+
+/**
+ * A script being scheduled against its audio, a step at a time. A step's place in time depends on the
+ * audio of the steps before it and on its own, never on what comes after, so the start of a video can be
+ * drawn while the end of it is still being spoken.
+ */
+export interface Timeline {
+  /** Schedules the next steps of the script, in order: `audio` has an entry for each of them. */
+  extend(audio: (StepAudio | null)[]): Schedule;
+  /** What is on the canvas at `t`, which has to be before `settled`. */
   frameAt(t: number): Frame;
 }
 
@@ -352,11 +370,15 @@ class Builder {
       if (!this.cur.has(id)) continue;
       if (![link.from, link.to].some((end) => typeof end === "string" && moving.has(end))) continue;
       const base = this.cur.get(id)!;
-      const endAt = (end: string | Pt, t: number) => (typeof end !== "string" ? end : (moving.get(end)?.(t) ?? this.cur.get(end)));
+      // Each end as it is now: a point, an element that stays put, or one on the move. Looked up here and
+      // not when a frame is drawn, by which time later steps may have moved or removed the element.
+      const [fromEnd, toEnd] = [link.from, link.to].map((end) => (typeof end !== "string" ? end : (moving.get(end) ?? this.cur.get(end))));
+      const endAt = (end: Pt | El | ((t: number) => El) | undefined, t: number) => (typeof end === "function" ? end(t) : end);
+      const via = (link.spec.via ?? []).map(asPt);
       const arrowAt = (t: number): El => {
-        const from = endAt(link.from, t);
-        const to = endAt(link.to, t);
-        return from && to ? E.withPath(base, E.arrowPath(from, to, (link.spec.via ?? []).map(asPt))) : base;
+        const from = endAt(fromEnd, t);
+        const to = endAt(toEnd, t);
+        return from && to ? E.withPath(base, E.arrowPath(from, to, via)) : base;
       };
       const label = this.cur.get(this.labels.get(id) ?? "");
       follow(id, arrowAt);
@@ -442,7 +464,7 @@ function spokenAt(at: string, audio: StepAudio, from: number): { t: number; inde
   return found >= 0 ? { t: audio.tokens[found].t, index: found } : null;
 }
 
-export function compile(script: Script, audio: (StepAudio | null)[], images: Map<string, ImageInfo>, formula: FormulaFile): Compiled {
+export function timeline(script: Script, images: Map<string, ImageInfo>, formula: FormulaFile): Timeline {
   const size = { ...DEFAULT_CANVAS, ...script.canvas };
   const canvas: Rect = { x: 0, y: 0, w: size.width, h: size.height };
   const b = new Builder(canvas, images, formula);
@@ -450,34 +472,39 @@ export function compile(script: Script, audio: (StepAudio | null)[], images: Map
   const captions: { t0: number; t1: number; text: string }[] = [];
   let free = LEAD_IN; // when the next step may start speaking
   let busy = 0; // when the last animation ends
+  let tracks: Seg[][] = [];
 
-  script.steps.forEach((step, si) => {
-    const voice = audio[si];
-    const start = Math.max(free, busy - OVERLAP);
-    stepStarts.push(start);
-    for (const c of voice?.captions ?? []) captions.push({ t0: start + c.t0, t1: start + c.t1, text: c.text });
+  const extend = (audio: (StepAudio | null)[]): Schedule => {
+    if (stepStarts.length + audio.length > script.steps.length) throw new Error(`The script has ${script.steps.length} steps, and audio came for more.`);
+    for (const voice of audio) {
+      const step = script.steps[stepStarts.length];
+      const start = Math.max(free, busy - OVERLAP);
+      stepStarts.push(start);
+      for (const c of voice?.captions ?? []) captions.push({ t0: start + c.t0, t1: start + c.t1, text: c.text });
 
-    let next = start; // where an action without `at` starts
-    let from = 0;
-    for (const action of step.do ?? []) {
-      let t0 = next;
-      if (typeof action.at === "number") t0 = start + action.at;
-      else if (typeof action.at === "string" && voice) {
-        const hit = spokenAt(action.at, voice, from);
-        if (hit) {
-          t0 = start + hit.t;
-          from = hit.index;
+      let next = start; // where an action without `at` starts
+      let from = 0;
+      for (const action of step.do ?? []) {
+        let t0 = next;
+        if (typeof action.at === "number") t0 = start + action.at;
+        else if (typeof action.at === "string" && voice) {
+          const hit = spokenAt(action.at, voice, from);
+          if (hit) {
+            t0 = start + hit.t;
+            from = hit.index;
+          }
         }
+        next = b.run(action, t0);
+        busy = Math.max(busy, next);
       }
-      next = b.run(action, t0);
-      busy = Math.max(busy, next);
+      const length = voice?.duration ?? step.duration ?? 0;
+      free = (voice ? start + length + STEP_GAP : Math.max(start + length, next)) + (step.pause ?? 0);
     }
-    const length = voice?.duration ?? step.duration ?? 0;
-    free = (voice ? start + length + STEP_GAP : Math.max(start + length, next)) + (step.pause ?? 0);
-  });
-
-  const duration = Math.max(free, busy) + TAIL;
-  const tracks = b.order.map((id) => b.tracks.get(id)!.sort((x, y) => x.t0 - y.t0));
+    tracks = b.order.map((id) => b.tracks.get(id)!.sort((x, y) => x.t0 - y.t0));
+    const duration = stepStarts.length === script.steps.length ? Math.max(free, busy) + TAIL : null;
+    // Nothing a step does comes before its own start, and the next one starts here.
+    return { stepStarts: [...stepStarts], settled: duration ?? Math.max(free, busy - OVERLAP), duration };
+  };
 
   const viewAt = (t: number): Rect => {
     let v: ViewSeg | null = null;
@@ -520,5 +547,5 @@ export function compile(script: Script, audio: (StepAudio | null)[], images: Map
     };
   };
 
-  return { duration, stepStarts, frameAt };
+  return { extend, frameAt };
 }

@@ -26,6 +26,8 @@ export interface Voice {
   key: string;
   /** Gets ready to speak (loads the model). Returns the function that says one sentence. */
   open(): Promise<(sentence: string) => Promise<Audio>>;
+  /** How many sentences it can be asked for at once. Left out, one. */
+  parallel?: number;
   /** The voice that says the whole script instead if this one cannot (no edge-tts, no connection). */
   fallback?: Voice;
 }
@@ -118,6 +120,10 @@ async function mixedSpeakers(model: ModelFiles): Promise<string> {
 function kokoro(speaker: string, mix: BuiltIn["mix"], log: (line: string) => void): Voice {
   return {
     key: sha("kokoro-v1.1", TOKENS, speaker, mix?.join(" ") ?? "", String(PACE.zh), String(PACE.en)),
+    // One sentence does not keep the machine busy, so with cores to spare several are spoken at once,
+    // by the one model. On a 22-thread laptop that halves the time (28 s to 13 s for 74 s of speech).
+    // Past four there is nothing more to gain, and each sentence in flight has its own working memory.
+    parallel: Math.max(1, Math.min(4, Math.floor(os.availableParallelism() / 4))),
     async open() {
       const model = await ensureModels(log);
       const dict = await dictionaries(model);
@@ -133,6 +139,7 @@ function kokoro(speaker: string, mix: BuiltIn["mix"], log: (line: string) => voi
       const tts = new sherpa.OfflineTts({
         model: {
           kokoro: { model: model.model, voices: mix ? await mixedSpeakers(model) : model.voices, tokens: model.tokens },
+          // more than eight makes it slower, not faster: 16 took twice as long as 8 on a 22-thread laptop
           numThreads: Math.max(1, Math.min(8, os.availableParallelism() - 1)),
           provider: "cpu",
         },
@@ -203,7 +210,8 @@ export interface VoiceOptions {
   log: (line: string) => void;
 }
 
-const edgeVoice = (name: string): Voice => ({ key: sha("edge", name), open: () => openEdgeVoice(name) });
+// each sentence is a request of its own to the service, and nearly all of its second is spent waiting
+const edgeVoice = (name: string): Voice => ({ key: sha("edge", name), open: () => openEdgeVoice(name), parallel: 6 });
 
 /**
  * Left unset, a script gets the first online voice of its language, and the first built-in one if the
