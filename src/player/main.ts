@@ -7,7 +7,7 @@
 import { convertToExcalidrawElements, exportToCanvas } from "@excalidraw/excalidraw";
 import { type ColorSpace, avcCodecs } from "../shared/h264.ts";
 import { DEFAULT_CANVAS, type Formula, type Script, type StepAudio } from "../shared/types.ts";
-import { type FormulaFile, type Frame, type ImageInfo, type Schedule, type Timeline, timeline } from "./compile.ts";
+import { type FormulaFile, type ImageInfo, type Pointer, type Schedule, type Timeline, timeline } from "./compile.ts";
 import type { Rect } from "./elements.ts";
 
 /** Everything about a video but its timing, so the page can get ready while the narration is still being spoken. */
@@ -26,6 +26,7 @@ export interface LoadResult {
   duration: number;
   stepStarts: number[];
   stepEnds: number[];
+  stepDone: number[];
 }
 
 const CAPTION_FONT = 'Nunito, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", Xiaolai, sans-serif';
@@ -124,7 +125,7 @@ async function loadFonts(script: Script) {
   const specs = script.steps.flatMap((s) => s.do ?? []).flatMap((a) => (a.add ? [a.add].flat() : []));
   const texts = [
     ...specs.filter((s) => s.label || s.text).map((s) => ({ text: `${s.label ?? ""}${s.text ?? ""}`, fontFamily: { hand: 5, normal: 6, code: 3 }[s.fontFamily ?? "hand"] })),
-    ...script.steps.flatMap((s) => (s.do ?? []).map((a) => a.update?.text ?? "")).map((text) => ({ text, fontFamily: 5 })),
+    ...script.steps.flatMap((s) => (s.do ?? []).map((a) => `${a.update?.text ?? ""}${a.update?.label ?? ""}`)).map((text) => ({ text, fontFamily: 5 })),
   ].filter((t) => t.text);
   if (texts.length) {
     const probes = convertToExcalidrawElements(texts.map((t, i) => ({ type: "text", x: 0, y: i * 40, ...t })) as any);
@@ -190,11 +191,15 @@ async function prepare(req: PrepareRequest): Promise<void> {
  * Schedules the next steps of the script against their audio, one entry for each. Frames before the
  * `settled` it returns can be asked for from then on, so a video can be drawn as far as it has been spoken.
  */
-const schedule = (audio: (StepAudio | null)[]): Schedule => line.extend(audio);
+const schedule = (audio: (StepAudio | null)[]): Schedule => (known = line.extend(audio));
+
+/** The timing scheduled so far. */
+let known: Schedule | null = null;
 
 /** Forgets every step scheduled so far: the script is to be scheduled again, against other audio. */
 function startOver(): void {
   line = timeline(request.script, images, formula);
+  known = null;
   // what was painted for another timing is not this timing's picture
   for (const s of [still, ...lanes.map((lane) => lane.surface)]) s.boardKey = s.frameKey = "";
 }
@@ -203,18 +208,19 @@ function startOver(): void {
 function load(audio: (StepAudio | null)[]): LoadResult {
   if (audio.length !== request.script.steps.length) throw new Error(`The script has ${request.script.steps.length} steps, and audio came for ${audio.length}.`);
   startOver();
-  const { stepStarts, stepEnds, settled } = line.extend(audio);
-  return { duration: settled, stepStarts, stepEnds };
+  const { stepStarts, stepEnds, stepDone, settled } = (known = line.extend(audio));
+  return { duration: settled, stepStarts, stepEnds, stepDone };
 }
 
-function drawPointer(g: CanvasRenderingContext2D, p: NonNullable<Frame["pointer"]>, view: Rect) {
+function drawPointer(g: CanvasRenderingContext2D, p: Pointer, view: Rect) {
   const k = g.canvas.width / view.w;
   const unit = g.canvas.height / 1080;
   const screen = (q: { x: number; y: number }) => ({ x: (q.x - view.x) * k, y: (q.y - view.y) * k });
   const pts = [...p.trail, p].map(screen);
   g.save();
   g.lineCap = "round";
-  g.strokeStyle = LASER;
+  const color = p.color ?? LASER;
+  g.strokeStyle = color;
   for (let i = 1; i < pts.length; i++) {
     g.globalAlpha = p.alpha * 0.6 * (i / pts.length);
     g.lineWidth = unit * (2 + (5 * i) / pts.length);
@@ -225,9 +231,9 @@ function drawPointer(g: CanvasRenderingContext2D, p: NonNullable<Frame["pointer"
   }
   const head = pts[pts.length - 1];
   g.globalAlpha = p.alpha;
-  g.shadowColor = LASER;
+  g.shadowColor = color;
   g.shadowBlur = unit * 14;
-  g.fillStyle = LASER;
+  g.fillStyle = color;
   g.beginPath();
   g.arc(head.x, head.y, unit * 6, 0, Math.PI * 2);
   g.fill();
@@ -265,13 +271,14 @@ function drawCaption(g: CanvasRenderingContext2D, text: string) {
 
 /**
  * Paints the frame at time `t` on a surface. False when the surface shows that very picture already.
- * `bare` leaves the pointer and the caption out, which is how a cover shows the canvas.
+ * `bare` leaves the pointer and the caption out, which is how a cover shows the canvas. With `upTo`, only
+ * what steps up to that one (0-based) do is shown.
  */
-async function paint(s: Surface, t: number, bare = false): Promise<boolean> {
-  const at = line.frameAt(t);
-  const f = bare ? { ...at, pointer: null, caption: null } : at;
+async function paint(s: Surface, t: number, bare = false, upTo?: number): Promise<boolean> {
+  const at = line.frameAt(t, upTo);
+  const f = bare ? { ...at, pointers: [], caption: null } : at;
   const key = JSON.stringify([f.elements, f.view]);
-  const overlay = JSON.stringify([f.pointer, f.caption]);
+  const overlay = JSON.stringify([f.pointers, f.caption]);
   if (key === s.boardKey && overlay === s.frameKey) return false;
   if (key !== s.boardKey) {
     // nothing is remembered until the new board is there, in case drawing it fails
@@ -283,7 +290,7 @@ async function paint(s: Surface, t: number, bare = false): Promise<boolean> {
 
   const g = s.stage.getContext("2d", { alpha: false })!;
   g.drawImage(s.board!, 0, 0);
-  if (f.pointer) drawPointer(g, f.pointer, f.view);
+  for (const p of f.pointers) drawPointer(g, p, f.view);
   if (f.caption) drawCaption(g, f.caption);
   return true;
 }
@@ -291,6 +298,67 @@ async function paint(s: Surface, t: number, bare = false): Promise<boolean> {
 /** The frame at time `t` as a PNG data URL, or null when it is identical to the frame rendered before it. */
 async function frame(t: number, bare = false): Promise<string | null> {
   return (await paint(still, t, bare)) ? still.stage.toDataURL("image/png") : null;
+}
+
+/** When step `step` (1-based) is over, by the timing scheduled so far. */
+function stepDone(step: number): number {
+  const t = known?.stepDone[step - 1];
+  if (t === undefined) throw new Error(`step ${step} has not been scheduled`);
+  return t;
+}
+
+/** Shades the strip at the bottom that the captions cover, so that a still shows what they would hide. */
+function shadeCaptions(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+  if (request.script.captions === false || !request.script.steps.some((s) => s.say?.trim())) return;
+  g.save();
+  g.fillStyle = "rgba(25, 113, 194, 0.10)";
+  g.fillRect(x, y + h * 0.86, w, h * 0.14);
+  g.restore();
+}
+
+/**
+ * The canvas once step `step` (1-based) is done, with every action it started finished and nothing of the
+ * next step begun, as a PNG data URL. Without pointer or captions; with `zone`, the captions' strip shaded.
+ */
+async function stepFrame(step: number, zone = false): Promise<string> {
+  await paint(still, stepDone(step), true, step - 1);
+  if (!zone) return still.stage.toDataURL("image/png");
+  const copy = document.createElement("canvas");
+  copy.width = still.stage.width;
+  copy.height = still.stage.height;
+  const g = copy.getContext("2d")!;
+  g.drawImage(still.stage, 0, 0);
+  shadeCaptions(g, 0, 0, copy.width, copy.height);
+  return copy.toDataURL("image/png");
+}
+
+/**
+ * Several steps on one picture, each as it ends, in a grid with its number and time above it: a whole
+ * script can be looked over at once.
+ */
+async function sheet(steps: number[], columns: number, tileWidth: number): Promise<string> {
+  const tileHeight = Math.round((tileWidth * request.output.height) / request.output.width);
+  const gap = 10;
+  const head = 26;
+  const rows = Math.ceil(steps.length / columns);
+  const c = document.createElement("canvas");
+  c.width = columns * tileWidth + (columns + 1) * gap;
+  c.height = rows * (tileHeight + head) + (rows + 1) * gap;
+  const g = c.getContext("2d")!;
+  g.fillStyle = "#dee2e6";
+  g.fillRect(0, 0, c.width, c.height);
+  for (const [i, step] of steps.entries()) {
+    const x = gap + (i % columns) * (tileWidth + gap);
+    const y = gap + Math.floor(i / columns) * (tileHeight + head + gap);
+    await paint(still, stepDone(step), true, step - 1);
+    g.drawImage(still.stage, x, y + head, tileWidth, tileHeight);
+    shadeCaptions(g, x, y + head, tileWidth, tileHeight);
+    g.fillStyle = "#1e1e1e";
+    g.font = `600 17px ${CAPTION_FONT}`;
+    g.textBaseline = "middle";
+    g.fillText(`step ${step}  ·  ${stepDone(step).toFixed(1)} s`, x + 4, y + head / 2);
+  }
+  return c.toDataURL("image/png");
 }
 
 /** The Excalidraw elements on the canvas at time `t`, as Excalidraw itself would save them. */
@@ -618,13 +686,13 @@ function base64(bytes: Uint8Array): string {
 /**
  * Frames `first` to `first + count - 1` as H.264 (Annex B, in base64), starting with a key frame, so that
  * segments put end to end are one stream whichever lane made them. A lane takes one segment at a time.
- * With `cover`, the first of these frames is the cover: the canvas at that time, in place of its own.
+ * With `cover`, the first of these frames is the cover: the canvas as that step (1-based) is done, in place of its own.
  */
 async function encodeSegment(index: number, first: number, count: number, cover?: number): Promise<string> {
   const lane = lanes[index];
   if (!lane) throw new Error("encoding has not been started");
   for (let i = first; i < first + count; i++) {
-    if (i === first && cover !== undefined) await paint(lane.surface, cover, true);
+    if (i === first && cover !== undefined) await paint(lane.surface, stepDone(cover), true, cover - 1);
     else await paint(lane.surface, i / encodeFps);
     await push(lane, i, i === first);
   }
@@ -634,6 +702,6 @@ async function encodeSegment(index: number, first: number, count: number, cover?
 /** The encoder `prepare` was asked to find, once the search is over. */
 const encoder = (): Promise<EncodeStart> => encoderReady ?? Promise.resolve({ encoder: null, tried: ["no video was asked for"] });
 
-const api = { prepare, load, schedule, startOver, frame, elements, encoder, encodeSegment, stopEncoding };
+const api = { prepare, load, schedule, startOver, frame, stepFrame, sheet, elements, encoder, encodeSegment, stopEncoding };
 export type PlayerApi = typeof api;
 (window as any).drawcast = api;

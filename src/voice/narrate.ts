@@ -78,6 +78,36 @@ export function estimateNarration(script: Script): Narration {
   return { steps, clips: steps.map(() => null) };
 }
 
+const speechFile = (voice: Voice, sentence: string) => path.join(cacheDir(), "speech", voice.key, `${createHash("sha256").update(sentence).digest("hex").slice(0, 24)}.wav`);
+
+/**
+ * Timing for `snapshot`, without speaking: a sentence the voice has already said (by an earlier render)
+ * takes as long as it did then, and any other as long as its syllables suggest. Once a script has been
+ * rendered, its snapshots are at the times of the video. `voice` is tried first, then its fallback.
+ */
+export async function cachedNarration(script: Script, voice: Voice, speed: number): Promise<Narration & { cached: number; total: number; voice: string | null }> {
+  const perStep = script.steps.map((step) => (step.say?.trim() ? sentences(step.say) : []));
+  const all = [...new Set(perStep.flat())];
+  // the voice that has the most of the script, so that one video's timing comes from one voice
+  let best: Voice = voice;
+  let bestCount = -1;
+  for (let v: Voice | undefined = voice; v; v = v.fallback) {
+    const count = all.filter((s) => existsSync(speechFile(v!, s))).length;
+    if (count > bestCount) [best, bestCount] = [v, count];
+  }
+  const seconds = new Map<string, number>();
+  await Promise.all(
+    all.map(async (s) => {
+      const file = speechFile(best, s);
+      if (!existsSync(file)) return;
+      const audio = await readWav(file).catch(() => null);
+      if (audio) seconds.set(s, audio.samples.length / audio.sampleRate / speed);
+    }),
+  );
+  const steps = perStep.map((list) => (list.length ? stepAudio(list.map((sentence) => ({ sentence, seconds: seconds.get(sentence) ?? estimateSeconds(sentence) / speed }))) : null));
+  return { steps, clips: steps.map(() => null), cached: seconds.size, total: all.length, voice: seconds.size ? best.name : null };
+}
+
 /** Whoever wants to hear a narration as it is spoken, so as to make the start of a video meanwhile. */
 export interface Listener {
   /** Called with each step, in order, as soon as it and every step before it are spoken. */
@@ -93,11 +123,11 @@ export interface Listener {
 export async function narrate(script: Script, voice: Voice, speed: number, log: (line: string) => void, listener?: Listener): Promise<Narration> {
   const perStep = script.steps.map((step) => (step.say?.trim() ? sentences(step.say) : []));
   const all = [...new Set(perStep.flat())];
-  const dir = path.join(cacheDir(), "speech", voice.key);
-  await mkdir(dir, { recursive: true });
-  const fileOf = (sentence: string) => path.join(dir, `${createHash("sha256").update(sentence).digest("hex").slice(0, 24)}.wav`);
+  await mkdir(path.join(cacheDir(), "speech", voice.key), { recursive: true });
+  const fileOf = (sentence: string) => speechFile(voice, sentence);
 
   const missing = all.filter((s) => !existsSync(fileOf(s)));
+  log(`  voice: ${voice.name}, ${all.length} sentence(s), ${missing.length ? `${all.length - missing.length} from the cache` : "all from the cache"}`);
   /** the sentences whose speech is in the cache */
   const have = new Set(all.filter((s) => !missing.includes(s)));
   const clips: (Audio | null)[] = [];

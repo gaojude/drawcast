@@ -36,18 +36,24 @@ newer. The first render downloads a speech model of about 365 MB, which can take
 Work in this loop:
 
 1. Decide what the video shows before writing JSON: what goes on the canvas, in what order, and what
-   is said as each part appears. One idea per step.
+   is said as each part appears. One idea per step. Plan for motion, not just boxes (see Making it vivid).
 2. Write the script, named `something.drawcast.json`.
-3. `drawcast check file` lists errors and layout warnings. Fix them all.
-4. `drawcast snapshot file` saves the finished canvas as a PNG. `--step 2` shows the canvas as step 2
-   ends and `-o name.png` names the file, so give each step its own name when you look at several.
-   Look at it: you cannot judge a layout from coordinates alone. Fix what overlaps, is cut off or is
-   hard to read, and check again.
+3. `drawcast check file` lists errors and layout warnings: overlaps, text that will not fit, arrows
+   that cross or run through something, things under the captions. Fix them all.
+4. `drawcast snapshot file --sheet` draws every step, each as it is done, on one picture (twelve
+   steps a sheet; it prints the file names). Look at it: you cannot judge a layout from coordinates
+   alone. The shaded strip at the bottom is where the captions go. Fix what overlaps, is cut off or is
+   hard to read, check again, and make a new sheet, or `--step 4,7` for a closer look at a few steps.
 5. `drawcast render file` speaks the narration and writes the MP4, and prints its path. Give that path
    to the user.
 
-Leave `voice` unset unless the user asks for one (see Narration), and leave `cover` at step 1 unless
-another step makes a better picture of the video. Speech is cached, so rendering again after changing
+A snapshot needs no narration, so it is quick. Its timing is estimated until a render has spoken the
+narration, and exact after that; it says which. `--at 12.5` shows the video at that moment, with the
+pointer and the captions.
+
+Leave `voice` unset unless the user asks for one (see Narration). Set `cover` to the step whose
+finished canvas best shows what the video is about, often the one where the whole picture is first
+there; the sheet shows them side by side. Speech is cached, so rendering again after changing
 only the drawing is quicker. When a command fails, its message says what is missing.
 
 ## The script
@@ -68,9 +74,9 @@ its size. Excalidraw's own defaults (20 px text, 2 px lines) are the right size 
 to the right and `y` grows downward, from the top left corner. Captions cover the bottom 14% of the
 picture (below y 620 on the default canvas), so keep drawings above that.
 
-The first frame of the video is the cover: the canvas as the `cover` step ends, without captions. It
-is what a player or a feed shows before the video plays. From the second frame on the canvas starts
-empty and everything is drawn in. `drawcast snapshot file --step 1` shows the default cover.
+The first frame of the video is the cover: the canvas once the `cover` step is done, without captions.
+It is what a player or a feed shows before the video plays, and `snapshot --step` of that step shows
+it. From the second frame on the canvas starts empty and everything is drawn in, so `--at 0` is blank.
 
 ## Steps
 
@@ -88,16 +94,23 @@ longer, the next step waits for them.
 
 ## Actions
 
-An action is one of `add`, `update`, `remove`, `camera` or `point`, plus when it happens:
+An action is one of `add`, `update`, `remove`, `camera`, `point`, `send` or `pulse`, plus when it
+happens. `at`, `duration` and `enter` sit on the action, beside the verb:
+
+```json
+{ "at": "rolls", "duration": 1.5, "update": { "id": "ball", "along": "curve" } }
+```
 
 | Property | |
 | --- | --- |
 | `at` | A word or short phrase copied from the step's `say`: the action starts as that phrase is spoken. Or a number: seconds from the start of the step. Left out, the action starts when the previous action ends (the first one, when the step starts). |
-| `duration` | Seconds the animation takes. Every action has a sensible default. |
+| `duration` | Seconds the animation takes. Every action has a sensible default. On an `add` of a list, each element takes that long. |
 
 Actions are listed in the order they happen, so `at` phrases must appear in the order they are spoken.
-When a phrase occurs twice, the first occurrence after the previous action's phrase is used. Matching
-ignores case and punctuation.
+Actions with the same `at` start together, which is how several things move at once: repeat the
+phrase on each. When a phrase occurs twice in `say`, an `at` takes the first occurrence from the
+previous action's phrase on, so a repeated `at` stays on the same one. Matching ignores case
+and punctuation.
 
 An arrow can only attach to elements that are already there. So word the narration to name both ends
 before the connection: "the client sends a request to the server" cannot draw the request at
@@ -112,7 +125,8 @@ Puts one element on the canvas, or several in turn when given a list.
 ```
 
 `enter` chooses how it appears: `"draw"` (the default: shapes are dragged out, lines grow from their
-start, text is typed, formulas are written out), `"fade"`, or `"none"` (it is simply there).
+start, text is typed, formulas are written out), `"fade"`, or `"none"` (it is simply there). Put it on
+the action for everything it adds, or on one element.
 
 ### update
 
@@ -124,8 +138,17 @@ Changes an element that is on the canvas, animated over 0.4 s. `id` is one id or
 ```
 
 It can set `x`, `y`, `width`, `height` (shapes, text and images), `dx`, `dy` (a move relative to where
-the element is; works on everything), any style property, `text` (text elements) and `tex` (math
-elements). Labels move with their shape, and arrows attached to a shape follow it.
+the element is; works on everything), any style property including `color`, `text` (text elements),
+`fontSize` (text and math: it grows or shrinks), `tex` (math elements) and `label` (a shape or arrow added with one: the old words fade into the new).
+Labels move with their shape, and arrows attached to a shape follow it.
+
+`along` moves an element over a path instead of in a straight line: its middle travels from where it
+is to the end of an arrow or line (by id; a plot too), or through points `[[x, y], ...]`. `span:
+[0.2, 0.6]` travels only that part of the path, as fractions of its length. Default 1.2 s.
+
+```json
+{ "at": "rolls", "update": { "id": "ball", "along": "loss", "span": [0, 0.5] } }
+```
 
 ### remove
 
@@ -138,7 +161,8 @@ those too.
 
 ### camera
 
-Moves the view, for a canvas larger than the picture or for a closer look.
+Moves the view, for a closer look or to another scene. Elements may be placed anywhere, past the
+1280 x 720 of the picture; there is no need to make `canvas` larger.
 
 ```json
 { "camera": { "fit": ["cache", "server"], "padding": 80 } }
@@ -146,8 +170,8 @@ Moves the view, for a canvas larger than the picture or for a closer look.
 { "camera": "reset" }
 ```
 
-`fit` takes a list of ids or `"all"`. With `x`, `y`, `width`, the height follows from the canvas
-proportions. `"reset"` returns to the whole canvas.
+`fit` takes a list of ids or `"all"`, and keeps them above the captions. With `x`, `y`, `width`, the
+height follows from the canvas proportions. `"reset"` returns to the whole canvas.
 
 ### point
 
@@ -156,6 +180,27 @@ to direct the eye to something already drawn.
 
 ```json
 { "at": "this one", "point": "cache" }
+```
+
+### send
+
+A glowing dot runs along an arrow or line from start to end and leaves no mark: a request, a message,
+a heartbeat, a signal. Given a list, a dot runs along each at once. The default colour is red; name
+another with `{ "along": [...], "color": "blue" }`, and `"reverse": true` runs it from the end back
+to the start, for a reply. It takes about a second, by the path's length.
+
+```json
+{ "at": "asks", "send": "query" }
+{ "at": "heartbeat", "send": { "along": ["hb2", "hb3", "hb4"], "color": "green" } }
+```
+
+### pulse
+
+Elements (one id or a list) swell for a moment and settle back; on an arrow or line the stroke
+thickens. For "this one changed", "this one answers". 0.6 s.
+
+```json
+{ "at": "answers", "pulse": "server" }
 ```
 
 ## Elements
@@ -168,7 +213,7 @@ Every element needs an `id`, unique in the script, and a `type`. Property names 
 | `text` | `x`, `y`, `text` (`\n` breaks lines) | `fontSize`, `fontFamily`, `textAlign` |
 | `math` | `x`, `y`, `tex` (a formula in LaTeX; see Math) | `fontSize`, `textAlign` |
 | `arrow` | `from`, `to`: each an element id or a point `[x, y]` | `via`, `rounded`, `label`, `startArrowhead`, `endArrowhead` |
-| `line` | `points`: `[[x, y], ...]` | `closed` (joins the ends, so `backgroundColor` fills it), `rounded` |
+| `line` | `points`: `[[x, y], ...]`; or a plot (below) | `closed` (joins the ends, so `backgroundColor` fills it), `rounded` |
 | `freedraw` | `points`: `[[x, y], ...]`, drawn as a smooth pen stroke through them | |
 | `image` | `x`, `y`, `src` (PNG, JPEG, GIF, WebP or SVG; path relative to the script) | `width`, `height` (default: the file's size and proportions) |
 
@@ -181,9 +226,31 @@ facing the other end, and follows when the element moves. `via` lists points the
 and `"rounded": true` turns the corners at those points into a curve. Arrowheads are `"arrow"`,
 `"triangle"`, `"bar"`, `"dot"` or `null`; the default is an `"arrow"` at the end and nothing at the start.
 
-A `label` is typed in the middle of a shape and wraps to its width, or sits on the middle of an arrow.
+A `label` is typed in the middle of a shape and wraps to its width (`\n` breaks it too), or sits on
+the middle of an arrow.
 `fontSize` (default 20; 16 on arrows) and `fontFamily` apply to labels too. Fonts are `"hand"` (the
 default handwriting, which covers Chinese), `"normal"` and `"code"`.
+
+### Plots
+
+A `line` with `fn` draws a function of x across the box `x`, `y`, `width`, `height`. `domain` is the
+x values the box spans, left to right; `range` the y values, bottom to top (default: as far as the
+curve goes; whatever leaves it is not drawn). Write `fn` as on paper: `x^2 / 4`, `2 sin(x) + 1`,
+`exp(-x^2)`, `sigmoid(3x)`, with `sin cos tan exp ln log sqrt abs sigmoid relu`, `pi` and `e`. Draw
+the axes yourself, as arrows.
+
+A point of the curve is named by the plot and its x: `["loss", -2.4]`. It goes wherever a point
+`[x, y]` does: an arrow's `from`, `to` and `via`, a line's `points`, `point`, and `along`. Two points of
+one plot in a row are the stretch of curve between them, so `"along": [["loss", -2.4], ["loss", 0]]`
+rolls something down the curve. `"on": ["loss", -2.4]` in place of `x` and `y` puts a shape's middle
+on the curve.
+
+```json
+{ "add": { "id": "loss", "type": "line", "fn": "x^2 / 4", "domain": [-3, 3], "range": [0, 2.5], "x": 340, "y": 200, "width": 600, "height": 300, "color": "blue", "strokeWidth": 3 } }
+{ "add": { "id": "ball", "type": "ellipse", "on": ["loss", -2.4], "width": 24, "height": 24, "color": "red" } }
+{ "at": "rolls", "update": { "id": "ball", "along": [["loss", -2.4], ["loss", -1]] } }
+{ "add": { "id": "slope", "type": "arrow", "from": ["loss", -2.9], "to": ["loss", -1.9], "color": "violet" } }
+```
 
 ### Math
 
@@ -217,6 +284,7 @@ needs layout: a fraction, limits on a sum, a root over an expression, a matrix.
 
 | Property | Values | Default |
 | --- | --- | --- |
+| `color` | a colour name: sets `strokeColor`, and on a shape `backgroundColor` too, from the palette below | |
 | `strokeColor` | hex colour | `"#1e1e1e"` |
 | `backgroundColor` | hex colour or `"transparent"` | `"transparent"` |
 | `fillStyle` | `"solid"`, `"hachure"`, `"cross-hatch"`, `"zigzag"` | `"solid"` |
@@ -226,22 +294,16 @@ needs layout: a fraction, limits on a sum, a root over an expression, a matrix.
 | `opacity` | 0 to 100 | 100 |
 | `angle` | radians, clockwise | 0 |
 
-Excalidraw's palette, which looks right together:
-
-| | Stroke | Fill |
-| --- | --- | --- |
-| red | `#e03131` | `#ffc9c9` |
-| green | `#2f9e44` | `#b2f2bb` |
-| blue | `#1971c2` | `#a5d8ff` |
-| yellow | `#f08c00` | `#ffec99` |
-| violet | `#6741d9` | `#d0bfff` |
-| gray | `#868e96` | `#e9ecef` |
+Excalidraw's palette, which looks right together, by name for `color`: `red`, `orange`, `yellow`,
+`green`, `teal`, `blue`, `violet`, `pink`, `gray`, `black`. `"color": "blue"` is stroke `#1971c2` and
+fill `#a5d8ff`; give `strokeColor` or `backgroundColor` as well to override either. A label is drawn in
+its shape's stroke colour.
 
 ## Layout
 
 `drawcast check` warns about layout it can measure, and `drawcast snapshot` shows the rest.
 
-- Leave at least 40 units between elements that are not inside one another.
+- Leave about 40 units between separate elements; `check` only warns when they overlap, so look.
 - An element may sit fully inside another (parts inside a container). Two elements that half overlap
   get a warning.
 - A label needs room: about 12 units per Latin letter and 20 per Chinese character at the default
@@ -252,6 +314,23 @@ Excalidraw's palette, which looks right together:
   wide; a line is about 20 tall, and 40 to 55 with a fraction or a sum in it. `check` measures the
   real thing, so its warnings about a formula are exact.
 - Text is for names, values and short phrases. The narration is in the captions already.
+
+## Making it vivid
+
+A video holds attention when something on screen answers every sentence. Cheap ways to get there:
+
+- **Colour means something.** Give each kind of thing a `color` (clients blue, servers violet, errors
+  red) and keep it; change an element's colour when its state changes, rather than adding a note.
+- **Show the motion the words describe.** A request travelling is a `send` along its arrow; a value
+  moving is an `update` `along` a path; a change is a `pulse` or a colour change at the word that says
+  it; a step-by-step change of a number or label is an `update` of `text` or `label`.
+- **Build up, then take away.** Add parts as they are named; `remove` or dim (`opacity`) what the
+  narration has moved past, so the eye goes to what is new.
+- **Use `point` for "this one"** when nothing needs to move.
+- **Use the camera for a second scene** rather than squeezing it in: draw it beside the first and
+  `camera` `fit` it.
+- Keep each scene to a handful of elements, with big type for what matters (`fontSize` 28 to 40 for
+  a title or a key number).
 
 ## Narration
 
@@ -270,8 +349,8 @@ Excalidraw's palette, which looks right together:
   Chinese, `edge:en-US-EmmaMultilingualNeural` for English). They sound natural and say English and
   Chinese in one sentence without trouble, but the narration is sent to Microsoft and the `edge-tts`
   program must be installed. Without it, or without a connection, the built-in voice (`lin` or
-  `maple`) says the whole script instead. Name a built-in voice to keep the narration on this
-  machine.
+  `maple`) says the whole script instead; `render` says which voice spoke. Name a built-in voice to
+  keep the narration on this machine.
 
 ## A longer example
 
@@ -283,21 +362,22 @@ Excalidraw's palette, which looks right together:
     {
       "say": "Every time the app needs a user, it goes to the database and asks. And the database is slow.",
       "do": [
-        { "at": "app", "add": { "id": "app", "type": "rectangle", "x": 120, "y": 260, "width": 200, "height": 100, "label": "App", "backgroundColor": "#a5d8ff" } },
-        { "at": "database", "add": { "id": "db", "type": "rectangle", "x": 940, "y": 260, "width": 220, "height": 100, "label": "Database", "backgroundColor": "#e9ecef" } },
+        { "at": "app", "add": { "id": "app", "type": "rectangle", "x": 120, "y": 260, "width": 200, "height": 100, "label": "App", "color": "blue" } },
+        { "at": "database", "add": { "id": "db", "type": "rectangle", "x": 940, "y": 260, "width": 220, "height": 100, "label": "Database", "color": "gray" } },
         { "at": "asks", "add": { "id": "query", "type": "arrow", "from": "app", "to": "db", "label": "80 ms" } },
-        { "at": "slow", "point": "query" }
+        { "at": "slow", "send": "query" }
       ]
     },
     {
       "say": "So we put a cache in between. It remembers the answers it has already seen.",
       "do": [
         { "at": "cache", "remove": "query" },
-        { "add": { "id": "cache", "type": "ellipse", "x": 530, "y": 250, "width": 200, "height": 120, "label": "Cache", "backgroundColor": "#ffec99" } },
+        { "add": { "id": "cache", "type": "ellipse", "x": 530, "y": 250, "width": 200, "height": 120, "label": "Cache", "color": "yellow" } },
         { "at": "remembers", "add": [
           { "id": "ask", "type": "arrow", "from": "app", "to": "cache", "label": "1 ms" },
           { "id": "miss", "type": "arrow", "from": "cache", "to": "db", "strokeStyle": "dashed", "label": "only on a miss" }
-        ] }
+        ] },
+        { "send": { "along": "ask", "color": "green" } }
       ],
       "pause": 0.5
     },

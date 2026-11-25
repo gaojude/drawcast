@@ -22,6 +22,8 @@ import { type Dictionaries, parseDictionary, toTokens } from "./tokenize.ts";
 import { type Audio, readWav } from "./wav.ts";
 
 export interface Voice {
+  /** What the voice is called, as a script names it: for the log. */
+  name: string;
   /** Identifies the voice and its settings; audio is cached under it. */
   key: string;
   /** Gets ready to speak (loads the model). Returns the function that says one sentence. */
@@ -117,8 +119,9 @@ async function mixedSpeakers(model: ModelFiles): Promise<string> {
   return target;
 }
 
-function kokoro(speaker: string, mix: BuiltIn["mix"], log: (line: string) => void): Voice {
+function kokoro(name: string, speaker: string, mix: BuiltIn["mix"], log: (line: string) => void): Voice {
   return {
+    name,
     key: sha("kokoro-v1.1", TOKENS, speaker, mix?.join(" ") ?? "", String(PACE.zh), String(PACE.en)),
     // One sentence does not keep the machine busy, so with cores to spare several are spoken at once,
     // by the one model. On a 22-thread laptop that halves the time (28 s to 13 s for 74 s of speech).
@@ -176,6 +179,7 @@ function kokoro(speaker: string, mix: BuiltIn["mix"], log: (line: string) => voi
 /** A voice that runs a program: the text arrives on stdin, and the program writes a WAV to $DRAWCAST_OUT. */
 function commandVoice(command: string): Voice {
   return {
+    name: "--tts-command",
     key: sha("command", command),
     async open() {
       const dir = path.join(cacheDir(), "tmp");
@@ -211,7 +215,7 @@ export interface VoiceOptions {
 }
 
 // each sentence is a request of its own to the service, and nearly all of its second is spent waiting
-const edgeVoice = (name: string): Voice => ({ key: sha("edge", name), open: () => openEdgeVoice(name), parallel: 6 });
+const edgeVoice = (name: string): Voice => ({ name: EDGE_PREFIX + name, key: sha("edge", name), open: () => openEdgeVoice(name), parallel: 6 });
 
 /**
  * Left unset, a script gets the first online voice of its language, and the first built-in one if the
@@ -234,5 +238,5 @@ export async function resolveVoice(o: VoiceOptions): Promise<Voice> {
   // a built-in voice, or one of the model's speakers by its own name
   const voice = BUILT_IN[name] ?? (SPEAKERS.includes(name) ? { speaker: name } : undefined);
   if (!voice) throw new Error(`There is no voice called "${name}". Built-in voices: ${Object.keys(BUILT_IN).join(", ")}. Online voices start with "${EDGE_PREFIX}".`);
-  return kokoro(voice.speaker, voice.mix, o.log);
+  return kokoro(name, voice.speaker, voice.mix, o.log);
 }

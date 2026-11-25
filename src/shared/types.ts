@@ -19,7 +19,26 @@ export interface Style {
   opacity?: number;
   /** radians, clockwise */
   angle?: number;
+  /** A colour by name: sets `strokeColor`, and on a shape `backgroundColor` too, from the palette. */
+  color?: ColorName;
 }
+
+/** Excalidraw's palette: a stroke and a fill of each colour, which look right together. */
+export const PALETTE = {
+  red: ["#e03131", "#ffc9c9"],
+  orange: ["#e8590c", "#ffd8a8"],
+  yellow: ["#f08c00", "#ffec99"],
+  green: ["#2f9e44", "#b2f2bb"],
+  teal: ["#099268", "#96f2d7"],
+  blue: ["#1971c2", "#a5d8ff"],
+  violet: ["#6741d9", "#d0bfff"],
+  pink: ["#c2255c", "#fcc2d7"],
+  // darker than Excalidraw's gray stroke, which as a label on the gray fill is hard to read
+  gray: ["#495057", "#e9ecef"],
+  black: ["#1e1e1e", "#e9ecef"],
+} as const;
+
+export type ColorName = keyof typeof PALETTE;
 
 export interface ElementSpec extends Style {
   id: string;
@@ -53,6 +72,16 @@ export interface ElementSpec extends Style {
   closed?: boolean;
   /** image: a file path relative to the script. */
   src?: string;
+  /** line: a function of x to plot, such as "x^2 / 4", drawn across the box x, y, width, height. */
+  fn?: string;
+  /** line with `fn`: the x values the box spans, [from, to]. */
+  domain?: [number, number];
+  /** line with `fn`: the y values the box spans, [bottom, top]. Default: as far as the curve goes. */
+  range?: [number, number];
+  /** How this element appears, when it is not the action's `enter`. */
+  enter?: Enter;
+  /** shapes and images: put the middle on a point of a plot, `["loss", -2.4]`, in place of x and y. */
+  on?: [string, number];
 }
 
 export type Arrowhead = "arrow" | "triangle" | "bar" | "dot";
@@ -78,6 +107,14 @@ export interface UpdateSpec extends Style {
   text?: string;
   /** math elements: replace the formula. */
   tex?: string;
+  /** shapes and arrows that were added with a label: replace it. */
+  label?: string;
+  /** text and math elements: grow or shrink. */
+  fontSize?: number;
+  /** Travel along a path to its end: the id of an arrow or line, or points [[x, y], ...]. The element's middle follows it. */
+  along?: string | Point[];
+  /** with `along`: the part of the path to travel, as fractions of its length (default [0, 1]). */
+  span?: [number, number];
 }
 
 export type CameraSpec =
@@ -101,6 +138,10 @@ export interface Action {
   camera?: CameraSpec;
   /** Laser pointer: circles an element or a point for a moment, leaving no mark. */
   point?: string | Point;
+  /** A glowing dot runs along each arrow or line, start to end, leaving no mark: a message, a request, a signal. */
+  send?: string | string[] | { along: string | string[]; color?: ColorName | string; reverse?: boolean };
+  /** Elements swell for a moment and settle back, to draw the eye: a heartbeat, a change, "this one". */
+  pulse?: string | string[];
 }
 
 export interface Step {

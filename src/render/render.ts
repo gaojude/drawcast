@@ -3,11 +3,12 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { check, type Report } from "../format/check.ts";
+import { expand } from "../format/expand.ts";
 import { cacheDir } from "../paths.ts";
 import type { PrepareRequest } from "../player/main.ts";
 import { segmentFrames } from "../shared/h264.ts";
 import { DEFAULT_CANVAS, type Formula, OUTPUT_SCALE, type Script, type StepAudio } from "../shared/types.ts";
-import { type Listener, SAMPLE_RATE, estimateNarration, narrate } from "../voice/narrate.ts";
+import { type Listener, SAMPLE_RATE, cachedNarration, estimateNarration, narrate } from "../voice/narrate.ts";
 import { resolveVoice } from "../voice/voice.ts";
 import { type Audio, pcm16, writeWav } from "../voice/wav.ts";
 import { type Output, startEncoder, startMuxer } from "./encode.ts";
@@ -44,7 +45,7 @@ export async function loadScript(file: string): Promise<Loaded> {
   }
   const report = await check(parsed, baseDir);
   if (report.errors.length) throw new ScriptError(report);
-  return { script: parsed as Script, baseDir, report };
+  return { script: expand(parsed as Script), baseDir, report };
 }
 
 /** Every formula the script draws, typeset and keyed by its LaTeX. */
@@ -127,7 +128,7 @@ export interface Telling {
   readonly samples: number;
   /** the length of the video in seconds; null until the last step has been spoken */
   readonly duration: number | null;
-  /** the moment whose canvas is the cover; null until the step it shows has been spoken, and when there is no cover */
+  /** the step (1-based) whose finished canvas is the cover; null until that step has been spoken, and when there is no cover */
   readonly cover: number | null;
   /**
    * Which telling this is. A voice that cannot go on hands the whole script to another, and the video
@@ -211,8 +212,8 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (listene
       frames = Math.ceil(schedule.settled * o.fps);
       samples = schedule.duration === null ? Math.floor(schedule.settled * SAMPLE_RATE) : Math.ceil(schedule.duration * SAMPLE_RATE);
       duration = schedule.duration;
-      // the canvas as that step ends, which is settled as soon as the step is scheduled
-      cover = o.cover ? (schedule.stepEnds[o.cover - 1] ?? null) : null;
+      // the canvas as that step is done, which is settled as soon as the step is scheduled
+      cover = o.cover && schedule.stepDone[o.cover - 1] !== undefined ? o.cover : null;
       if (duration !== null) o.log(`Video: ${duration.toFixed(1)} s, ${frames} frames`);
       settled.fire();
     }
@@ -401,7 +402,7 @@ export async function recordWithFfmpeg(player: Player, o: Output & { audio: stri
     let last: Buffer | null = null;
     for (let i = 0; i < o.frames; i++) {
       const cover = i === 0 && o.cover !== null;
-      last = (await (cover ? player.frame(o.cover!, true) : player.frame(i / o.fps))) ?? last;
+      last = (await (cover ? player.stepFrame(o.cover!) : player.frame(i / o.fps))) ?? last;
       await encoder.write(last!);
       report(i + 1);
     }
@@ -472,31 +473,84 @@ function guessFrames(script: Script, fps: number): number {
 }
 
 export interface SnapshotOptions {
+  /** the file to write; with several pictures, each gets a suffix before the extension */
   output: string;
-  /** seconds into the video; left out, the last frame */
+  /** seconds into the video, with pointer and captions as the video shows them */
   at?: number;
-  /** instead of `at`: the picture as this step (1-based) ends */
-  step?: number;
+  /** instead of `at`: the steps (1-based) to show, each as it is done. Left out, the last step. */
+  steps?: number[];
+  /** the steps on one picture, in a grid, instead of a picture each */
+  sheet?: boolean;
   width?: number;
+  voice?: string;
   log: Log;
 }
 
-/** A PNG of one moment. Nothing is spoken: timing is estimated, which is close enough to judge a layout. */
-export async function renderSnapshot(loaded: Loaded, o: SnapshotOptions): Promise<{ at: number }> {
-  const player = await openPlayer(await playerRequest(loaded, o.width), o.log);
+/** Steps on one contact sheet: three across and four down still reads at the size an agent is shown a picture. */
+const SHEET_COLUMNS = 3;
+const SHEET_STEPS = 12;
+const SHEET_TILE = 512;
+
+/**
+ * Stills of a script. Nothing is spoken: a sentence an earlier render spoke takes as long as it did then,
+ * and any other is estimated from its syllables. Returns each file written, with what it shows.
+ */
+export async function renderSnapshot(loaded: Loaded, o: SnapshotOptions): Promise<{ files: { file: string; shows: string }[]; timing: string }> {
+  const { script } = loaded;
+  const canvas = { ...DEFAULT_CANVAS, ...script.canvas };
+  // a still is looked at, not watched: the canvas's own size is plenty, and quicker to make and to read
+  const player = await openPlayer(await playerRequest(loaded, o.width ?? canvas.width), o.log);
   try {
-    const captions = loaded.script.captions ?? true;
-    const { duration, stepEnds } = await player.load(estimateNarration(loaded.script).steps.map((step) => timing(step, captions)));
-    let at = Math.min(o.at ?? duration, duration);
-    if (o.step !== undefined) {
-      if (o.step < 1 || o.step > stepEnds.length) throw new Error(`--step must be between 1 and ${stepEnds.length}.`);
-      at = stepEnds[o.step - 1];
-    }
-    const png = await player.frame(at);
+    const captions = script.captions ?? true;
+    const voice = await resolveVoice({ spec: o.voice ?? script.voice, narration: script.steps.map((s) => s.say ?? "").join(" "), log: o.log }).catch(() => null);
+    const narration = voice ? await cachedNarration(script, voice, script.speed ?? 1) : { ...estimateNarration(script), cached: 0, total: 1, voice: null };
+    const { duration, stepDone } = await player.load(narration.steps.map((step) => timing(step, captions)));
+    const timingNote =
+      narration.cached === narration.total && narration.voice
+        ? `timing from the speech of ${narration.voice}, as the video will have it`
+        : narration.cached
+          ? `timing from cached speech for ${narration.cached} of ${narration.total} sentences, the rest estimated`
+          : "timing estimated: times will move a little once the narration is rendered";
     await mkdir(path.dirname(path.resolve(o.output)), { recursive: true });
-    await writeFile(o.output, png!);
-    return { at };
+    const named = (suffix: string) => o.output.replace(/(\.png)?$/i, `${suffix}.png`);
+    const files: { file: string; shows: string }[] = [];
+
+    if (o.at !== undefined) {
+      const at = Math.min(Math.max(0, o.at), duration);
+      // the first frame of a fresh page always comes back
+      await writeFile(o.output, (await player.frame(at))!);
+      return { files: [{ file: o.output, shows: `the video at ${at.toFixed(1)} s` }], timing: timingNote };
+    }
+    const steps = o.steps ?? [stepDone.length];
+    for (const s of steps) if (!Number.isInteger(s) || s < 1 || s > stepDone.length) throw new Error(`--step must be step numbers from 1 to ${stepDone.length}, or "all".`);
+    if (o.sheet) {
+      const pages = Math.ceil(steps.length / SHEET_STEPS);
+      for (let p = 0; p < pages; p++) {
+        const part = steps.slice(p * SHEET_STEPS, (p + 1) * SHEET_STEPS);
+        const file = pages > 1 ? named(`-${p + 1}`) : o.output;
+        await writeFile(file, await player.sheet(part, Math.min(SHEET_COLUMNS, part.length), SHEET_TILE));
+        files.push({ file, shows: `steps ${part[0]}${part.length > 1 ? ` to ${part[part.length - 1]}` : ""}, each as it is done` });
+      }
+    } else {
+      for (const s of steps) {
+        const file = steps.length > 1 ? named(`-step${s}`) : o.output;
+        await writeFile(file, await player.stepFrame(s, true));
+        files.push({ file, shows: `step ${s} done, at ${stepDone[s - 1].toFixed(1)} s` });
+      }
+    }
+    return { files, timing: timingNote };
   } finally {
     await player.close();
   }
+}
+
+/** Parses `--step`: a number, a list such as `2,5,9`, a range such as `3-6`, or `all`. */
+export function parseSteps(value: string, count: number): number[] {
+  if (value.trim() === "all") return Array.from({ length: count }, (_, i) => i + 1);
+  // PowerShell hands `--step 4,7` over as "4 7", so spaces separate as well as commas
+  return value.split(/[\s,]+/).filter(Boolean).flatMap((part) => {
+    const [a, b] = part.split("-").map((n) => Number(n.trim()));
+    if (!Number.isInteger(a) || (b !== undefined && !Number.isInteger(b))) throw new Error(`--step must be step numbers such as 3, 2,5,9 or 3-6, or "all" (got "${value}").`);
+    return b === undefined ? [a] : Array.from({ length: Math.max(0, b - a + 1) }, (_, i) => a + i);
+  });
 }

@@ -81,30 +81,33 @@ Microsoft's online voice. Name a built-in voice (`--voice lin`) to keep it all o
 ```
 drawcast guide                 the script format, with examples
 drawcast check <script>        errors and layout warnings, without rendering
-drawcast snapshot <script>     one moment of the canvas as a PNG (--step 2, --at 12.5)
+drawcast snapshot <script>     stills as PNG: --sheet (every step on one picture), --step 2,5, --at 12.5
 drawcast render <script>       the MP4 (-o out.mp4, --voice lin, --speed 1.1, --no-captions)
 drawcast voices                the voices
 ```
 
 `drawcast guide` prints the full reference, which is also in [`docs/format.md`](docs/format.md). In
 short: a script is a list of steps, each with narration (`say`) and actions (`do`). An action adds,
-updates or removes an Excalidraw element, moves the camera, or points at something, and its `at` names
-the phrase of the narration it starts on. The renderer finds when the voice reaches that phrase: the
+updates or removes an Excalidraw element, moves an element along a path, sends a dot along an arrow,
+pulses something, moves the camera, or points at something, and its `at` names the phrase of the
+narration it starts on. The renderer finds when the voice reaches that phrase: the
 start of a sentence exactly, a word inside a sentence to within about a quarter of a second.
 
-The first frame of the video is a cover, the canvas as step 1 ends, so a feed that takes its
+The first frame of the video is a cover, the canvas once step 1 is done, so a feed that takes its
 thumbnail from that frame does not show an empty canvas. `"cover": 3` in the script picks another
 step and `"cover": false` leaves the cover out.
 
 Besides Excalidraw's shapes, text, arrows and images there is a `math` element, which typesets a
 formula from LaTeX: `{ "type": "math", "tex": "\\frac{n(n+1)}{2}" }`. It is written out as it
 appears, and an update can replace it with the next line of a derivation.
-[`examples/pythagoras.drawcast.json`](examples/pythagoras.drawcast.json) uses one.
+[`examples/pythagoras.drawcast.json`](examples/pythagoras.drawcast.json) uses one. A `line` with `fn`
+plots a function, such as `"fn": "x^2 / 4"`, and something can then roll along the curve.
 
 `check` exists because whoever writes a script usually cannot see it. It catches references to
-elements that are not there, phrases the narration never says, shapes that half overlap, labels that
-will not fit and drawings hidden under the captions. `snapshot` renders a still in a second or two, with
-no speech, to look at the layout before rendering the video.
+elements that are not there, phrases the narration never says, shapes that half overlap, arrows that cross or run through
+something, labels that will not fit and drawings hidden under the captions. `snapshot --sheet` draws
+every step, as it ends, on one picture in a second or two, with no speech, so the whole layout is one
+look before rendering the video.
 
 ## With an agent
 
@@ -142,8 +145,8 @@ scene and minified. It has no narration and no timing in it, and it is still two
 size of the script that draws it, narrates it and times it.
 
 What an agent reads first does not grow with the video: the skill is about 190 tokens and
-`drawcast guide` about 4,600. Layout problems come back from `check` as text, so finding them costs
-no screenshots, and one `snapshot` is usually enough to look at before rendering.
+`drawcast guide` about 5,800. Layout problems come back from `check` as text, so finding them costs
+no screenshots, and the rest is one contact sheet of every step rather than a picture per step.
 
 These are counts from `o200k_base`, a tokenizer from OpenAI that runs offline; another model's
 tokenizer will give somewhat different numbers. The scene sizes move by a fraction of a percent

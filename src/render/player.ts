@@ -45,6 +45,10 @@ export interface Player {
   startOver(): Promise<void>;
   /** PNG of the frame at `t`, or null when it equals the one before. `bare` leaves the pointer and the caption out. */
   frame(t: number, bare?: boolean): Promise<Buffer | null>;
+  /** PNG of the canvas once step `step` (1-based) is done, without pointer or captions; with `zone`, the captions' strip shaded. */
+  stepFrame(step: number, zone?: boolean): Promise<Buffer>;
+  /** PNG of several steps, each as it is done, in a grid of `columns`, each `tileWidth` pixels wide. */
+  sheet(steps: number[], columns: number, tileWidth: number): Promise<Buffer>;
   /** The Excalidraw elements on the canvas at `t`. */
   elements(t: number): Promise<unknown[]>;
   /**
@@ -63,6 +67,8 @@ export interface Player {
 }
 
 declare const drawcast: PlayerApi;
+
+const png = (dataUrl: string) => Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64");
 
 /** Opens the page and loads the script's fonts and images into it, which needs no timing yet. With `video` in the request, the page also starts looking for its encoder. */
 export async function openPlayer(request: PrepareRequest, log: (line: string) => void): Promise<Player> {
@@ -94,6 +100,8 @@ export async function openPlayer(request: PrepareRequest, log: (line: string) =>
         const url = await page.evaluate((time, b) => drawcast.frame(time, b), t, bare ?? false);
         return url ? Buffer.from(url.slice(url.indexOf(",") + 1), "base64") : null;
       },
+      stepFrame: async (step, zone) => png(await page.evaluate((s, z) => drawcast.stepFrame(s, z), step, zone ?? false)),
+      sheet: async (steps, columns, tileWidth) => png(await page.evaluate((s, c, w) => drawcast.sheet(s, c, w), steps, columns, tileWidth)),
       elements: (t) => page.evaluate((time) => drawcast.elements(time), t),
       encoder: () => page.evaluate(() => drawcast.encoder()),
       async encodeSegment(lane, first, count, cover) {
