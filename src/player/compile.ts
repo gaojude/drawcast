@@ -164,6 +164,8 @@ class Builder {
   pointers: PointerSeg[] = [];
   /** the step (0-based) being compiled */
   step = 0;
+  /** when each element has finished being drawn in */
+  drawn = new Map<string, number>();
   /** each element as it was added, to build its label again when the label changes */
   specs = new Map<string, ElementSpec>();
   /** whether captions cover the bottom of the picture */
@@ -194,7 +196,16 @@ class Builder {
 
   /** Runs an action starting at `t0` and returns when it is over. */
   run(a: Action, t0: number): number {
-    if (a.add) return list(a.add).reduce((t, spec) => this.add(spec, t, spec.enter ?? a.enter ?? "draw", a.duration), t0);
+    if (a.add) {
+      return list(a.add).reduce((t, spec) => {
+        const end = this.add(spec, t, spec.enter ?? a.enter ?? "draw", a.duration);
+        this.drawn.set(spec.id, end);
+        return end;
+      }, t0);
+    }
+    // Nothing is changed before it has been drawn: an action whose phrase is spoken while what it acts on
+    // is still being drawn (or waits to be) starts once that is done, and does not get undone by the drawing.
+    t0 = Math.max(t0, ...this.targets(a).map((id) => this.drawn.get(id) ?? t0));
     if (a.update) return this.update(a.update, t0, a.duration ?? (a.update.along ? ALONG : FADE));
     if (a.remove) return this.remove(list(a.remove), t0, a.duration ?? 0.3);
     if (a.camera) return this.camera(a.camera, t0, a.duration ?? 0.8);
@@ -202,6 +213,18 @@ class Builder {
     if (a.send) return this.send(a.send, t0, a.duration);
     if (a.pulse) return this.pulse(list(a.pulse), t0, a.duration ?? 0.6);
     return t0;
+  }
+
+  /** The ids an action other than `add` acts on, or follows. */
+  private targets(a: Action): string[] {
+    const ids = (v: unknown) => [v].flat().filter((x): x is string => typeof x === "string");
+    if (a.update) return [...ids(a.update.id), ...ids(a.update.along)];
+    if (a.remove) return ids(a.remove);
+    if (a.pulse) return ids(a.pulse);
+    if (a.point) return ids(a.point);
+    if (a.send) return ids(typeof a.send === "object" && !Array.isArray(a.send) ? a.send.along : a.send);
+    if (a.camera && typeof a.camera === "object" && "fit" in a.camera && a.camera.fit !== "all") return a.camera.fit;
+    return [];
   }
 
   // ---------------------------------------------------------------- add
