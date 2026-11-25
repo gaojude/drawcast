@@ -20,13 +20,35 @@ element is drawn at the moment the narration reaches the words you tie it to.
 }
 ```
 
+## Making a video
+
+This guide is the whole of the instructions: the skill only says to read it, so that the steps and
+the format always come from the release that runs them. Do not write a script from memory or from an
+earlier run.
+
+**Which command to run.** The first line `drawcast guide` prints is the version it belongs to. If
+`drawcast --version` prints that same version, run `drawcast` as written below. If it prints another
+one, or `drawcast` is not found, run `npx -y drawcast@latest` in place of `drawcast` every time, and
+tell the user that `npm install -g drawcast@latest` updates their own copy. It needs Node.js 20 or
+newer. The first render downloads a speech model of about 365 MB, which can take a few minutes;
+`drawcast setup` downloads everything ahead of time and reports what is missing.
+
 Work in this loop:
 
-1. Write the script, named `something.drawcast.json`.
-2. `drawcast check file` lists errors and layout warnings. Fix them all.
-3. `drawcast snapshot file` saves the finished canvas as a PNG (`--step 2` for the canvas as step 2
-   ends). Look at it. You cannot judge a layout from coordinates alone.
-4. `drawcast render file` speaks the narration and writes the MP4.
+1. Decide what the video shows before writing JSON: what goes on the canvas, in what order, and what
+   is said as each part appears. One idea per step.
+2. Write the script, named `something.drawcast.json`.
+3. `drawcast check file` lists errors and layout warnings. Fix them all.
+4. `drawcast snapshot file` saves the finished canvas as a PNG. `--step 2` shows the canvas as step 2
+   ends and `-o name.png` names the file, so give each step its own name when you look at several.
+   Look at it: you cannot judge a layout from coordinates alone. Fix what overlaps, is cut off or is
+   hard to read, and check again.
+5. `drawcast render file` speaks the narration and writes the MP4, and prints its path. Give that path
+   to the user.
+
+Leave `voice` unset unless the user asks for one (see Narration), and leave `cover` at step 1 unless
+another step makes a better picture of the video. Speech is cached, so rendering again after changing
+only the drawing is quicker. When a command fails, its message says what is missing.
 
 ## The script
 

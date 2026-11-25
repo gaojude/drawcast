@@ -26,12 +26,12 @@
       "pause": 0.3
     },
     {
-      "say": "The skill is a single Markdown file, about six hundred tokens. The program is not inside it. It only tells your agent which commands to run.",
+      "say": "The skill is a single Markdown file, under two hundred tokens. The program is not inside it, and neither are the instructions. It tells your agent to read the guide of the latest release, so it never goes out of date.",
       "do": [
         { "at": "single", "duration": 0.5, "add": { "id": "page", "type": "rectangle", "x": 1470, "y": 290, "width": 460, "height": 300, "backgroundColor": "#ffec99", "strokeColor": "#f08c00" } },
         { "duration": 0.4, "add": { "id": "page-name", "type": "text", "x": 1495, "y": 306, "text": "SKILL.md", "fontSize": 28, "fontFamily": "code" } },
-        { "at": "six hundred", "enter": "fade", "add": { "id": "page-size", "type": "text", "x": 1495, "y": 545, "text": "one Markdown file · about 600 tokens", "fontSize": 18, "strokeColor": "#868e96" } },
-        { "at": "tells", "duration": 2.2, "add": { "id": "page-steps", "type": "text", "x": 1495, "y": 360, "text": "1. drawcast guide\n2. write a script\n3. drawcast check\n4. drawcast snapshot\n5. drawcast render", "fontSize": 24 } }
+        { "at": "two hundred", "enter": "fade", "add": { "id": "page-size", "type": "text", "x": 1495, "y": 545, "text": "one Markdown file · under 200 tokens", "fontSize": 18, "strokeColor": "#868e96" } },
+        { "at": "tells", "duration": 2.2, "add": { "id": "page-steps", "type": "text", "x": 1495, "y": 360, "text": "read\nnpx -y drawcast@latest guide\n\nthen follow it", "fontSize": 22, "fontFamily": "code" } }
       ],
       "pause": 0.2
     },

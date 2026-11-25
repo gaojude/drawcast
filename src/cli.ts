@@ -69,12 +69,14 @@ async function main(): Promise<number> {
   });
   const [command, file] = positionals;
 
-  if (values.version) return console.log(JSON.parse(readFileSync(path.join(packageRoot, "package.json"), "utf8")).version), 0;
+  const version: string = JSON.parse(readFileSync(path.join(packageRoot, "package.json"), "utf8")).version;
+  if (values.version) return console.log(version), 0;
   if (values.help || !command) return console.log(HELP), command || values.help ? 0 : 1;
 
   switch (command) {
     case "guide":
-      process.stdout.write(readFileSync(path.join(packageRoot, "docs", "format.md"), "utf8"));
+      // The version comes first: the guide tells an agent to compare it with `drawcast --version`.
+      process.stdout.write(`drawcast ${version}\n\n${readFileSync(path.join(packageRoot, "docs", "format.md"), "utf8")}`);
       return 0;
 
     case "voices": {
