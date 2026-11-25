@@ -120,8 +120,11 @@ Any agent that can run a shell command can make a video:
 - **Any other agent:** tell it to run `npx -y drawcast@latest guide` and make a video of what you
   want explained.
 
-The skill only says what to run: read `drawcast guide`, write a script, `check`, `snapshot`,
-`render`. The format reference lives in the command, so the skill does not go out of date with it.
+The skill says one thing: run `npx -y drawcast@latest guide` and follow it. The steps (which command
+to run, `check`, `snapshot`, `render`) and the format reference all live in the command, and the
+guide always comes from the latest release, so an installed skill never goes out of date. The first
+line of the guide is its version: when `drawcast --version` matches it, the agent uses the installed
+`drawcast`, and otherwise `npx -y drawcast@latest`.
 
 ## What it costs in tokens
 
@@ -138,8 +141,8 @@ The last column is the canvas as it stands when the video ends, saved the way Ex
 scene and minified. It has no narration and no timing in it, and it is still two to four times the
 size of the script that draws it, narrates it and times it.
 
-What an agent reads first does not grow with the video: the skill is about 600 tokens and
-`drawcast guide` about 4,100. Layout problems come back from `check` as text, so finding them costs
+What an agent reads first does not grow with the video: the skill is about 190 tokens and
+`drawcast guide` about 4,600. Layout problems come back from `check` as text, so finding them costs
 no screenshots, and one `snapshot` is usually enough to look at before rendering.
 
 These are counts from `o200k_base`, a tokenizer from OpenAI that runs offline; another model's
