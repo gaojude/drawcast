@@ -40,7 +40,7 @@ test("segments are a second to five seconds long, and several per encoder", () =
 
 /** A voice that takes a moment over each sentence and notes how many it was asked for at once. */
 function slowVoice(parallel) {
-  const voice = { key: `test-${parallel ?? "one"}`, parallel, said: [], most: 0, now: 0 };
+  const voice = { name: "test", key: `test-${parallel ?? "one"}`, parallel, said: [], most: 0, now: 0 };
   voice.open = async () => async (sentence) => {
     voice.most = Math.max(voice.most, ++voice.now);
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -80,7 +80,9 @@ test("a voice that can speaks several sentences at once, and the steps come out 
     assert.equal(voice.most, 3);
     // each sentence once, though one is said in two steps
     assert.deepEqual([...voice.said].sort(), [ONE, TWO, THREE, FOUR, FIVE, SIX].sort());
-    assert.equal(lines.length, 6);
+    // which voice, then a line for each sentence spoken
+    assert.equal(lines[0], "  voice: test, 6 sentence(s), 0 from the cache");
+    assert.equal(lines.length, 7);
 
     assert.deepEqual(narration.steps.map((s) => s?.captions.map((c) => c.text) ?? null), [[ONE, TWO, THREE], null, [FOUR, FIVE, SIX, TWO]]);
     assert.equal(narration.clips[1], null);
@@ -230,7 +232,7 @@ function toyPlayer(steps) {
       }
       const duration = starts.length === steps ? at + 1 : null;
       if (duration !== null) ends[ends.length - 1] = duration;
-      return { stepStarts: [...starts], stepEnds: [...ends], settled: duration ?? at, duration };
+      return { stepStarts: [...starts], stepEnds: [...ends], stepDone: [...ends], settled: duration ?? at, duration };
     },
     async startOver() {
       player.startedOver++;
@@ -321,26 +323,25 @@ test("the cover is known as soon as the step it shows is spoken", async () => {
     return { t, hear, listener: () => listener };
   };
 
-  // the first step ends just before the second starts at 3 s, which is settled with the first step
+  // the cover is the first step as it is done, known as soon as that step is scheduled
   const first = telling(1);
   assert.equal(first.t.cover, null);
   await first.hear([0, 2]);
-  assert.equal(first.t.cover, 2.95);
-  assert.ok(first.t.cover * 10 < first.t.frames, "the cover is of a moment that is settled");
+  assert.equal(first.t.cover, 1);
   // another voice starts over, and its first step ends elsewhere
   const more = first.t.more();
   first.listener().startOver();
   await more;
   assert.equal(first.t.cover, null);
   await first.hear([0, 4]);
-  assert.equal(first.t.cover, 4.95);
+  assert.equal(first.t.cover, 1);
 
   // a later step's cover waits for that step, and the last step ends with the video
   const last = telling(3);
   await last.hear([0, 2]);
   assert.equal(last.t.cover, null);
   await last.hear([1, null], [2, 1]);
-  assert.deepEqual([last.t.cover, last.t.duration], [7, 7]);
+  assert.deepEqual([last.t.cover, last.t.duration], [3, 7]);
 
   const none = telling(null);
   await none.hear([0, 2]);

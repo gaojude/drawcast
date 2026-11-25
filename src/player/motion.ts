@@ -46,6 +46,16 @@ export function partialPolyline(pts: Pt[], u: number): Pt[] {
   return out;
 }
 
+/** The part of a polyline from fraction `a` to fraction `b` of its length. */
+export function subPath(pts: Pt[], a: number, b: number): Pt[] {
+  const upTo = partialPolyline(pts, b);
+  const skip = clamp(a, 0, b) * polylineLength(pts);
+  const total = polylineLength(upTo);
+  if (skip <= 0 || total <= 0) return upTo;
+  // the same path backwards, cut short, and turned round again
+  return partialPolyline([...upTo].reverse(), 1 - skip / total).reverse();
+}
+
 /** A smooth curve through the points (Catmull-Rom), sampled about every `step` units. */
 export function smooth(points: Pt[], step = 8): Pt[] {
   if (points.length < 3) return points;

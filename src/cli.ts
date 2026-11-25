@@ -4,7 +4,7 @@ import { parseArgs } from "node:util";
 import { cacheDir, packageRoot } from "./paths.ts";
 import { findBrowser } from "./render/browser.ts";
 import { findFfmpeg } from "./render/encode.ts";
-import { ScriptError, loadScript, renderSnapshot, renderVideo } from "./render/render.ts";
+import { ScriptError, loadScript, parseSteps, renderSnapshot, renderVideo } from "./render/render.ts";
 import { ensureModels, modelsDir, modelsInstalled } from "./voice/models.ts";
 import { EDGE_PREFIX, EDGE_VOICES, findEdgeTts } from "./voice/edge.ts";
 import { SPEAKERS, builtInVoices } from "./voice/voice.ts";
@@ -14,22 +14,24 @@ const HELP = `drawcast: turn a narrated Excalidraw script into a video
 Usage
   drawcast guide                      how to write a script (the file format, with examples)
   drawcast check <script>             find problems in a script without rendering it
-  drawcast snapshot <script>          save one moment as a PNG, to look at the layout
+  drawcast snapshot <script>          save the canvas as a PNG, to look at the layout
   drawcast render <script>            speak the narration and render the MP4
   drawcast voices                     list the voices
   drawcast setup                      download what rendering needs, and report what is installed
 
 Options
   -o, --output <file>     where to write (default: the script's name with .mp4 or .png)
-  --voice <name>          render: a voice from "drawcast voices", instead of the script's
+  --voice <name>          render, snapshot: a voice from "drawcast voices", instead of the script's
   --speed <n>             render: speaking rate, 1 = normal
   --no-captions           render: leave the captions out
   --fps <n>               render: frames per second (default 30)
-  --width <px>            render, snapshot: output width (default: 1.5 x the canvas, so 1920)
+  --width <px>            output width (render: 1.5 x the canvas, so 1920; snapshot: the canvas, 1280)
   --tts-command <cmd>     render: speak with your own program. It gets one sentence on stdin
                           and must write a WAV file to the path in $DRAWCAST_OUT.
-  --at <seconds>          snapshot: the moment to capture (default: the end)
-  --step <n>              snapshot: capture the canvas as step n ends
+  --step <n>              snapshot: the canvas as step n is done (every action finished). Several:
+                          2,5,9 or 3-6 or all, a file each
+  --sheet                 snapshot: the steps (default all) on one picture, in a grid
+  --at <seconds>          snapshot: the video at that moment, with pointer and captions
   -h, --help, -v, --version
 
 Files are kept in ${cacheDir()} (set DRAWCAST_HOME to move them).`;
@@ -63,6 +65,7 @@ async function main(): Promise<number> {
       "tts-command": { type: "string" },
       at: { type: "string" },
       step: { type: "string" },
+      sheet: { type: "boolean" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
     },
@@ -95,6 +98,8 @@ async function main(): Promise<number> {
       console.log(`speech model  ${modelsInstalled() ? modelsDir() : "missing"}`);
       console.log(`browser       ${browser ?? "missing: install Chrome, Chromium or Edge"}`);
       console.log(`ffmpeg        ${findFfmpeg() ?? "missing: install ffmpeg, or reinstall drawcast with install scripts allowed"}`);
+      // optional: without it a script left without a voice is spoken by the built-in one
+      console.log(`edge-tts      ${findEdgeTts() ?? 'not found (optional: the online voices need it; "pipx install edge-tts" or "uv tool install edge-tts")'}`);
       return browser && findFfmpeg() ? 0 : 1;
     }
 
@@ -112,9 +117,14 @@ async function main(): Promise<number> {
         return 0;
       }
       if (command === "snapshot") {
-        const output = values.output ?? withExtension(file, ".png");
-        const { at } = await renderSnapshot(loaded, { output, at: number(values.at, "at"), step: number(values.step, "step"), width, log });
-        console.log(`${output} (the canvas at ${at.toFixed(1)} s)`);
+        const sheet = values.sheet ?? false;
+        const steps = values.step !== undefined ? parseSteps(values.step, loaded.script.steps.length) : sheet ? parseSteps("all", loaded.script.steps.length) : undefined;
+        // each kind of still gets its own name, so that looking at one does not overwrite another
+        const kind = sheet ? ".sheet" : values.at !== undefined ? `.at${values.at}` : steps?.length === 1 ? `.step${steps[0]}` : "";
+        const output = values.output ?? withExtension(file, `${kind}.png`);
+        const { files, timing } = await renderSnapshot(loaded, { output, at: number(values.at, "at"), steps, sheet, width, voice: values.voice, log });
+        for (const f of files) console.log(`${f.file} (${f.shows})`);
+        console.log(timing);
         return 0;
       }
       const output = values.output ?? withExtension(file, ".mp4");

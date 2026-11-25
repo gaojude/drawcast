@@ -146,8 +146,37 @@ export function arrowPath(from: End, to: End, via: Pt[] = []): Pt[] {
   return [start, ...via, end];
 }
 
+/**
+ * An arrow's course: its path, and when it is `rounded` with `via` points, a smooth curve through them.
+ * Excalidraw's own rounding pulls a curve through few points into a hook at each one, so the curve is
+ * drawn here, as many short straight pieces.
+ */
+export function arrowCourse(from: End, to: End, via: Pt[], rounded?: boolean): Pt[] {
+  const path = arrowPath(from, to, via);
+  if (!rounded || !via.length) return path;
+  let pts: Pt[];
+  if (path.length === 3) {
+    // one point to pass through: a single even arc, the curve whose middle is that point
+    const [a, v, b] = path;
+    const c = { x: 2 * v.x - (a.x + b.x) / 2, y: 2 * v.y - (a.y + b.y) / 2 };
+    const n = Math.max(8, Math.ceil((Math.hypot(v.x - a.x, v.y - a.y) + Math.hypot(b.x - v.x, b.y - v.y)) / 12));
+    pts = Array.from({ length: n + 1 }, (_, k) => {
+      const t = k / n;
+      const u = 1 - t;
+      return { x: u * u * a.x + 2 * u * t * c.x + t * t * b.x, y: u * u * a.y + 2 * u * t * c.y + t * t * b.y };
+    });
+  } else pts = smooth(path, 12);
+  // Excalidraw sizes an arrowhead by the piece of line it sits on: keep the end pieces long enough to carry one
+  const [first, last] = [pts[0], pts[pts.length - 1]];
+  const far = (p: Pt, q: Pt) => Math.hypot(p.x - q.x, p.y - q.y) >= HEAD_ROOM;
+  return pts.filter((p, i) => i === 0 || i === pts.length - 1 || (far(p, first) && far(p, last)));
+}
+
+/** How long the end pieces of a curved arrow are kept, so its heads are drawn full size. */
+const HEAD_ROOM = 30;
+
 export function makeArrow(spec: ElementSpec, from: End, to: End): El[] {
-  const path = arrowPath(from, to, (spec.via ?? []).map(pt));
+  const path = arrowCourse(from, to, (spec.via ?? []).map(pt), spec.rounded);
   const els = convert({
     type: "arrow",
     id: spec.id,
@@ -161,7 +190,8 @@ export function makeArrow(spec: ElementSpec, from: End, to: End): El[] {
     ...els[0],
     // convertToExcalidrawElements straightens the path; keep ours
     ...pathGeometry(path),
-    roundness: spec.rounded ? { type: 2 } : null,
+    // a curve through `via` is already smooth; without `via` there is nothing to round
+    roundness: null,
     startBinding: isPoint(from) ? null : { elementId: from.id, focus: 0, gap: ARROW_GAP },
     endBinding: isPoint(to) ? null : { elementId: to.id, focus: 0, gap: ARROW_GAP },
   };
