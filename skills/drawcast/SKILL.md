@@ -10,7 +10,16 @@ locally synthesized voice. You write the script; the `drawcast` command checks a
 
 ## Running the command
 
-Use `drawcast` if it is on the PATH, otherwise `npx -y drawcast@latest`. It needs Node.js 20 or newer.
+It needs Node.js 20 or newer. Before anything else, make sure the command is the latest release:
+
+- Run `drawcast --version` and `npm view drawcast version`.
+- If `drawcast` is not on the PATH, use `npx -y drawcast@latest` in place of `drawcast` everywhere
+  below. That always fetches the latest release.
+- If the installed version is older than the one npm reports, run `npm install -g drawcast@latest`
+  and tell the user it was updated. If that fails (for example, no permission), use
+  `npx -y drawcast@latest` for this video instead.
+- If `npm view` fails (no network), carry on with whatever is installed.
+
 The first render downloads a speech model (about 365 MB), which can take a few minutes.
 
 ## Steps
