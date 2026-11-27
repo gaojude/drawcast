@@ -22,6 +22,11 @@ Keep the workflow and reference in the CLI so installed skills can pick up chang
 
 ## Publish to npm
 
+Every PR must add a new changeset. Run `npm run changeset`, select a patch, minor, or
+major bump for `drawcast`, and write a release note for users. For work with no release
+impact, including docs-only changes, run `npm run changeset -- --empty`. Commit the
+generated Markdown file. The **Require changeset** check runs on every pull request.
+
 ### Add the npm token to GitHub
 
 1. Sign in to npm with an account that can publish `drawcast`. Open your profile menu,
@@ -37,10 +42,12 @@ Keep the workflow and reference in the CLI so installed skills can pick up chang
 
 ### Release a stable version
 
-1. Choose an unpublished version. Run `npm version patch --no-git-tag-version`
-   (or use `minor` or `major`) to update `package.json` and `package-lock.json`.
-   Set the same version in `.claude-plugin/plugin.json`. Commit and merge the version
-   changes into `main`.
+1. On a release branch, run `npm run changeset -- status` to inspect the pending
+   bumps, then `npm run changeset -- version` to consume the notes, update
+   `package.json`, and generate the changelog. Run `npm install --package-lock-only`
+   and set the same version in `.claude-plugin/plugin.json`. Run
+   `npm run changeset -- --empty` to record the release PR itself, then commit
+   the generated files and deletions and merge the PR into `main`.
 2. From the updated `main` checkout, create and push the matching tag. For example,
    for version `0.6.1`, run `git tag v0.6.1` followed by `git push origin v0.6.1`.
 3. Open the tag's **Verify** run in GitHub Actions. Once Linux, macOS, and Windows pass,
