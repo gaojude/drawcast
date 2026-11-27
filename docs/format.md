@@ -64,7 +64,7 @@ encoding and muxing. Speech and video can run together, so the phase times can o
 | `steps` | The list of steps, played in order. Required. |
 | `title` | A name for the video. Not drawn. |
 | `canvas` | `{ "width": 1280, "height": 720, "background": "#ffffff" }`, which is the default. |
-| `voice` | A voice name from `drawcast voices`. Default: the online voice for the narration's language, or the first built-in one if it cannot be had. A name starting with `edge:` is an online voice (see Narration). |
+| `voice` | A voice name from `drawcast voices`. Default: the online voice for the narration's language, or the first built-in one if it cannot be had. A name starting with `edge:` is an online voice, and one starting with `minimax:` a paid MiniMax voice (see Narration). |
 | `speed` | Speaking rate, 0.5 to 2. Default 1. |
 | `captions` | `false` leaves the narration out of the picture. Default `true`. |
 | `cover` | The number of the step whose finished canvas is the cover. Default `1`. `false` for no cover. |
@@ -436,6 +436,12 @@ A video holds attention when something on screen answers every sentence. Cheap w
   program must be installed. Without it, or without a connection, the built-in voice (`lin` or
   `maple`) says the whole script instead; `render` says which voice spoke. Name a built-in voice to
   keep the narration on this machine.
+- `minimax:<voice id>` (for example `minimax:male-qn-qingse`) is one of MiniMax's voices. They are
+  the most expressive, but each character spoken is billed to the person's own MiniMax account, so use
+  one only when asked to. A spoken sentence is cached, so a render again pays only for new sentences.
+  It needs an API key, which never goes in the script or the conversation: if `drawcast voices`
+  reports no key, ask the person to run `drawcast key minimax` in their own terminal and paste the key
+  there, then render. `@speech-2.8-turbo` after the voice id picks the cheaper model.
 
 ## A longer example
 

@@ -12,3 +12,14 @@ export function cacheDir(): string {
   if (process.platform === "darwin") return path.join(os.homedir(), "Library", "Caches", "drawcast");
   return path.join(process.env.XDG_CACHE_HOME ?? path.join(os.homedir(), ".cache"), "drawcast");
 }
+
+/**
+ * Where settings are kept that clearing a cache must not lose, such as a saved API key. On Windows that
+ * is the same folder as the cache, which nothing clears by itself and which does not roam to other
+ * machines. DRAWCAST_HOME moves it too.
+ */
+export function configDir(): string {
+  if (process.env.DRAWCAST_HOME || process.platform === "win32") return cacheDir();
+  if (process.platform === "darwin") return path.join(os.homedir(), "Library", "Application Support", "drawcast");
+  return path.join(process.env.XDG_CONFIG_HOME ?? path.join(os.homedir(), ".config"), "drawcast");
+}

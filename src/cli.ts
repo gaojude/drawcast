@@ -8,6 +8,7 @@ import { inspectVideo } from "./render/inspect.ts";
 import { ScriptError, loadScript, parseSteps, renderSnapshot, renderVideo } from "./render/render.ts";
 import { ensureModels, modelsDir, modelsInstalled } from "./voice/models.ts";
 import { EDGE_PREFIX, EDGE_VOICES, edgeTtsStatus } from "./voice/edge.ts";
+import { MINIMAX_MODEL, MINIMAX_PREFIX, MINIMAX_VOICES, minimaxKeyStatus, removeMinimaxKey, saveMinimaxKey } from "./voice/minimax.ts";
 import { SPEAKERS, builtInVoices } from "./voice/voice.ts";
 
 const HELP = `drawcast: turn a narrated Excalidraw script into a video
@@ -19,6 +20,8 @@ Usage
   drawcast render <script>            speak the narration and render the MP4
   drawcast inspect <video.mp4>        sample the encoded video to <video>.inspect.png
   drawcast voices                     list the voices
+  drawcast key minimax [--remove]     save the API key for MiniMax's paid voices, typed or pasted
+                                      here and never shown, or remove the saved one
   drawcast setup                      download what rendering needs, and report what is installed
 
 Options
@@ -59,6 +62,47 @@ function number(value: string | undefined, name: string): number | undefined {
   return n;
 }
 
+/**
+ * Reads a secret: typed or pasted at a terminal without being shown, or piped in
+ * (`Get-Clipboard | drawcast key minimax`, `pbpaste | drawcast key minimax`).
+ */
+async function readSecret(prompt: string, signal: AbortSignal): Promise<string> {
+  const stdin = process.stdin;
+  if (!stdin.isTTY) {
+    const chunks: Buffer[] = [];
+    for await (const chunk of stdin) chunks.push(chunk as Buffer);
+    return Buffer.concat(chunks).toString("utf8").trim();
+  }
+  process.stderr.write(prompt);
+  return new Promise((resolve, reject) => {
+    let value = "";
+    const finish = (error?: Error) => {
+      stdin.off("data", onData);
+      signal.removeEventListener("abort", onAbort);
+      stdin.setRawMode(false);
+      stdin.pause();
+      process.stderr.write("\n");
+      if (error) reject(error);
+      else resolve(value.trim());
+    };
+    // in raw mode Ctrl+C arrives as a character, not as SIGINT
+    const onData = (chunk: string) => {
+      for (const ch of chunk) {
+        if (ch === "\r" || ch === "\n") return finish();
+        if (ch === "\u0003" || ch === "\u0004") return finish(new Error("Cancelled. Nothing was saved."));
+        if (ch === "\u007f" || ch === "\b") value = value.slice(0, -1);
+        else if (ch >= " ") value += ch;
+      }
+    };
+    const onAbort = () => finish(signal.reason instanceof Error ? signal.reason : new Error("Cancelled."));
+    signal.addEventListener("abort", onAbort, { once: true });
+    stdin.setRawMode(true);
+    stdin.setEncoding("utf8");
+    stdin.on("data", onData);
+    stdin.resume();
+  });
+}
+
 async function main(signal: AbortSignal): Promise<number> {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
@@ -74,6 +118,7 @@ async function main(signal: AbortSignal): Promise<number> {
       step: { type: "string" },
       sheet: { type: "boolean" },
       motion: { type: "boolean" },
+      remove: { type: "boolean" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
     },
@@ -85,11 +130,11 @@ async function main(signal: AbortSignal): Promise<number> {
   if (values.help || !command) return console.log(HELP), command || values.help ? 0 : 1;
 
   const takesScript = ["check", "snapshot", "render"].includes(command);
-  const maxArgs = takesScript || command === "inspect" ? 2 : 1;
+  const maxArgs = takesScript || command === "inspect" || command === "key" ? 2 : 1;
   if (command !== "guide" && positionals.length > maxArgs) throw new Error(`Unexpected argument for ${command}: ${positionals[maxArgs]}.`);
   const allowed = command === "render" || command === "snapshot"
     ? ["output", "width", "voice", "speed", "no-captions", "tts-command", ...(command === "snapshot" ? ["sheet", "at", "step"] : ["fps"])]
-    : command === "inspect" ? ["output", "at", "motion", "step", "width"] : [];
+    : command === "inspect" ? ["output", "at", "motion", "step", "width"] : command === "key" ? ["remove"] : [];
   for (const [option, value] of Object.entries(values)) {
     if (!allowed.includes(option)) throw new Error(`--${option} does not apply to ${command}.`);
     if (typeof value === "string" && !value.trim()) throw new Error(`--${option} needs a nonempty value.`);
@@ -122,6 +167,26 @@ async function main(signal: AbortSignal): Promise<number> {
       console.log(`\nOnline voices send the narration to Microsoft and need the edge-tts program.\nedge-tts: ${edgeTtsStatus().description}\nLeft unset, a script gets the first online voice of its language, or the first built-in one if that\ncannot be had:`);
       for (const v of EDGE_VOICES) console.log(`${(EDGE_PREFIX + v.name).padEnd(width)}  ${v.language}  ${v.description}`);
       console.log(`"edge-tts --list-voices" lists the rest; put "${EDGE_PREFIX}" in front of a name.`);
+      console.log(`\nMiniMax's voices are paid by the character, with your own API key, and are used only when a script\nor --voice names one. minimax: ${minimaxKeyStatus()}.`);
+      for (const v of MINIMAX_VOICES) console.log(`${(MINIMAX_PREFIX + v.name).padEnd(width)}  ${v.language}  ${v.description}`);
+      console.log(`Any voice id from MiniMax's list, or one you cloned, works after "${MINIMAX_PREFIX}". The model is\n${MINIMAX_MODEL}; add "@speech-2.8-turbo" to a name for the cheaper one.`);
+      return 0;
+    }
+
+    case "key": {
+      if (file !== "minimax") throw new Error(`Usage: drawcast key minimax [--remove]. MiniMax is the only service drawcast keeps a key for.`);
+      if (values.remove) {
+        console.log(`Removed the saved MiniMax key from ${await removeMinimaxKey()}.`);
+        if (process.env.MINIMAX_API_KEY?.trim()) console.log("MINIMAX_API_KEY is still set in this environment, and is used while it is.");
+        return 0;
+      }
+      const key = await readSecret("MiniMax API key (it is not shown): ", signal);
+      if (!key) throw new Error("No key was given, so nothing was saved.");
+      if (/\s/.test(key)) throw new Error("That has spaces in it, so it is not one API key. Nothing was saved.");
+      const saved = await saveMinimaxKey(key);
+      console.log(`Saved the MiniMax key ending ${key.slice(-4)} to ${saved}.`);
+      console.log(`A script with "voice": "${MINIMAX_PREFIX}<voice id>" uses it from now on, in any program that runs drawcast.`);
+      if (process.env.MINIMAX_API_KEY?.trim()) console.log("MINIMAX_API_KEY is set in this environment, and is used instead while it is.");
       return 0;
     }
 
@@ -135,6 +200,7 @@ async function main(signal: AbortSignal): Promise<number> {
       console.log(`ffmpeg        ${ffmpeg ?? "missing: install ffmpeg, or reinstall drawcast with install scripts allowed"}`);
       // optional: without it a script left without a voice is spoken by the built-in one
       console.log(`edge-tts      ${edgeTtsStatus().description} (needed for online voices)`);
+      console.log(`minimax       ${minimaxKeyStatus()} (needed for MiniMax's paid voices)`);
       return browser && ffmpeg ? 0 : 1;
     }
 
