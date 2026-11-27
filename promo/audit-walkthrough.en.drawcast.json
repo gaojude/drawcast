@@ -1,0 +1,84 @@
+{
+  "drawcast": 1,
+  "title": "Drawcast render audit",
+  "canvas": { "width": 1280, "height": 720, "background": "#fbfcf9" },
+  "cover": 1,
+  "steps": [
+    {
+      "say": "Drawcast encoded eighteen frames. When we played the file, only sixteen appeared. Where did the first two go?",
+      "do": [
+        {"at":0,"add":{"id":"series","type":"text","x":72,"y":50,"text":"Drawcast  /  render audit","fontSize":23,"fontFamily":"code","strokeColor":"#087c72"},"enter":"none"},
+        {"at":0,"add":{"id":"h1","type":"text","x":72,"y":100,"text":"Where did two frames go?","fontSize":50,"fontFamily":"normal","strokeColor":"#19384a"},"enter":"fade","duration":0.3},
+        {"at":"eighteen","add":[{"id":"n1","type":"text","x":220,"y":227,"text":"18","fontSize":124,"fontFamily":"hand","strokeColor":"#276c91"},{"id":"encoded","type":"text","x":192,"y":390,"text":"frames encoded","fontSize":31,"fontFamily":"normal","strokeColor":"#19384a"}],"duration":0.42},
+        {"at":"played","add":{"id":"transport","type":"arrow","from":[480,324],"to":[752,324],"roughness":0,"strokeWidth":3,"strokeColor":"#536873"}},
+        {"at":"sixteen","add":[{"id":"n2","type":"text","x":862,"y":227,"text":"16","fontSize":124,"fontFamily":"hand","strokeColor":"#b9403d"},{"id":"decoded","type":"text","x":804,"y":390,"text":"frames decoded","fontSize":31,"fontFamily":"normal","strokeColor":"#19384a"}],"duration":0.42},
+        {"at":"first two","pulse":"n2"}
+      ]
+    },
+    {
+      "say": "The opening frames had negative timestamps. Now the first frame starts at zero, and each frame advances by one tick at the chosen frame rate. All eighteen play.",
+      "do": [
+        {"at":"negative","add":{"id":"clock","type":"text","x":230,"y":495,"text":"First timestamp < 0","fontSize":29,"fontFamily":"code","strokeColor":"#b9403d"}},
+        {"at":"zero","duration":0.4,"update":{"id":"clock","text":"First timestamp = 0","strokeColor":"#087c72"}},
+        {"at":"one tick","add":{"id":"ticks","type":"text","x":762,"y":495,"text":"0    1    2   ...   17","fontSize":27,"fontFamily":"code","strokeColor":"#087c72"}},
+        {"at":"eighteen","duration":0.45,"update":{"id":"n2","text":"18","strokeColor":"#087c72"}},
+        {"at":"play","pulse":"n2"}
+      ]
+    },
+    {
+      "say": "A second bug was visible on the board. Rotate this track a quarter turn. The dot used to travel sideways. Now it follows the line you see.",
+      "do": [
+        {"at":0,"duration":0.22,"remove":["h1","n1","encoded","transport","n2","decoded","clock","ticks"]},
+        {"at":"second","add":{"id":"h3","type":"text","x":72,"y":100,"text":"Does the dot follow the track?","fontSize":50,"fontFamily":"normal","strokeColor":"#19384a"},"duration":0.45},
+        {"at":"track","add":{"id":"track","type":"line","points":[[540,365],[860,365]],"roughness":0,"strokeWidth":5,"strokeColor":"#087c72"}},
+        {"at":"quarter turn","duration":0.9,"update":{"id":"track","angle":1.5707963267948966}},
+        {"at":"sideways","add":{"id":"guide","type":"line","points":[[540,365],[860,365]],"roughness":0,"strokeWidth":2,"strokeColor":"#536873","strokeStyle":"dashed","opacity":35}},
+        {"at":"sideways","add":{"id":"former","type":"text","x":917,"y":346,"text":"old direction","fontSize":24,"fontFamily":"normal","strokeColor":"#536873"}},
+        {"at":"Now","add":{"id":"rider","type":"ellipse","x":682,"y":187,"width":36,"height":36,"roughness":0,"backgroundColor":"#ef8c42","strokeColor":"#af511e"},"enter":"fade","duration":0.3},
+        {"at":"follows","duration":1.7,"update":{"id":"rider","along":"track"}}
+      ]
+    },
+    {
+      "say": "If the online voice fails halfway through, Drawcast restarts the narration with a built-in voice. It rebuilds the video timing from that voice, so the pictures still follow the words.",
+      "do": [
+        {"at":0,"duration":0.22,"remove":["h3","track","guide","former","rider"]},
+        {"at":"online","add":{"id":"h4","type":"text","x":72,"y":100,"text":"When a voice drops out","fontSize":50,"fontFamily":"normal","strokeColor":"#19384a"},"duration":0.35},
+        {"at":"online","add":{"id":"cloud","type":"rectangle","x":90,"y":287,"width":250,"height":106,"label":"Online voice","fontSize":29,"fontFamily":"normal","strokeColor":"#19384a","backgroundColor":"#e9eff0","roughness":0}},
+        {"at":"fails","duration":0.35,"update":{"id":"cloud","strokeColor":"#b9403d","backgroundColor":"#fbddda"}},
+        {"at":"restarts","add":{"id":"local","type":"rectangle","x":500,"y":287,"width":250,"height":106,"label":"Built-in voice","fontSize":29,"fontFamily":"normal","strokeColor":"#087c72","backgroundColor":"#e2f1ed","roughness":0}},
+        {"at":"restarts","add":{"id":"toLocal","type":"arrow","from":"cloud","to":"local","roughness":0,"strokeWidth":3,"strokeColor":"#536873"}},
+        {"at":"built-in","send":{"along":"toLocal","color":"teal"}},
+        {"at":"timing","add":{"id":"timeline","type":"rectangle","x":910,"y":287,"width":270,"height":106,"label":"New timing","fontSize":29,"fontFamily":"normal","strokeColor":"#087c72","backgroundColor":"#e2f1ed","roughness":0}},
+        {"at":"timing","add":{"id":"toTiming","type":"arrow","from":"local","to":"timeline","roughness":0,"strokeWidth":3,"strokeColor":"#536873"}},
+        {"at":"pictures","send":{"along":"toTiming","color":"teal"}}
+      ]
+    },
+    {
+      "say": "You can also cancel a render. The signal stops the browser and the speech process. The previous video stays in place while the unfinished output is cleared.",
+      "do": [
+        {"at":0,"duration":0.22,"remove":["h4","cloud","local","timeline","toLocal","toTiming"]},
+        {"at":"cancel","add":{"id":"h5","type":"text","x":72,"y":100,"text":"What survives a cancelled render?","fontSize":50,"fontFamily":"normal","strokeColor":"#19384a"},"duration":0.4},
+        {"at":"cancel","add":{"id":"ctrl","type":"rectangle","x":90,"y":276,"width":245,"height":104,"label":"Ctrl + C","fontSize":29,"fontFamily":"normal","strokeColor":"#276c91","backgroundColor":"#e4eff4","roughness":0}},
+        {"at":"stops","add":{"id":"workers","type":"rectangle","x":488,"y":276,"width":310,"height":104,"label":"Browser + voice","fontSize":29,"fontFamily":"normal","strokeColor":"#b9403d","backgroundColor":"#fbddda","roughness":0}},
+        {"at":"stops","add":{"id":"stopSignal","type":"arrow","from":"ctrl","to":"workers","roughness":0,"strokeWidth":3,"strokeColor":"#536873"}},
+        {"at":"speech","send":{"along":"stopSignal","color":"red"}},
+        {"at":"previous","add":{"id":"saved","type":"rectangle","x":916,"y":276,"width":258,"height":104,"label":"Prior video","fontSize":29,"fontFamily":"normal","strokeColor":"#087c72","backgroundColor":"#e2f1ed","roughness":0}},
+        {"at":"stays","add":{"id":"kept","type":"text","x":936,"y":429,"text":"preserved","fontSize":27,"fontFamily":"code","strokeColor":"#087c72"}},
+        {"at":"cleared","add":{"id":"cleared","type":"text","x":519,"y":429,"text":"work stopped","fontSize":27,"fontFamily":"code","strokeColor":"#b9403d"}}
+      ]
+    },
+    {
+      "say": "We checked the result on Windows. All one hundred and eighteen local tests passed. We also decoded the exported video to count its frames and verify both the picture and sound tracks.",
+      "do": [
+        {"at":0,"duration":0.22,"remove":["h5","ctrl","workers","stopSignal","saved","kept","cleared"]},
+        {"at":"checked","add":{"id":"h6","type":"text","x":72,"y":100,"text":"How we checked the export","fontSize":50,"fontFamily":"normal","strokeColor":"#19384a"},"duration":0.4},
+        {"at":"eighteen","add":{"id":"total","type":"text","x":145,"y":210,"text":"118","fontSize":132,"fontFamily":"hand","strokeColor":"#087c72"},"duration":0.55},
+        {"at":"tests","add":{"id":"passed","type":"text","x":124,"y":392,"text":"local tests passed","fontSize":30,"fontFamily":"normal","strokeColor":"#19384a"}},
+        {"at":"decoded","add":{"id":"verify1","type":"text","x":615,"y":240,"text":"Decoded frame count","fontSize":37,"fontFamily":"normal","strokeColor":"#19384a"}},
+        {"at":"picture","add":{"id":"verify2","type":"text","x":615,"y":337,"text":"Video track","fontSize":37,"fontFamily":"normal","strokeColor":"#276c91"}},
+        {"at":"sound","add":{"id":"verify3","type":"text","x":615,"y":434,"text":"Audio track","fontSize":37,"fontFamily":"normal","strokeColor":"#087c72"}}
+      ],
+      "pause": 0.5
+    }
+  ]
+}
