@@ -10,10 +10,10 @@ import { statSync } from "node:fs";
 import path from "node:path";
 import { findPhrase, tokens, widthEm } from "../shared/text.ts";
 import { Plots, isPlotRef, type PlotRef } from "../shared/expr.ts";
-import { axesLayout } from "../shared/axes.ts";
-import { partialPolyline, type Pt } from "../player/motion.ts";
+import { type AxisRef, axesLayout, axesPoint, isAxisRef } from "../shared/axes.ts";
+import { partialPolyline, rotatePath, type Pt } from "../player/motion.ts";
 import { arrowCourse, arrowLabelCenter, type ArrowEnd } from "../shared/arrows.ts";
-import { DEFAULT_CANVAS, type ElementSpec, type Formula, PALETTE, type Script, type TextAlign, alignOffset } from "../shared/types.ts";
+import { DEFAULT_CANVAS, type ElementSpec, type Formula, PALETTE, type Point, type Script, type TextAlign, alignOffset } from "../shared/types.ts";
 
 export interface Report {
   errors: string[];
@@ -40,6 +40,7 @@ interface Live {
   labelled?: boolean;
   /** A line or pen stroke, in canvas coordinates, for moves along its path. */
   points?: Pt[];
+  axes?: { spec: ElementSpec; offset: Point };
   /** an arrow: what it runs between, to tell where it goes as the things at its ends move */
   arrow?: { from: string | [number, number]; to: string | [number, number]; via: Pt[]; rounded?: boolean };
 }
@@ -119,6 +120,7 @@ const LINE_HEIGHT = 1.25;
 const isNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const isColor = (v: unknown): v is string => typeof v === "string" && COLOR.test(v);
 const isPoint = (v: unknown): v is [number, number] => Array.isArray(v) && v.length === 2 && v.every(isNumber);
+const isCoordinate = (v: unknown) => isPoint(v) || isPlotRef(v) || isAxisRef(v);
 const increasing = (v: unknown): v is [number, number] => isPoint(v) && v[0] < v[1] && Number.isFinite(v[1] - v[0]);
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const quote = (v: unknown) => JSON.stringify(v);
@@ -145,7 +147,7 @@ const LATEX = new RegExp(`\\\\(?:${TEX_COMMANDS})(?![a-zA-Z])|[\\^_]\\{|\\$(?![\
 /** A tab, line break or other control character: what JSON makes of `\t`, `\n`, `\f`, `\b` and `\r`. */
 const CONTROL = /[\u0000-\u001f]/;
 
-export async function check(input: unknown, baseDir: string): Promise<Report> {
+export async function check(input: unknown, baseDir: string, axisPoints?: WeakMap<AxisRef, Point>): Promise<Report> {
   // MathJax is large and most scripts have no formulas, so it is loaded only for those that do
   const typeset: ((tex: string) => Formula) | null = JSON.stringify(input ?? null).includes('"type":"math"') ? (await import("../math/typeset.ts")).typeset : null;
   const errors: string[] = [];
@@ -219,7 +221,20 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
     return plots.point(ref) ?? (fail(where, `${name} ${quote(ref)}: the plot ${quote(ref[0])} has no value at x = ${ref[1]}.`), null);
   };
   /** A point as given, `[x, y]` or a point of a plot, in canvas coordinates; null when it is neither. */
-  const anyPoint = (where: string, name: string, v: unknown): [number, number] | null => (isPoint(v) ? v : isPlotRef(v) ? plotPoint(where, name, v) : null);
+  const anyPoint = (where: string, name: string, v: unknown): Point | null => {
+    if (isPoint(v)) return v;
+    if (isPlotRef(v)) return plotPoint(where, name, v);
+    if (!isAxisRef(v)) return null;
+    const [id, x, y] = v, el = live.get(id);
+    if (!el?.axes || !el.box) return fail(where, `${name} ${quote(v)} needs an axes element named ${quote(id)} already on the canvas.`), null;
+    const { spec, offset } = el.axes;
+    if (x < spec.domain![0] || x > spec.domain![1] || y < spec.range![0] || y > spec.range![1]) {
+      return fail(where, `${name} ${quote(v)} is outside the axes domain ${quote(spec.domain)} or range ${quote(spec.range)}.`), null;
+    }
+    const value = axesPoint(spec, offset, el.box, el.angle ?? 0, x, y);
+    axisPoints?.set(v, value);
+    return value;
+  };
   const used = new Set<string>();
   const steps = script.steps as unknown[];
   const movesCamera = steps.some((s) => isObject(s) && Array.isArray(s.do) && s.do.some((a) => isObject(a) && a.camera !== undefined));
@@ -242,8 +257,7 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
 
   /** An arrow end or a pointer target: an element on the canvas, or a point. */
   const checkRef = (where: string, name: string, ref: unknown, attachable = false): boolean => {
-    if (isPoint(ref)) return true;
-    if (isPlotRef(ref)) return !!plotPoint(where, name, ref);
+    if (isCoordinate(ref)) return !!anyPoint(where, name, ref);
     if (typeof ref !== "string") return fail(where, `${name} must be an element id or a point [x, y].`), false;
     const target = live.get(ref);
     if (!target) return fail(where, `${name} refers to ${quote(ref)}, which is not on the canvas at this point (never added, or already removed).`), false;
@@ -297,11 +311,11 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
       return !missing.length;
     };
     let box: Box | null = null;
-    let anchor: Pick<Live, "align" | "fontSize" | "points"> = {};
+    let anchor: Pick<Live, "align" | "fontSize" | "points" | "axes"> = {};
     plainText(where, "label", el.label);
 
     if (el.on !== undefined) {
-      const at = isPlotRef(el.on) ? plotPoint(where, "on", el.on) : (fail(where, `"on" must be a point of a plot, such as ["loss", -2.4].`), null);
+      const at = isPlotRef(el.on) || isAxisRef(el.on) ? anyPoint(where, "on", el.on) : (fail(where, `"on" needs a plot point ["plot", x] or an axes reading ["axes", x, y].`), null);
       if (!at) return;
       if (!isNumber(el.width) || !isNumber(el.height)) return fail(where, `"on" puts the element's middle on the point, so it needs width and height.`);
       if (el.x !== undefined || el.y !== undefined) fail(where, `"on" says where the element goes; leave out x and y.`);
@@ -335,6 +349,7 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
         plainText(where, field, text);
       }
       const layout = axesLayout(el as ElementSpec);
+      anchor.axes = { spec: el as ElementSpec, offset: [layout.left, layout.top] };
       const nx = el.xTicks?.length ?? 0, ny = el.yTicks?.length ?? 0;
       const xLabels = layout.labels.slice(0, nx).sort((a, b) => a.x - b.x);
       const yLabels = layout.labels.slice(nx, nx + ny).sort((a, b) => a.y - b.y);
@@ -372,7 +387,7 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
     } else if (type === "arrow") {
       const ok = [checkRef(where, "from", el.from, true), checkRef(where, "to", el.to, true)];
       if (ok.every(Boolean) && typeof el.from === "string" && el.from === el.to) fail(where, "an arrow cannot start and end on the same element.");
-      if (el.via !== undefined && !(Array.isArray(el.via) && el.via.every((p) => isPoint(p) || isPlotRef(p)))) fail(where, `"via" must be a list of points [[x, y], ...].`);
+      if (el.via !== undefined && !(Array.isArray(el.via) && el.via.every(isCoordinate))) fail(where, `"via" needs a list of canvas, plot or axes points.`);
       else if (ok.every(Boolean)) {
         const end = (r: unknown) => (typeof r === "string" ? r : anyPoint(where, "an end", r) ?? [0, 0]);
         const arrow = { from: end(el.from), to: end(el.to), via: pathPoints(where, "via", el.via ?? []), rounded: el.rounded === true };
@@ -417,7 +432,7 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
       const plotOnly = ["x", "y", "width", "height", "domain", "range", "p"].filter((k) => el[k] !== undefined);
       if (plotOnly.length) fail(where, `${plotOnly.join(", ")} are for a plot, a line with "fn". A line is placed by its "points".`);
       const min = el.closed ? 3 : 2;
-      if (!Array.isArray(el.points) || el.points.length < min || !el.points.every((p) => isPoint(p) || isPlotRef(p))) return fail(where, `needs "points": at least ${min} points [[x, y], ...] in canvas coordinates.`);
+      if (!Array.isArray(el.points) || el.points.length < min || !el.points.every(isCoordinate)) return fail(where, `needs "points": at least ${min} canvas points [x, y], plot points [id, x] or axes points [id, x, y].`);
       anchor.points = pathPoints(where, "a point", el.points);
       if (el.closed && anchor.points.length) anchor.points.push(anchor.points[0]);
     }
@@ -426,7 +441,7 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
 
   const pathPoints = (where: string, name: string, refs: unknown[]): Pt[] => {
     const valid = refs.map((ref) => anyPoint(where, name, ref));
-    return valid.every(Boolean) ? plots.path(refs as ([number, number] | PlotRef)[]) : [];
+    return valid.every(Boolean) ? plots.path(refs.map((r, i) => isPlotRef(r) ? r : valid[i]!)) : [];
   };
 
   /** Resolve the arrow using the same outline and curve geometry the player draws. */
@@ -541,13 +556,16 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
         let arrival: P | null = null;
         if (u.along !== undefined) {
           let route: Pt[] | null = null;
-          if (Array.isArray(u.along) && u.along.length >= 2 && u.along.every((p) => isPoint(p) || isPlotRef(p))) {
+          if (Array.isArray(u.along) && u.along.length >= 2 && u.along.every(isCoordinate)) {
             route = pathPoints(where, "along", u.along);
           }
           else if (typeof u.along === "string" && checkRef(where, "along", u.along)) {
             const path = live.get(u.along)!;
             if (!PATHS.includes(path.type)) fail(where, `"along" names ${quote(u.along)}, a ${path.type}; it must be an arrow or a line to travel along, or points [[x, y], ...].`);
-            else route = path.arrow ? course(path.arrow) : path.points ?? null;
+            else {
+              route = path.arrow ? course(path.arrow) : path.points ?? null;
+              if (route && path.angle) route = rotatePath(route, path.angle);
+            }
           } else if (typeof u.along !== "string") fail(where, `"along" must be the id of an arrow or line, or at least two points [[x, y], ...].`);
           if (u.span !== undefined && !(Array.isArray(u.span) && u.span.length === 2 && u.span.every(isNumber) && 0 <= u.span[0] && u.span[0] < u.span[1] && u.span[1] <= 1)) {
             fail(where, `"span" must be [from, to], fractions of the path between 0 and 1, smaller first.`);

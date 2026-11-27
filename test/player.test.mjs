@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { build } from "esbuild";
 import { findBrowser, launchBrowser } from "../src/render/browser.ts";
 import { expand } from "../src/format/expand.ts";
+import { check } from "../src/format/check.ts";
 import { axesImageKey, axesLayout } from "../src/shared/axes.ts";
 
 test("the browser timeline", async (t) => {
@@ -42,6 +43,24 @@ test("the browser timeline", async (t) => {
     assert.deepEqual([at(moved, "scale").x, at(moved, "scale").opacity], [el.x + 50, 60]);
     assert.ok(moved.view.w >= layout.width && moved.view.h >= layout.height);
     assert.equal(at(gone, "scale"), undefined);
+  });
+
+  await t.test("a reading on axes moved along a rotated named path lands on the rendered chart", async () => {
+    const axes = { id: "scale", type: "axes", x: 40, y: 60, width: 200, height: 100, domain: [0, 4], range: [0, 1], xLabel: "Hours", yTicks: [0, 0.5, 1] };
+    const rail = { id: "rail", type: "line", points: [[300, 200], [500, 200]], roughness: 0 };
+    const script = { drawcast: 1, steps: [{ do: [
+      { enter: "none", add: [axes, rail] },
+      { duration: 0, update: { id: "rail", dy: 10, angle: Math.PI / 2 } },
+      { duration: 1, update: { id: "scale", along: "rail", span: [0.1, 0.75] } },
+      { enter: "none", add: { id: "marker", type: "ellipse", on: ["scale", 3, 0.25], width: 12, height: 12 } },
+    ] }] };
+    const readings = new WeakMap();
+    assert.deepEqual((await check(script, root, readings)).errors, []);
+    const { frames: [frame] } = await run(expand(script, readings).steps, [2], [[axesImageKey("scale"), { fileId: "scale" }]]);
+    const chart = at(frame, "scale"), marker = at(frame, "marker");
+    const { left, top } = axesLayout(axes);
+    assert.deepEqual([chart.x + chart.width / 2, chart.y + chart.height / 2], [400, 260]);
+    assert.deepEqual([marker.x + 6, marker.y + 6], [chart.x - left + 150, chart.y - top + 75]);
   });
 
   await t.test("phase changes move a crest continuously and keep the sum in sync", async () => {

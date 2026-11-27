@@ -198,6 +198,7 @@ Every element needs an `id`, unique in the script, and a `type`. Property names 
 | `arrow` | `from`, `to`: each an element id or a point `[x, y]` | `via`, `rounded`, `label`, `startArrowhead`, `endArrowhead` |
 | `line` | `points`: `[[x, y], ...]`; or a plot (below) | `closed` (joins the ends, so `backgroundColor` fills it), `rounded` |
 | `freedraw` | `points`: `[[x, y], ...]`, drawn as a smooth pen stroke through them | |
+| `axes` | `x`, `y`, `width`, `height`, `domain`, `range` | `xTicks`, `yTicks`, `xLabel`, `yLabel`, `fontSize` (see Plots) |
 | `image` | `x`, `y`, `src` (PNG, JPEG, GIF, WebP or SVG; path relative to the script) | `width`, `height` (default: the file's size and proportions) |
 
 `x`, `y` is the top left corner. Points are in canvas coordinates. On a `text` or `math` element,
@@ -215,6 +216,9 @@ the middle of an arrow.
 default handwriting, which covers Chinese), `"normal"` and `"code"`.
 
 ### Style
+
+Axes use clean vector strokes. Their style options are `color`, `strokeColor`, `strokeWidth`,
+`opacity`, `angle` and `fontSize`. Omit `roughness` on axes.
 
 | Property | Values | Default |
 | --- | --- | --- |
@@ -248,8 +252,18 @@ the bottom and the vertical axis along the left. Leave space outside the plot fo
 { "add": { "id": "scale", "type": "axes", "x": 137, "y": 184, "width": 600, "height": 334, "domain": [-3, 3], "range": [0, 1], "xTicks": [-1, 0, 1], "yTicks": [0, 0.5, 1], "xLabel": "input x", "yLabel": "output" } }
 ```
 
-Tick lists and titles are optional. Set `fontSize` (default 18), `color` or `strokeColor`, and
-`strokeWidth` on the axes when adding them. Move the complete set with `dx` and `dy`.
+Tick lists and titles are optional. Axes are clean by default. Their styles are `fontSize`
+(default 18), `color` or `strokeColor`, `strokeWidth`, `opacity` and `angle`.
+
+Use `["scale", x, y]` for a reading in the axes' domain and range. Connect measured samples
+directly, or use a reading in arrow endpoints and `via`, `point`, an `along` route, or a
+marker's `on`. Each action resolves its coordinates at the position and angle set by preceding
+actions. Move existing marks together with their axes by updating their ids together.
+
+```json
+{ "add": { "id": "readings", "type": "line", "points": [["scale", -1, 0.25], ["scale", 0, 0.5], ["scale", 1, 0.75]], "color": "teal" } }
+{ "add": { "id": "last", "type": "ellipse", "on": ["scale", 1, 0.75], "width": 12, "height": 12, "color": "teal" } }
+```
 
 A point of the curve is named by the plot and its x: `["loss", -2.4]`. It goes wherever a point
 `[x, y]` does: an arrow's `from`, `to` and `via`, a line's `points`, `point`, and `along`. Two points of
