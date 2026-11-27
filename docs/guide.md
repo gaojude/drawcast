@@ -4,7 +4,7 @@ Use the same CLI invocation that printed this guide for the commands below.
 
 1. Write a `lesson.drawcast.json`. Give each spoken idea a visible change.
 2. Run `drawcast snapshot lesson.drawcast.json --sheet`. It validates the script and prints layout diagnostics and a PNG path. Inspect the sheet. Revise if needed. For a moving detail use `--at <seconds>`; timing becomes exact after rendering.
-3. Run `drawcast render lesson.drawcast.json` and return the MP4. Defaults are 1080p at 30 fps on the default canvas. `--width` and `--fps` change delivery size and frame rate. Speech is cached. Leave `voice` unset for the default online voice with local fallback, or choose a built-in voice for offline narration.
+3. Run `drawcast render lesson.drawcast.json` and return the MP4. To inspect the encoded frames, run `drawcast inspect lesson.mp4` (add `--at <seconds>` for one frame). Defaults are 1080p at 30 fps on the default canvas. `--width` and `--fps` change delivery size and frame rate. Speech is cached. Leave `voice` unset for the default online voice with local fallback, or choose a built-in voice for offline narration.
 
 ```json
 {
@@ -27,7 +27,7 @@ Place elements in canvas coordinates (1280 by 720 by default). Keep content abov
 
 Copy `at` phrases from the step's `say` in spoken order. Repeat a phrase to start actions together. With no `at`, an action follows the preceding one. Put `duration` (seconds) beside the action verb. Use `update` to change an existing object's position, colour or label, `pulse` for emphasis, `point` for a pointer and `remove` to clear space.
 
-Look up only what your scene needs with `drawcast guide <topic>`:
+Request the topics your scene needs together, e.g. `drawcast guide plots math elements`. Topics print once in the order listed.
 
 | Topic | Use it for |
 | --- | --- |
@@ -37,4 +37,4 @@ Look up only what your scene needs with `drawcast guide <topic>`:
 | `actions` | Motion along a path, simultaneous actions, camera, signals |
 | `layout` | Spacing, overlap, label and caption clearance |
 | `narration` | Voice, language, offline speech and pronunciation |
-| `full` | Complete script reference and longer worked example |
+| `full` | Complete script reference and longer worked example. Includes every topic. |

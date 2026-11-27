@@ -8,6 +8,7 @@
 import { type Action, type CameraSpec, type ColorName, DEFAULT_CANVAS, type ElementSpec, type Enter, PALETTE, type Point, type Script, type StepAudio, type TextAlign, type UpdateSpec, alignOffset } from "../shared/types.ts";
 import { findPhrase, tokens } from "../shared/text.ts";
 import * as E from "./elements.ts";
+import { axesImageKey, axesLayout } from "../shared/axes.ts";
 import type { El, Rect } from "./elements.ts";
 import { type Pt, clamp, dragEase, lerp, lerpColor, minJerk, partialPolyline, polylineLength, reversePath, subPath } from "./motion.ts";
 
@@ -259,6 +260,12 @@ class Builder {
       }
       case "line":
         return [E.makeLine(spec)];
+      case "axes": {
+        const file = this.images.get(axesImageKey(spec.id));
+        if (!file) return [];
+        const { left, top, width, height } = axesLayout(spec);
+        return [E.makeImage({ ...spec, x: spec.x! + left, y: spec.y! + top, width, height }, file.fileId)];
+      }
       case "freedraw":
         return [E.makeFreedraw(spec)];
       case "arrow": {

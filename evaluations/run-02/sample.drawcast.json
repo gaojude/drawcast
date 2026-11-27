@@ -1,0 +1,532 @@
+{
+  "drawcast": 1,
+  "cover": 6,
+  "voice": "maple",
+  "steps": [
+    {
+      "say": "A sigmoid turns an input into an output between zero and one. Its graph is a smooth S.",
+      "do": [
+        {
+          "at": "A sigmoid",
+          "enter": "fade",
+          "duration": 0.32,
+          "add": {
+            "id": "title",
+            "type": "text",
+            "x": 70,
+            "y": 44,
+            "text": "Turning up sigmoid gain",
+            "fontSize": 44,
+            "fontFamily": "normal",
+            "strokeColor": "#233047"
+          }
+        },
+        {
+          "at": "an input",
+          "add": {
+            "id": "xa",
+            "type": "arrow",
+            "from": [
+              137,
+              518
+            ],
+            "to": [
+              757,
+              518
+            ],
+            "strokeColor": "#8a97a0",
+            "roughness": 0
+          }
+        },
+        {
+          "at": "an input",
+          "enter": "fade",
+          "duration": 0.32,
+          "add": {
+            "id": "xlabel",
+            "type": "text",
+            "x": 652,
+            "y": 546,
+            "text": "input x",
+            "fontSize": 21,
+            "fontFamily": "normal",
+            "strokeColor": "#233047"
+          }
+        },
+        {
+          "at": "an output",
+          "add": {
+            "id": "ya",
+            "type": "arrow",
+            "from": [
+              137,
+              518
+            ],
+            "to": [
+              137,
+              163
+            ],
+            "strokeColor": "#8a97a0",
+            "roughness": 0
+          }
+        },
+        {
+          "at": "an output",
+          "enter": "fade",
+          "duration": 0.32,
+          "add": {
+            "id": "ylabel",
+            "type": "text",
+            "x": 94,
+            "y": 122,
+            "text": "output",
+            "fontSize": 21,
+            "fontFamily": "normal",
+            "strokeColor": "#233047"
+          }
+        },
+        {
+          "at": "zero and one",
+          "enter": "none",
+          "duration": 0.01,
+          "add": [
+            {
+              "id": "y0",
+              "type": "text",
+              "x": 110,
+              "y": 506,
+              "text": "0",
+              "fontSize": 20,
+              "fontFamily": "normal",
+              "strokeColor": "#233047",
+              "textAlign": "right"
+            },
+            {
+              "id": "y1",
+              "type": "text",
+              "x": 110,
+              "y": 170,
+              "text": "1",
+              "fontSize": 20,
+              "fontFamily": "normal",
+              "strokeColor": "#233047",
+              "textAlign": "right"
+            },
+            {
+              "id": "yhalf",
+              "type": "text",
+              "x": 110,
+              "y": 337,
+              "text": "0.5",
+              "fontSize": 20,
+              "fontFamily": "normal",
+              "strokeColor": "#233047",
+              "textAlign": "right"
+            }
+          ]
+        },
+        {
+          "at": "zero and one",
+          "enter": "none",
+          "duration": 0.01,
+          "add": [
+            {
+              "id": "xneg",
+              "type": "text",
+              "x": 337,
+              "y": 537,
+              "text": "−1",
+              "fontSize": 20,
+              "fontFamily": "normal",
+              "strokeColor": "#233047",
+              "textAlign": "center"
+            },
+            {
+              "id": "xzero",
+              "type": "text",
+              "x": 437,
+              "y": 537,
+              "text": "0",
+              "fontSize": 20,
+              "fontFamily": "normal",
+              "strokeColor": "#233047",
+              "textAlign": "center"
+            },
+            {
+              "id": "xpos",
+              "type": "text",
+              "x": 537,
+              "y": 537,
+              "text": "+1",
+              "fontSize": 20,
+              "fontFamily": "normal",
+              "strokeColor": "#233047",
+              "textAlign": "center"
+            }
+          ]
+        },
+        {
+          "at": "zero and one",
+          "enter": "none",
+          "duration": 0.01,
+          "add": [
+            {
+              "id": "tickneg",
+              "type": "line",
+              "points": [
+                [
+                  337,
+                  518
+                ],
+                [
+                  337,
+                  526
+                ]
+              ],
+              "strokeColor": "#9aabb3",
+              "roughness": 0
+            },
+            {
+              "id": "tickzero",
+              "type": "line",
+              "points": [
+                [
+                  437,
+                  518
+                ],
+                [
+                  437,
+                  526
+                ]
+              ],
+              "strokeColor": "#9aabb3",
+              "roughness": 0
+            },
+            {
+              "id": "tickpos",
+              "type": "line",
+              "points": [
+                [
+                  537,
+                  518
+                ],
+                [
+                  537,
+                  526
+                ]
+              ],
+              "strokeColor": "#9aabb3",
+              "roughness": 0
+            },
+            {
+              "id": "ticky1",
+              "type": "line",
+              "points": [
+                [
+                  131,
+                  184
+                ],
+                [
+                  137,
+                  184
+                ]
+              ],
+              "strokeColor": "#9aabb3",
+              "roughness": 0
+            }
+          ]
+        },
+        {
+          "at": "a smooth S",
+          "duration": 1.6,
+          "add": {
+            "id": "sig",
+            "type": "line",
+            "x": 137,
+            "y": 184,
+            "width": 600,
+            "height": 334,
+            "fn": "sigmoid(p*x)",
+            "p": 1,
+            "domain": [
+              -3,
+              3
+            ],
+            "range": [
+              0,
+              1
+            ],
+            "roughness": 0,
+            "strokeColor": "#137f80",
+            "strokeWidth": 4
+          }
+        }
+      ]
+    },
+    {
+      "say": "The gain, written as g, multiplies the input inside the exponent. Start with a gain of one and the curve rises gently.",
+      "do": [
+        {
+          "at": "The gain",
+          "enter": "fade",
+          "duration": 0.32,
+          "add": {
+            "id": "formula",
+            "type": "math",
+            "x": 808,
+            "y": 135,
+            "tex": "S(x)=\\frac{1}{1+e^{-gx}}",
+            "fontSize": 35,
+            "strokeColor": "#233047"
+          }
+        },
+        {
+          "at": "gain of one",
+          "enter": "fade",
+          "duration": 0.32,
+          "add": {
+            "id": "gain",
+            "type": "text",
+            "x": 810,
+            "y": 237,
+            "text": "Gain g = 1",
+            "fontSize": 27,
+            "fontFamily": "normal",
+            "strokeColor": "#137f80"
+          }
+        },
+        {
+          "at": "rises gently",
+          "point": [
+            "sig",
+            0.65
+          ]
+        }
+      ]
+    },
+    {
+      "say": "At zero, any gain times zero is zero. Since e to the zero is one, the output is always one half.",
+      "do": [
+        {
+          "at": "At zero",
+          "duration": 0.28,
+          "add": {
+            "id": "vguide",
+            "type": "line",
+            "points": [
+              [
+                437,
+                518
+              ],
+              [
+                437,
+                351
+              ]
+            ],
+            "strokeColor": "#a7b5b8",
+            "roughness": 0,
+            "strokeStyle": "dashed"
+          }
+        },
+        {
+          "at": "At zero",
+          "duration": 0.28,
+          "add": {
+            "id": "hguide",
+            "type": "line",
+            "points": [
+              [
+                137,
+                351
+              ],
+              [
+                437,
+                351
+              ]
+            ],
+            "strokeColor": "#a7b5b8",
+            "roughness": 0,
+            "strokeStyle": "dashed"
+          }
+        },
+        {
+          "at": "At zero",
+          "enter": "fade",
+          "duration": 0.32,
+          "add": {
+            "id": "midpoint",
+            "type": "ellipse",
+            "on": [
+              "sig",
+              0
+            ],
+            "width": 14,
+            "height": 14,
+            "roughness": 0,
+            "strokeColor": "#0c6461",
+            "backgroundColor": "#0c6461"
+          }
+        },
+        {
+          "at": "times zero",
+          "enter": "fade",
+          "duration": 0.32,
+          "add": {
+            "id": "midcalc",
+            "type": "math",
+            "x": 808,
+            "y": 310,
+            "tex": "S(0)=\\frac{1}{1+e^0}",
+            "fontSize": 27,
+            "strokeColor": "#0c6461"
+          }
+        },
+        {
+          "at": "one half",
+          "update": {
+            "id": "midcalc",
+            "tex": "S(0)=\\frac{1}{1+1}=\\frac{1}{2}"
+          }
+        },
+        {
+          "at": "one half",
+          "pulse": "midpoint"
+        }
+      ]
+    },
+    {
+      "say": "Now turn the gain up to four. Watch the curve steepen around that fixed midpoint, like a switch flipping near zero.",
+      "do": [
+        {
+          "at": "turn the gain",
+          "duration": 3.3,
+          "update": {
+            "id": "sig",
+            "p": 4
+          }
+        },
+        {
+          "at": "turn the gain",
+          "update": {
+            "id": "gain",
+            "text": "Gain g = 1 → 4"
+          }
+        },
+        {
+          "at": "fixed midpoint",
+          "update": {
+            "id": "gain",
+            "text": "Gain g = 4"
+          }
+        },
+        {
+          "at": "fixed midpoint",
+          "pulse": "midpoint"
+        },
+        {
+          "at": "flipping near zero",
+          "point": [
+            "sig",
+            0.21
+          ]
+        }
+      ]
+    },
+    {
+      "say": "On the left, plug in minus one. The exponent becomes positive four, so the denominator is large and the output drops to about zero point zero two.",
+      "do": [
+        {
+          "at": "minus one",
+          "enter": "fade",
+          "duration": 0.32,
+          "add": {
+            "id": "leftpoint",
+            "type": "ellipse",
+            "on": [
+              "sig",
+              -1
+            ],
+            "width": 14,
+            "height": 14,
+            "roughness": 0,
+            "strokeColor": "#ac4a00",
+            "backgroundColor": "#ac4a00"
+          }
+        },
+        {
+          "at": "positive four",
+          "enter": "fade",
+          "duration": 0.32,
+          "add": {
+            "id": "leftcalc",
+            "type": "math",
+            "x": 808,
+            "y": 402,
+            "tex": "S(-1)=\\frac{1}{1+e^{4}}",
+            "fontSize": 27,
+            "strokeColor": "#ac4a00"
+          }
+        },
+        {
+          "at": "drops to",
+          "update": {
+            "id": "leftcalc",
+            "tex": "S(-1)=\\frac{1}{1+e^{4}}\\approx0.02"
+          }
+        },
+        {
+          "at": "drops to",
+          "pulse": "leftpoint"
+        }
+      ]
+    },
+    {
+      "say": "On the right, plug in plus one. Now the exponent is negative four. That makes the denominator just over one, so the output reaches about zero point nine eight.",
+      "do": [
+        {
+          "at": "plus one",
+          "enter": "fade",
+          "duration": 0.32,
+          "add": {
+            "id": "rightpoint",
+            "type": "ellipse",
+            "on": [
+              "sig",
+              1
+            ],
+            "width": 14,
+            "height": 14,
+            "roughness": 0,
+            "strokeColor": "#6442a5",
+            "backgroundColor": "#6442a5"
+          }
+        },
+        {
+          "at": "negative four",
+          "enter": "fade",
+          "duration": 0.32,
+          "add": {
+            "id": "rightcalc",
+            "type": "math",
+            "x": 808,
+            "y": 499,
+            "tex": "S(+1)=\\frac{1}{1+e^{-4}}",
+            "fontSize": 27,
+            "strokeColor": "#6442a5"
+          }
+        },
+        {
+          "at": "output reaches",
+          "update": {
+            "id": "rightcalc",
+            "tex": "S(+1)=\\frac{1}{1+e^{-4}}\\approx0.98"
+          }
+        },
+        {
+          "at": "output reaches",
+          "pulse": "rightpoint"
+        }
+      ]
+    }
+  ]
+}

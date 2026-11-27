@@ -10,6 +10,7 @@ import { statSync } from "node:fs";
 import path from "node:path";
 import { findPhrase, tokens, widthEm } from "../shared/text.ts";
 import { Plots, isPlotRef, type PlotRef } from "../shared/expr.ts";
+import { axesLayout } from "../shared/axes.ts";
 import { partialPolyline, type Pt } from "../player/motion.ts";
 import { arrowCourse, arrowLabelCenter, type ArrowEnd } from "../shared/arrows.ts";
 import { DEFAULT_CANVAS, type ElementSpec, type Formula, PALETTE, type Script, type TextAlign, alignOffset } from "../shared/types.ts";
@@ -85,7 +86,7 @@ function rotatedBox(b: Box, type: string, angle = 0): Box {
 }
 
 const SHAPES = ["rectangle", "ellipse", "diamond"];
-const TYPES = [...SHAPES, "text", "math", "arrow", "line", "freedraw", "image"];
+const TYPES = [...SHAPES, "text", "math", "arrow", "line", "freedraw", "image", "axes"];
 const STYLE = ["strokeColor", "backgroundColor", "fillStyle", "strokeWidth", "strokeStyle", "roughness", "opacity", "angle", "color"];
 const ELEMENT_KEYS: Record<string, string[]> = {
   rectangle: ["x", "y", "width", "height", "rounded", "label", "fontSize", "fontFamily", "on"],
@@ -97,6 +98,7 @@ const ELEMENT_KEYS: Record<string, string[]> = {
   line: ["points", "closed", "rounded", "fn", "p", "domain", "range", "x", "y", "width", "height"],
   freedraw: ["points"],
   image: ["x", "y", "width", "height", "src", "on"],
+  axes: ["x", "y", "width", "height", "domain", "range", "xTicks", "yTicks", "xLabel", "yLabel", "fontSize"],
 };
 const ENUMS: Record<string, readonly unknown[]> = {
   fillStyle: ["solid", "hachure", "cross-hatch", "zigzag"],
@@ -117,6 +119,7 @@ const LINE_HEIGHT = 1.25;
 const isNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const isColor = (v: unknown): v is string => typeof v === "string" && COLOR.test(v);
 const isPoint = (v: unknown): v is [number, number] => Array.isArray(v) && v.length === 2 && v.every(isNumber);
+const increasing = (v: unknown): v is [number, number] => isPoint(v) && v[0] < v[1] && Number.isFinite(v[1] - v[0]);
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const quote = (v: unknown) => JSON.stringify(v);
 const span = (b: Box) => `x ${Math.round(b.x)} to ${Math.round(b.x + b.w)}, y ${Math.round(b.y)} to ${Math.round(b.y + b.h)}`;
@@ -276,7 +279,8 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
     let el = value as Record<string, unknown> & Partial<ElementSpec>;
     const type = el.type;
     if (typeof type !== "string" || !TYPES.includes(type)) return fail(where, `"type" must be one of ${TYPES.join(", ")} (got ${quote(el.type)}).`);
-    unknownKeys(where, el, ["id", "type", ...ELEMENT_KEYS[type], ...STYLE, "enter"]);
+    const styles = type === "axes" ? ["color", "strokeColor", "strokeWidth", "opacity", "angle"] : STYLE;
+    unknownKeys(where, el, ["id", "type", ...ELEMENT_KEYS[type], ...styles, "enter"]);
     checkStyle(where, el);
     for (const key of ["rounded", "closed"]) {
       if (el[key] !== undefined && typeof el[key] !== "boolean") fail(where, `${key} must be true or false.`);
@@ -315,6 +319,28 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
           warn(where, `the label ${quote(el.label)} needs about ${lines} line(s) and will not fit; make the shape wider or taller, or shorten the label.`);
         }
       }
+    } else if (type === "axes") {
+      if (!need(["x", "y", "width", "height"])) return;
+      if (el.width! <= 0 || el.height! <= 0) return fail(where, "width and height must be positive.");
+      if (!increasing(el.domain) || !increasing(el.range)) return fail(where, 'axes need increasing "domain" and "range" pairs with finite spans.');
+      for (const [ticks, limits] of [["xTicks", el.domain], ["yTicks", el.range]] as const) {
+        const values = el[ticks];
+        if (values !== undefined && !(Array.isArray(values) && values.every((v) => isNumber(v) && v >= limits[0] && v <= limits[1]) && new Set(values).size === values.length)) {
+          return fail(where, `${ticks} must be a list of distinct finite numbers between ${limits[0]} and ${limits[1]}.`);
+        }
+      }
+      for (const field of ["xLabel", "yLabel"] as const) {
+        const text = el[field];
+        if (text !== undefined && (typeof text !== "string" || !text.trim() || CONTROL.test(text))) return fail(where, `${field} must be a single line of text.`);
+        plainText(where, field, text);
+      }
+      const layout = axesLayout(el as ElementSpec);
+      const nx = el.xTicks?.length ?? 0, ny = el.yTicks?.length ?? 0;
+      const xLabels = layout.labels.slice(0, nx).sort((a, b) => a.x - b.x);
+      const yLabels = layout.labels.slice(nx, nx + ny).sort((a, b) => a.y - b.y);
+      if (xLabels.some((l, i) => i && l.x < xLabels[i-1].x + xLabels[i-1].w + 2)) warn(where, "x tick labels overlap. Use fewer xTicks or widen the plot.");
+      if (yLabels.some((l, i) => i && l.y < yLabels[i-1].y + yLabels[i-1].h + 2)) warn(where, "y tick labels overlap. Use fewer yTicks or increase the plot height.");
+      box = { x: el.x! + layout.left, y: el.y! + layout.top, w: layout.width, h: layout.height };
     } else if (type === "text") {
       if (typeof el.text !== "string" || !el.text.trim()) return fail(where, `needs "text".`);
       if (!need(["x", "y"])) return;
@@ -532,6 +558,9 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
         for (const target of ids) {
           if (!checkRef(where, "id", typeof target === "string" ? target : undefined)) continue;
           const el = live.get(target as string)!;
+          if (el.type === "axes" && ["x", "y", "width", "height", "strokeWidth", "strokeColor", "color", "fillStyle", "strokeStyle", "backgroundColor", "roughness"].some((key) => u[key] !== undefined)) {
+            fail(where, "Set the scale, position and stroke on the axes when adding them. Use dx and dy to move the complete chart axes.");
+          }
           if (PATHS.includes(el.type) && ["x", "y", "width", "height"].some((k) => u[k] !== undefined)) {
             fail(where, `${quote(target)} is a ${el.type}; move it with dx and dy (x, y, width and height are for shapes, text and images).`);
           }

@@ -1,12 +1,13 @@
 /** The two things a script can be turned into: a video, and a still picture of one moment. */
-import { mkdir, mkdtemp, open, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, open, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { check, type Report } from "../format/check.ts";
 import { expand } from "../format/expand.ts";
+import { axesImageKey, axesSvg } from "../shared/axes.ts";
 import type { PrepareRequest } from "../player/main.ts";
 import { segmentFrames } from "../shared/h264.ts";
-import { publishFile } from "../shared/files.ts";
+import { prepareOutputFiles, publishFile } from "../shared/files.ts";
 import { DEFAULT_CANVAS, type Formula, OUTPUT_SCALE, type Script, type StepAudio } from "../shared/types.ts";
 import { type Listener, SAMPLE_RATE, cachedNarration, estimateNarration, narrate } from "../voice/narrate.ts";
 import { resolveVoice } from "../voice/voice.ts";
@@ -71,18 +72,7 @@ function imageSources(script: Script): Set<string> {
 
 async function prepareOutputs(loaded: Loaded, outputs: string[]) {
   const inputs = [loaded.sourceFile, ...Array.from(imageSources(loaded.script), (src) => path.resolve(loaded.baseDir, src))];
-  const originals = await Promise.all(inputs.map((file) => realpath(file)));
-  for (const output of outputs) {
-    if (!output.trim()) throw new Error("Choose a nonempty output filename.");
-    try {
-      const destination = await realpath(output);
-      if (originals.some((input) => path.relative(input, destination) === "")) throw new Error(`Choose an output different from the input script and its images: ${output}.`);
-      if (!(await stat(destination)).isFile()) throw new Error(`Output must be a file: ${output}.`);
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
-    }
-  }
-  await mkdir(path.dirname(path.resolve(outputs[0])), { recursive: true });
+  await prepareOutputFiles(inputs, outputs, "input script and its images");
 }
 
 /**
@@ -99,6 +89,11 @@ export async function playerRequest(loaded: Loaded, width: number | undefined, c
   const outHeight = Math.max(1, Math.round((outWidth * canvas.height) / canvas.width));
   if (!Number.isSafeInteger(outWidth) || !Number.isSafeInteger(outHeight) || outWidth < 1) throw new Error("The canvas and output width must give a usable image size.");
   const images: Record<string, string> = {};
+  for (const step of script.steps) for (const action of step.do ?? []) {
+    for (const el of [action.add ?? []].flat()) {
+      if (el.type === "axes") images[axesImageKey(el.id)] = `data:image/svg+xml;base64,${Buffer.from(axesSvg(el)).toString("base64")}`;
+    }
+  }
   for (const src of imageSources(script)) {
     const data = await readFile(path.resolve(baseDir, src), { signal });
     images[src] = `data:${IMAGE_MIME[path.extname(src).toLowerCase()]};base64,${data.toString("base64")}`;
@@ -628,7 +623,7 @@ export async function renderSnapshot(loaded: Loaded, o: SnapshotOptions): Promis
         ? `timing from the speech of ${narration.voice}, as the video will have it`
         : narration.cached
           ? `timing from cached speech for ${narration.cached} of ${narration.total} sentences, the rest estimated`
-          : "timing estimated: times will move a little once the narration is rendered";
+          : "timing estimated: timestamps can shift by several seconds when the narration is rendered";
     const files: { file: string; shows: string }[] = [];
 
     if (o.at !== undefined) {
