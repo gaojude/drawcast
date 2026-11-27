@@ -1,0 +1,184 @@
+{
+  "drawcast": 1,
+  "title": "drawcast now speaks with MiniMax",
+  "voice": "minimax:Casual_Guy",
+  "steps": [
+    {
+      "say": "This whole video was made by an AI agent. Drawn by drawcast. And now, voiced by MiniMax.",
+      "do": [
+        { "at": "made by an AI agent", "duration": 0.8, "add": { "id": "s0-made", "type": "text", "x": 640, "y": 115, "textAlign": "center", "text": "Made end to end by an AI agent", "fontSize": 32, "strokeColor": "#868e96" } },
+        { "at": "Drawn by drawcast", "duration": 0.8, "add": { "id": "s0-dc", "type": "text", "x": 575, "y": 230, "textAlign": "right", "text": "drawcast", "fontSize": 100 } },
+        { "at": "voiced by MiniMax", "duration": 0.3, "add": { "id": "s0-x", "type": "text", "x": 640, "y": 252, "textAlign": "center", "text": "×", "fontSize": 64, "strokeColor": "#868e96" } },
+        { "enter": "fade", "duration": 0.7, "add": { "id": "s0-logo", "type": "image", "x": 705, "y": 217, "width": 420, "height": 140, "src": "assets/minimax-logo-light.png" } },
+        { "duration": 0.6, "add": { "id": "s0-pill", "type": "rectangle", "x": 370, "y": 455, "width": 540, "height": 84, "label": "Now with MiniMax speech", "fontSize": 36, "backgroundColor": "#ffdeeb", "strokeColor": "#c2255c", "strokeWidth": 4 } }
+      ],
+      "pause": 0.6
+    },
+    {
+      "say": "If you haven't met drawcast yet: you ask your coding agent for a video, and it writes a short script. Each step says one thing, and draws something to match.",
+      "do": [
+        { "camera": { "x": 1400, "y": 0, "width": 1280 }, "duration": 0.6 },
+        { "at": "met drawcast", "add": { "id": "h1", "type": "text", "x": 1470, "y": 50, "text": "What is drawcast?", "fontSize": 52 } },
+        { "at": "ask your", "duration": 0.5, "add": { "id": "bubble", "type": "rectangle", "x": 1470, "y": 160, "width": 540, "height": 90, "label": "“Make a video explaining DNS”", "fontSize": 28, "backgroundColor": "#a5d8ff", "strokeColor": "#1971c2" } },
+        { "at": "coding agent", "duration": 0.4, "add": [
+          { "id": "agent", "type": "rectangle", "x": 1470, "y": 360, "width": 240, "height": 100, "label": "Your agent", "fontSize": 30, "backgroundColor": "#e5dbff", "strokeColor": "#6741d9" },
+          { "id": "a-ask", "type": "arrow", "from": "bubble", "to": "agent" }
+        ] },
+        { "at": "writes a short script", "duration": 0.5, "add": [
+          { "id": "card", "type": "rectangle", "x": 1880, "y": 300, "width": 600, "height": 270, "backgroundColor": "#fff9db", "strokeColor": "#f08c00" },
+          { "id": "a-write", "type": "arrow", "from": "agent", "to": "card", "label": "writes" },
+          { "id": "card-name", "type": "text", "x": 1910, "y": 318, "text": "script.json", "fontSize": 22, "fontFamily": "code", "strokeColor": "#e67700" }
+        ] },
+        { "at": "says one thing", "duration": 1.2, "add": { "id": "card-say", "type": "text", "x": 1910, "y": 370, "text": "say: “Your browser asks DNS\n      for the address.”", "fontSize": 24, "fontFamily": "code" } },
+        { "at": "draws something", "duration": 1.2, "add": { "id": "card-do", "type": "text", "x": 1910, "y": 470, "text": "do:  draw Browser, draw DNS,\n      an arrow between them", "fontSize": 24, "fontFamily": "code" } }
+      ],
+      "pause": 0.3
+    },
+    {
+      "say": "Then drawcast turns that script into a video. It sketches every step on a whiteboard, in time with the voice, and renders an MP4.",
+      "do": [
+        { "camera": { "x": 2800, "y": 0, "width": 1280 }, "duration": 0.6 },
+        { "enter": "none", "add": { "id": "h2", "type": "text", "x": 2870, "y": 50, "text": "Script in. Video out.", "fontSize": 52 } },
+        { "duration": 0.3, "add": { "id": "sc2", "type": "rectangle", "x": 2870, "y": 260, "width": 180, "height": 100, "label": "script", "fontSize": 26, "fontFamily": "code", "backgroundColor": "#fff9db", "strokeColor": "#f08c00" } },
+        { "at": "drawcast turns", "duration": 0.5, "add": [
+          { "id": "dc", "type": "rectangle", "x": 3110, "y": 250, "width": 240, "height": 120, "label": "drawcast", "fontSize": 36, "backgroundColor": "#a5d8ff", "strokeColor": "#1971c2", "strokeWidth": 4 },
+          { "id": "a-in", "type": "arrow", "from": "sc2", "to": "dc" }
+        ] },
+        { "at": "into a video", "duration": 0.5, "add": [
+          { "id": "frame", "type": "rectangle", "x": 3420, "y": 140, "width": 600, "height": 340, "backgroundColor": "#ffffff", "strokeColor": "#1e1e1e", "strokeWidth": 4 },
+          { "id": "a-out", "type": "arrow", "from": "dc", "to": "frame" }
+        ] },
+        { "at": "sketches", "duration": 0.4, "add": [
+          { "id": "mb", "type": "rectangle", "x": 3465, "y": 220, "width": 160, "height": 76, "label": "Browser", "fontSize": 22, "backgroundColor": "#a5d8ff", "strokeColor": "#1971c2" },
+          { "id": "md", "type": "rectangle", "x": 3815, "y": 220, "width": 160, "height": 76, "label": "DNS", "fontSize": 22, "backgroundColor": "#e5dbff", "strokeColor": "#6741d9" }
+        ] },
+        { "at": "in time with the voice", "duration": 0.4, "add": [
+          { "id": "ma", "type": "arrow", "from": "mb", "to": "md", "label": "where is it?" },
+          { "id": "strip", "type": "rectangle", "x": 3445, "y": 415, "width": 550, "height": 44, "backgroundColor": "#343a40", "strokeColor": "#343a40", "roughness": 0 },
+          { "id": "strip-text", "type": "text", "x": 3720, "y": 425, "textAlign": "center", "text": "Your browser asks DNS for the address.", "fontSize": 18, "strokeColor": "#f8f9fa" }
+        ] },
+        { "send": { "along": "ma", "color": "red" } },
+        { "at": "MP4", "duration": 0.5, "add": { "id": "mp4", "type": "text", "x": 3720, "y": 505, "textAlign": "center", "text": "explainer.mp4", "fontSize": 28, "fontFamily": "code", "strokeColor": "#2f9e44" } },
+        { "pulse": "frame" }
+      ],
+      "pause": 0.3
+    },
+    {
+      "say": "Until now, that voice came from Microsoft Edge, or from a small model on your laptop. Today there's a third choice: MiniMax.",
+      "do": [
+        { "camera": { "x": 4200, "y": 0, "width": 1280 }, "duration": 0.6 },
+        { "enter": "none", "add": { "id": "h3", "type": "text", "x": 4270, "y": 50, "text": "Choose the voice", "fontSize": 52 } },
+        { "at": "Microsoft Edge", "duration": 0.4, "add": { "id": "v1", "type": "rectangle", "x": 4270, "y": 150, "width": 330, "height": 170, "label": "Edge\nfree · online", "fontSize": 30, "backgroundColor": "#a5d8ff", "strokeColor": "#1971c2" } },
+        { "at": "small model", "duration": 0.4, "add": { "id": "v2", "type": "rectangle", "x": 4640, "y": 150, "width": 330, "height": 170, "label": "Built-in\nfree · offline", "fontSize": 30, "backgroundColor": "#c3fae8", "strokeColor": "#0c8599" } },
+        { "at": "third choice", "duration": 0.4, "add": { "id": "v3", "type": "rectangle", "x": 5010, "y": 150, "width": 400, "height": 170, "backgroundColor": "#fff0f6", "strokeColor": "#e64980", "strokeWidth": 4 } },
+        { "enter": "fade", "duration": 0.5, "add": [
+          { "id": "v3-logo", "type": "image", "x": 5045, "y": 162, "width": 330, "height": 110, "src": "assets/minimax-logo-light.png" },
+          { "id": "v3-text", "type": "text", "x": 5210, "y": 274, "textAlign": "center", "text": "expressive · paid", "fontSize": 26, "strokeColor": "#c2255c" }
+        ] },
+        { "at": "MiniMax", "duration": 0.3, "add": { "id": "badge", "type": "rectangle", "x": 5330, "y": 108, "width": 100, "height": 46, "label": "NEW", "fontSize": 24, "backgroundColor": "#e64980", "strokeColor": "#ffffff" } },
+        { "pulse": "v3" }
+      ],
+      "pause": 0.3
+    },
+    {
+      "say": "MiniMax speech sounds like a real person. It reads the context, picks the right emotion, and speaks English, Chinese, and dozens more languages. In fact, the voice you're hearing right now is MiniMax.",
+      "do": [
+        { "at": "sounds like a real person", "update": { "id": ["v1", "v2"], "opacity": 35 } },
+        { "at": "reads the context", "duration": 0.9, "add": [
+          { "id": "b1-mark", "type": "image", "x": 4270, "y": 374, "width": 40, "height": 34, "src": "assets/minimax-mark.png" },
+          { "id": "b1", "type": "text", "x": 4325, "y": 370, "text": "Reads the context, picks the emotion", "fontSize": 28 }
+        ] },
+        { "at": "speaks English", "duration": 0.9, "add": [
+          { "id": "b2-mark", "type": "image", "x": 4270, "y": 444, "width": 40, "height": 34, "src": "assets/minimax-mark.png" },
+          { "id": "b2", "type": "text", "x": 4325, "y": 440, "text": "English, 中文, and dozens more", "fontSize": 28 }
+        ] },
+        { "at": "the voice you're hearing", "duration": 0.5, "add": [
+          { "id": "hear", "type": "rectangle", "x": 4990, "y": 370, "width": 420, "height": 130, "backgroundColor": "#ffdeeb", "strokeColor": "#e64980", "strokeWidth": 4 },
+          { "id": "hear-mark", "type": "image", "x": 5015, "y": 392, "width": 100, "height": 85, "src": "assets/minimax-mark.png" },
+          { "id": "hear-text", "type": "text", "x": 5135, "y": 393, "text": "You're hearing\nMiniMax now", "fontSize": 30, "strokeColor": "#c2255c" }
+        ] },
+        { "at": "right now", "pulse": "hear" }
+      ],
+      "pause": 0.5
+    },
+    {
+      "say": "Here's how to use it. Step one: get an API key from MiniMax, then save it once, in your own terminal, with drawcast key minimax.",
+      "do": [
+        { "camera": { "x": 5600, "y": 0, "width": 1280 }, "duration": 0.6 },
+        { "at": "Step one", "add": { "id": "h4", "type": "text", "x": 5670, "y": 50, "text": "1 · Save your key, once", "fontSize": 52, "strokeColor": "#c2255c" } },
+        { "at": "get an API key", "duration": 0.8, "add": { "id": "src", "type": "text", "x": 5670, "y": 135, "text": "Get an API key at platform.minimax.io", "fontSize": 26, "strokeColor": "#495057" } },
+        { "at": "your own terminal", "duration": 0.4, "add": { "id": "term", "type": "rectangle", "x": 5670, "y": 200, "width": 780, "height": 200, "backgroundColor": "#212529", "strokeColor": "#212529" } },
+        { "at": "drawcast key minimax", "duration": 1.2, "add": { "id": "t1", "type": "text", "x": 5700, "y": 225, "text": "$ npx -y drawcast@latest key minimax", "fontSize": 24, "fontFamily": "code", "strokeColor": "#69db7c" } },
+        { "duration": 0.8, "add": { "id": "t2", "type": "text", "x": 5700, "y": 285, "text": "MiniMax API key (it is not shown):", "fontSize": 20, "fontFamily": "code", "strokeColor": "#ced4da" } },
+        { "duration": 0.8, "add": { "id": "t3", "type": "text", "x": 5700, "y": 335, "text": "Saved the MiniMax key ending 9f2c.", "fontSize": 20, "fontFamily": "code", "strokeColor": "#ffd43b" } }
+      ],
+      "pause": 0.2
+    },
+    {
+      "say": "The key never goes into a script, or into your chat with the agent. It stays on your machine, and every render finds it.",
+      "do": [
+        { "at": "never goes", "duration": 0.4, "add": [
+          { "id": "lock-card", "type": "rectangle", "x": 6490, "y": 200, "width": 330, "height": 200, "backgroundColor": "#fff5f5", "strokeColor": "#e03131" },
+          { "id": "lock", "type": "image", "x": 6625, "y": 218, "width": 60, "height": 70, "svg": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 56'><path d='M12 25V16a12 12 0 0 1 24 0v9' fill='none' stroke='#e03131' stroke-width='5' stroke-linecap='round'/><rect x='4' y='25' width='40' height='29' rx='6' fill='#ffc9c9' stroke='#e03131' stroke-width='4'/><circle cx='24' cy='37' r='4' fill='#e03131'/><path d='M24 39v7' stroke='#e03131' stroke-width='4' stroke-linecap='round'/></svg>" }
+        ] },
+        { "duration": 0.8, "add": { "id": "lock-text", "type": "text", "x": 6655, "y": 305, "textAlign": "center", "text": "Never in a script.\nNever in a chat.", "fontSize": 26, "strokeColor": "#e03131" } },
+        { "at": "stays on your machine", "duration": 1.2, "add": { "id": "note", "type": "text", "x": 5670, "y": 440, "text": "Saved on your machine, readable only by you.\nEvery render finds it, even in an agent session that's already open.", "fontSize": 22, "strokeColor": "#495057" } },
+        { "at": "every render finds it", "pulse": "term" }
+      ],
+      "pause": 0.4
+    },
+    {
+      "say": "Step two: just ask. Tell your agent to narrate the video with a MiniMax voice, or name the voice in the script yourself.",
+      "do": [
+        { "camera": { "x": 7000, "y": 0, "width": 1280 }, "duration": 0.6 },
+        { "at": "Step two", "add": { "id": "h5", "type": "text", "x": 7070, "y": 50, "text": "2 · Just ask", "fontSize": 52, "strokeColor": "#1971c2" } },
+        { "at": "Tell your agent", "duration": 0.5, "add": { "id": "ask", "type": "rectangle", "x": 7070, "y": 150, "width": 900, "height": 90, "label": "“Make a video about DNS, narrated by a MiniMax voice”", "fontSize": 26, "backgroundColor": "#a5d8ff", "strokeColor": "#1971c2" } },
+        { "at": "name the voice", "duration": 0.5, "add": { "id": "or", "type": "text", "x": 7070, "y": 272, "text": "or, in the script:", "fontSize": 24, "strokeColor": "#868e96" } },
+        { "duration": 0.5, "add": { "id": "code", "type": "rectangle", "x": 7070, "y": 315, "width": 480, "height": 80, "label": "\"voice\": \"minimax:Casual_Guy\"", "fontSize": 24, "fontFamily": "code", "backgroundColor": "#fff9db", "strokeColor": "#f08c00" } },
+        { "at": "yourself", "enter": "fade", "add": { "id": "hint", "type": "text", "x": 7590, "y": 322, "text": "any MiniMax voice id,\nor one you cloned", "fontSize": 22, "strokeColor": "#868e96" } }
+      ],
+      "pause": 0.3
+    },
+    {
+      "say": "MiniMax bills by the character, so drawcast caches every sentence. Edit one line, render again, and you only pay for that line.",
+      "do": [
+        { "at": "caches every sentence", "duration": 0.3, "add": [
+          { "id": "c1", "type": "rectangle", "x": 7070, "y": 440, "width": 300, "height": 72, "label": "Sentence 1 · cached", "fontSize": 22, "backgroundColor": "#d3f9d8", "strokeColor": "#2f9e44" },
+          { "id": "c2", "type": "rectangle", "x": 7410, "y": 440, "width": 300, "height": 72, "label": "Sentence 2 · cached", "fontSize": 22, "backgroundColor": "#d3f9d8", "strokeColor": "#2f9e44" },
+          { "id": "c3", "type": "rectangle", "x": 7750, "y": 440, "width": 300, "height": 72, "label": "Sentence 3 · cached", "fontSize": 22, "backgroundColor": "#d3f9d8", "strokeColor": "#2f9e44" }
+        ] },
+        { "at": "Edit one line", "update": { "id": "c3", "label": "Sentence 3 · edited", "backgroundColor": "#ffe8cc", "strokeColor": "#e8590c" } },
+        { "at": "only pay", "pulse": "c3" },
+        { "at": "that line", "enter": "fade", "add": { "id": "billed", "type": "text", "x": 7900, "y": 532, "textAlign": "center", "text": "only this one is billed", "fontSize": 22, "strokeColor": "#e8590c" } }
+      ],
+      "pause": 0.5
+    },
+    {
+      "say": "drawcast is free and open source. Install it in your agent, save your MiniMax key, and ask for a video. Just like this one.",
+      "do": [
+        { "camera": { "x": 8400, "y": 0, "width": 1280 }, "duration": 0.6 },
+        { "enter": "fade", "duration": 0.6, "add": [
+          { "id": "e-dc", "type": "text", "x": 9010, "y": 40, "textAlign": "right", "text": "drawcast", "fontSize": 76 },
+          { "id": "e-x", "type": "text", "x": 9050, "y": 58, "textAlign": "center", "text": "×", "fontSize": 48, "strokeColor": "#868e96" },
+          { "id": "e-logo", "type": "image", "x": 9095, "y": 30, "width": 300, "height": 100, "src": "assets/minimax-logo-light.png" }
+        ] },
+        { "at": "free and open source", "enter": "fade", "add": { "id": "e-sub", "type": "text", "x": 9040, "y": 160, "textAlign": "center", "text": "Free · open source · MIT", "fontSize": 26, "strokeColor": "#868e96" } },
+        { "at": "Install it", "duration": 0.5, "add": [
+          { "id": "n1", "type": "text", "x": 8560, "y": 236, "text": "1", "fontSize": 40, "strokeColor": "#1971c2" },
+          { "id": "r1", "type": "rectangle", "x": 8620, "y": 230, "width": 860, "height": 76, "label": "npx skills add gaojude/drawcast -g -y", "fontSize": 26, "fontFamily": "code", "backgroundColor": "#e7f5ff", "strokeColor": "#1971c2" }
+        ] },
+        { "at": "save your MiniMax key", "duration": 0.5, "add": [
+          { "id": "n2", "type": "text", "x": 8560, "y": 336, "text": "2", "fontSize": 40, "strokeColor": "#c2255c" },
+          { "id": "r2", "type": "rectangle", "x": 8620, "y": 330, "width": 860, "height": 76, "label": "npx -y drawcast@latest key minimax", "fontSize": 26, "fontFamily": "code", "backgroundColor": "#fff0f6", "strokeColor": "#e64980" }
+        ] },
+        { "at": "ask for a video", "duration": 0.5, "add": [
+          { "id": "n3", "type": "text", "x": 8560, "y": 436, "text": "3", "fontSize": 40, "strokeColor": "#2f9e44" },
+          { "id": "r3", "type": "rectangle", "x": 8620, "y": 430, "width": 860, "height": 76, "label": "“Make a video about …”", "fontSize": 30, "backgroundColor": "#ebfbee", "strokeColor": "#2f9e44" }
+        ] },
+        { "at": "Just like this one", "enter": "fade", "add": { "id": "gh", "type": "text", "x": 9040, "y": 540, "textAlign": "center", "text": "github.com/gaojude/drawcast", "fontSize": 28, "fontFamily": "code", "strokeColor": "#495057" } },
+        { "pulse": ["e-dc", "e-logo"] }
+      ],
+      "pause": 2
+    }
+  ]
+}
