@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -57,6 +57,32 @@ test("a generated snapshot name cannot overwrite an image used by the script", a
   await assert.rejects(renderSnapshot(loaded, { output: path.join(dir, "picture.png"), steps: [1, 2], log() {} }), /input script and its images/);
   assert.equal(readFileSync(path.join(dir, image), "utf8"), "original asset");
   assert.equal(existsSync(path.join(dir, "picture-step1.png")), false);
+});
+
+test("snapshots size and move inline SVG alongside a file with the same name as its id", async (t) => {
+  if (!existsSync(path.join(import.meta.dirname, "../dist/player/index.html"))) return t.skip("requires the built player");
+  const ffmpeg = findFfmpeg();
+  if (!ffmpeg || !await findBrowser(false, () => {})) return t.skip("requires a browser and ffmpeg");
+  const dir = mkdtempSync(path.join(os.tmpdir(), "drawcast-inline-svg-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const svg = (fill) => `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="10"><rect width="20" height="10" fill="${fill}"/></svg>`;
+  writeFileSync(path.join(dir, "book.svg"), svg("blue"));
+  const file = path.join(dir, "script.json");
+  writeFileSync(file, JSON.stringify({ drawcast: 1, canvas: { width: 160, height: 100 }, captions: false, steps: [
+    { do: [{ enter: "none", add: [
+      { type: "image", id: "book.svg", svg: svg("red"), x: 10, y: 10, height: 20 },
+      { type: "image", id: "file", src: "book.svg", x: 100, y: 10 },
+    ] }] },
+    { do: [{ update: { id: "book.svg", dx: 50, dy: 25 } }] },
+  ] }));
+  const loaded = await loadScript(file);
+  assert.deepEqual(loaded.report, { errors: [], warnings: [] });
+  const { files } = await renderSnapshot(loaded, { output: path.join(dir, "shot.png"), steps: [1, 2], log() {} });
+  const [before, after] = files.map(({ file }) => execFileSync(ffmpeg, ["-v", "error", "-i", file, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]));
+  const pixel = (frame, x, y) => frame.readUIntBE((160 * y + x) * 3, 3);
+  assert.deepEqual([pixel(before, 48, 28), pixel(after, 48, 28)], [0xff0000, 0xffffff]);
+  assert.deepEqual([pixel(before, 98, 53), pixel(after, 98, 53)], [0xffffff, 0xff0000]);
+  assert.deepEqual([pixel(before, 110, 15), pixel(after, 110, 15)], [0x0000ff, 0x0000ff]);
 });
 
 test("an invalid encoder is reported before any narration is requested", () => {

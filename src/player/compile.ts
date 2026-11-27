@@ -5,7 +5,7 @@
  * a final state. A frame is each track's latest segment evaluated at that time. Actions only ever append
  * segments, so the result is a pure function of time and any frame can be rendered on its own.
  */
-import { type Action, type CameraSpec, type ColorName, DEFAULT_CANVAS, type ElementSpec, type Enter, PALETTE, type Point, type Script, type StepAudio, type TextAlign, type UpdateSpec, alignOffset } from "../shared/types.ts";
+import { type Action, type CameraSpec, type ColorName, DEFAULT_CANVAS, type ElementSpec, type Enter, imageKey, PALETTE, type Point, type Script, type StepAudio, type TextAlign, type UpdateSpec, alignOffset } from "../shared/types.ts";
 import { findPhrase, tokens } from "../shared/text.ts";
 import * as E from "./elements.ts";
 import { axesImageKey, axesLayout } from "../shared/axes.ts";
@@ -282,7 +282,7 @@ class Builder {
         return from && to ? E.makeArrow(spec, from, to) : [];
       }
       case "image": {
-        const file = this.images.get(spec.src ?? "");
+        const file = this.images.get(imageKey(spec));
         if (!file) return [];
         const width = spec.width ?? (spec.height === undefined ? file.width : spec.height * file.width / file.height);
         return [E.makeImage({ ...spec, width, height: spec.height ?? (width * file.height) / file.width }, file.fileId)];

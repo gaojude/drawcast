@@ -130,6 +130,19 @@ export async function inspectVideo(input: string, output: string, { at, signal, 
       const filter = "scale=160:90,crop=160:76:0:0,format=yuv420p,signalstats,metadata=print:key=lavfi.signalstats.YDIF:file=motion.txt";
       await exec(ffmpeg, [...source, "-vf", filter, "-f", "null", "-"], { ...options, cwd: work });
       indices = await motionFrames(path.join(work, "motion.txt"), starts.map((_, i) => seconds(i)), signal);
+      // Indexed movies can show where each sampled movement settles as well as its path.
+      const motionIndex = await readStepIndex(input, signal).catch(() => {
+        signal?.throwIfAborted();
+        return undefined;
+      });
+      if (motionIndex?.frames === frames) {
+        const selected = new Set(indices);
+        for (const peak of indices.slice(1, -1)) {
+          const arrival = motionIndex.stepFrames.find(frame => frame >= peak);
+          if (arrival !== undefined) selected.add(arrival);
+        }
+        indices = [...selected].sort((a, b) => a - b);
+      }
     }
 
     const selected = indices.map((i) => `eq(n\\,${i})`).join("+");

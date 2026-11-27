@@ -1,0 +1,437 @@
+{
+  "drawcast": 1,
+  "title": "From bin to shelf",
+  "canvas": {
+    "width": 1280,
+    "height": 720,
+    "background": "#fffefa"
+  },
+  "voice": "maple",
+  "steps": [
+    {
+      "say": "The orange book is waiting in the return bin.",
+      "do": [
+        {
+          "enter": "none",
+          "duration": 0,
+          "add": [
+            {
+              "id": "title",
+              "type": "text",
+              "x": 640,
+              "y": 93,
+              "text": "From bin to shelf",
+              "fontSize": 50,
+              "strokeColor": "#263e50",
+              "fontFamily": "hand",
+              "textAlign": "center"
+            },
+            {
+              "id": "title-rule",
+              "type": "line",
+              "points": [
+                [559, 162],
+                [622, 164],
+                [689, 161],
+                [718, 159]
+              ],
+              "strokeColor": "#e69a41",
+              "strokeWidth": 4,
+              "roughness": 0.55
+            },
+            {
+              "id": "bin-to-cart",
+              "type": "arrow",
+              "from": [342, 374],
+              "to": [481, 374],
+              "strokeColor": "#83a095",
+              "strokeWidth": 2,
+              "strokeStyle": "dashed",
+              "roughness": 0.4
+            },
+            {
+              "id": "cart-to-shelf",
+              "type": "arrow",
+              "from": [789, 374],
+              "to": [925, 374],
+              "strokeColor": "#83a095",
+              "strokeWidth": 2,
+              "strokeStyle": "dashed",
+              "roughness": 0.4
+            },
+            {
+              "id": "bin-body",
+              "type": "line",
+              "points": [
+                [91, 369],
+                [306, 369],
+                [286, 459],
+                [112, 459]
+              ],
+              "strokeColor": "#263e50",
+              "strokeWidth": 2,
+              "roughness": 0.55,
+              "closed": true,
+              "backgroundColor": "#b5c9d2"
+            },
+            {
+              "id": "bin-mouth",
+              "type": "line",
+              "points": [
+                [88, 370],
+                [105, 352],
+                [288, 352],
+                [309, 370],
+                [295, 385],
+                [104, 385]
+              ],
+              "strokeColor": "#263e50",
+              "strokeWidth": 2,
+              "roughness": 0.55,
+              "closed": true,
+              "backgroundColor": "#829dab"
+            },
+            {
+              "id": "bin-opening",
+              "type": "line",
+              "points": [
+                [105, 368],
+                [288, 368]
+              ],
+              "strokeColor": "#425c6a",
+              "strokeWidth": 5,
+              "roughness": 0.55
+            },
+            {
+              "id": "cart-frame",
+              "type": "line",
+              "points": [
+                [528, 386],
+                [536, 386],
+                [551, 454],
+                [706, 454],
+                [706, 336],
+                [732, 326],
+                [736, 332],
+                [716, 343],
+                [716, 462],
+                [545, 462]
+              ],
+              "strokeColor": "#3f6258",
+              "strokeWidth": 2,
+              "roughness": 0.55,
+              "closed": true,
+              "backgroundColor": "#9ebfb3"
+            },
+            {
+              "id": "cart-tray",
+              "type": "rectangle",
+              "x": 524,
+              "y": 380,
+              "width": 188,
+              "height": 10,
+              "backgroundColor": "#a0bcad",
+              "strokeColor": "#496559",
+              "roughness": 0.5,
+              "rounded": false
+            },
+            {
+              "id": "cart-rail",
+              "type": "line",
+              "points": [
+                [548, 426],
+                [704, 426]
+              ],
+              "strokeColor": "#80998f",
+              "strokeWidth": 4,
+              "roughness": 0.55
+            },
+            {
+              "id": "wheel-left",
+              "type": "ellipse",
+              "x": 542,
+              "y": 459,
+              "width": 18,
+              "height": 18,
+              "backgroundColor": "#f5f8f2",
+              "strokeColor": "#496559",
+              "roughness": 0.4
+            },
+            {
+              "id": "wheel-right",
+              "type": "ellipse",
+              "x": 697,
+              "y": 459,
+              "width": 18,
+              "height": 18,
+              "backgroundColor": "#f5f8f2",
+              "strokeColor": "#496559",
+              "roughness": 0.4
+            },
+            {
+              "id": "shelf-back",
+              "type": "rectangle",
+              "x": 963,
+              "y": 275,
+              "width": 220,
+              "height": 164,
+              "backgroundColor": "#f0eadd",
+              "strokeColor": "#b3a58d",
+              "roughness": 0.5,
+              "rounded": false
+            },
+            {
+              "id": "left-volume",
+              "type": "rectangle",
+              "x": 978,
+              "y": 307,
+              "width": 18,
+              "height": 85,
+              "backgroundColor": "#aabcc4",
+              "strokeColor": "#526e80",
+              "roughness": 0.5,
+              "rounded": false
+            },
+            {
+              "id": "left-volume-2",
+              "type": "rectangle",
+              "x": 999,
+              "y": 316,
+              "width": 18,
+              "height": 76,
+              "backgroundColor": "#9bb7ad",
+              "strokeColor": "#5f776e",
+              "roughness": 0.5,
+              "rounded": false
+            },
+            {
+              "id": "right-volume",
+              "type": "rectangle",
+              "x": 1102,
+              "y": 316,
+              "width": 23,
+              "height": 76,
+              "backgroundColor": "#ced4cf",
+              "strokeColor": "#788982",
+              "roughness": 0.5,
+              "rounded": false
+            },
+            {
+              "id": "right-volume-2",
+              "type": "rectangle",
+              "x": 1128,
+              "y": 297,
+              "width": 24,
+              "height": 95,
+              "backgroundColor": "#bdc8d1",
+              "strokeColor": "#768a95",
+              "roughness": 0.5,
+              "rounded": false
+            },
+            {
+              "id": "right-volume-3",
+              "type": "rectangle",
+              "x": 1156,
+              "y": 313,
+              "width": 16,
+              "height": 79,
+              "backgroundColor": "#c7cbba",
+              "strokeColor": "#838a76",
+              "roughness": 0.5,
+              "rounded": false
+            },
+            {
+              "id": "shelf-left",
+              "type": "line",
+              "points": [
+                [962, 264],
+                [962, 455]
+              ],
+              "strokeColor": "#827260",
+              "strokeWidth": 5,
+              "roughness": 0.55
+            },
+            {
+              "id": "shelf-right",
+              "type": "line",
+              "points": [
+                [1185, 264],
+                [1185, 455]
+              ],
+              "strokeColor": "#827260",
+              "strokeWidth": 5,
+              "roughness": 0.55
+            },
+            {
+              "id": "shelf-top",
+              "type": "rectangle",
+              "x": 954,
+              "y": 265,
+              "width": 238,
+              "height": 10,
+              "backgroundColor": "#c7b390",
+              "strokeColor": "#827260",
+              "roughness": 0.5,
+              "rounded": false
+            },
+            {
+              "id": "shelf-plank",
+              "type": "rectangle",
+              "x": 963,
+              "y": 392,
+              "width": 220,
+              "height": 12,
+              "backgroundColor": "#c7b390",
+              "strokeColor": "#827260",
+              "roughness": 0.5,
+              "rounded": false
+            },
+            {
+              "id": "shelf-bottom",
+              "type": "rectangle",
+              "x": 958,
+              "y": 439,
+              "width": 232,
+              "height": 10,
+              "backgroundColor": "#c7b390",
+              "strokeColor": "#827260",
+              "roughness": 0.5,
+              "rounded": false
+            },
+            {
+              "id": "label-bin",
+              "type": "text",
+              "x": 200,
+              "y": 505,
+              "text": "Return bin",
+              "fontSize": 32,
+              "strokeColor": "#263e50",
+              "fontFamily": "normal",
+              "textAlign": "center"
+            },
+            {
+              "id": "label-cart",
+              "type": "text",
+              "x": 630,
+              "y": 505,
+              "text": "Sorting cart",
+              "fontSize": 32,
+              "strokeColor": "#263e50",
+              "fontFamily": "normal",
+              "textAlign": "center"
+            },
+            {
+              "id": "label-shelf",
+              "type": "text",
+              "x": 1072,
+              "y": 505,
+              "text": "Library shelf",
+              "fontSize": 32,
+              "strokeColor": "#263e50",
+              "fontFamily": "normal",
+              "textAlign": "center"
+            },
+            {
+              "id": "book",
+              "type": "image",
+              "x": 164,
+              "y": 296,
+              "width": 76,
+              "height": 100,
+              "src": "book.svg"
+            },
+            {
+              "id": "bin-front-rim",
+              "type": "line",
+              "points": [
+                [91, 370],
+                [308, 370],
+                [302, 384],
+                [282, 459],
+                [112, 459],
+                [97, 383]
+              ],
+              "strokeColor": "#263e50",
+              "strokeWidth": 2,
+              "roughness": 0.55,
+              "closed": true,
+              "backgroundColor": "#b5c9d2"
+            },
+            {
+              "id": "bin-rim-line",
+              "type": "line",
+              "points": [
+                [98, 384],
+                [302, 384]
+              ],
+              "strokeColor": "#698896",
+              "strokeWidth": 2,
+              "roughness": 0.55
+            },
+            {
+              "id": "bin-inset",
+              "type": "line",
+              "points": [
+                [151, 408],
+                [248, 408],
+                [244, 432],
+                [155, 432],
+                [151, 408]
+              ],
+              "strokeColor": "#7b98a5",
+              "strokeWidth": 2,
+              "roughness": 0.55
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "say": "A librarian lifts the book from the bin and sets it on the sorting cart.",
+      "do": [
+        {
+          "at": "lifts",
+          "duration": 3.5,
+          "update": {
+            "id": "book",
+            "along": [
+              [202, 346],
+              [202, 262],
+              [302, 237],
+              [492, 237],
+              [630, 270],
+              [630, 330]
+            ]
+          }
+        }
+      ],
+      "pause": 0.3
+    },
+    {
+      "say": "From the cart, she carries the book to its place on the shelf.",
+      "do": [
+        {
+          "at": "carries",
+          "duration": 2.65,
+          "update": {
+            "id": "book",
+            "along": [
+              [630, 330],
+              [638, 252],
+              [758, 230],
+              [917, 250],
+              [1004, 298],
+              [1059, 342]
+            ]
+          }
+        }
+      ],
+      "pause": 0.35
+    },
+    {
+      "say": "Back on the shelf, the book is ready for its next reader.",
+      "do": [],
+      "pause": 0.6
+    }
+  ]
+}

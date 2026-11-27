@@ -83,6 +83,8 @@ export interface ElementSpec extends Style {
   closed?: boolean;
   /** image: a file path relative to the script. */
   src?: string;
+  /** image: a self-contained SVG document in place of a file path. */
+  svg?: string;
   /** line: a function of x to plot, such as "x^2 / 4", drawn across the box x, y, width, height. */
   fn?: string;
   /** Plot parameter in fn, animated by update.p on the same fixed axes. */
@@ -101,6 +103,9 @@ export interface ElementSpec extends Style {
   /** Place the middle on a shape center [id], a function value [plot,x] or a reading [axes,x,y]. */
   on?: ShapeCenter | [string, number] | [string, number, number];
 }
+
+/** File paths cannot contain NUL, so inline assets have their own keys alongside axes images. */
+export const imageKey = (spec: ElementSpec) => spec.src ?? `\0svg/${spec.id}`;
 
 export type Arrowhead = "arrow" | "triangle" | "bar" | "dot";
 

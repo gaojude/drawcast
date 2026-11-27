@@ -164,4 +164,9 @@ test("motion inspection finds two brief changes between long holds", async (t) =
   assert.equal(times.at(-1), 9.9);
   assert.ok(times.some(t => t > 2 && t <= 2.4), times);
   assert.ok(times.some(t => t > 7.3 && t <= 7.7), times);
+  await appendStepIndex(video, { frames: 100, stepFrames: [15, 39, 86] });
+  const indexed = run(video, "--motion");
+  assert.equal(indexed.status, 0, indexed.stderr);
+  const withArrivals = indexed.stdout.match(/encoded frames at ([\d., ]+) s/)[1].split(", ").map(Number);
+  assert.deepEqual(withArrivals, [...new Set([...times, 3.9, 8.6])].sort((a, b) => a - b));
 });
