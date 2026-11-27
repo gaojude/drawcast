@@ -20,6 +20,43 @@ and ffmpeg.
 headings for its subsections. `drawcast guide plots math` prints those topics in order.
 Keep the workflow and reference in the CLI so installed skills can pick up changes.
 
+## Publish to npm
+
+Every PR must add a new changeset. Run `npm run changeset`, select a patch, minor, or
+major bump for `drawcast`, and write a release note for users. For work with no release
+impact, including docs-only changes, run `npm run changeset -- --empty`. Commit the
+generated Markdown file. The **Require changeset** check runs on every pull request.
+
+### Add the npm token to GitHub
+
+1. Sign in to npm with an account that can publish `drawcast`. Open your profile menu,
+   choose **Access Tokens**, and generate a **Granular Access Token**.
+2. Give the token a name and expiration date. Under **Packages and scopes**, grant
+   **Read and write** access to the `drawcast` package. Enable **Bypass two-factor
+   authentication (2FA)** so GitHub Actions can publish unattended. Generate and copy the token.
+3. In the GitHub repository, open **Settings > Secrets and variables > Actions**.
+   Choose **New repository secret**, name it `NPM_TOKEN`, paste the token as the value,
+   and select **Add secret**. [Open this repository's Actions secrets](https://github.com/gaojude/drawcast/settings/secrets/actions).
+4. Before the token expires, generate a replacement, update the same GitHub secret,
+   and revoke the old token in npm.
+
+### Release a stable version
+
+1. On a release branch, run `npm run changeset -- status` to inspect the pending
+   bumps, then `npm run changeset -- version` to consume the notes, update
+   `package.json`, and generate the changelog. Run `npm install --package-lock-only`
+   and set the same version in `.claude-plugin/plugin.json`. Run
+   `npm run changeset -- --empty` to record the release PR itself, then commit
+   the generated files and deletions and merge the PR into `main`.
+2. From the updated `main` checkout, create and push the matching tag. For example,
+   for version `0.6.1`, run `git tag v0.6.1` followed by `git push origin v0.6.1`.
+3. Open the tag's **Verify** run in GitHub Actions. Once Linux, macOS, and Windows pass,
+   **Publish to npm** checks the tag against the package version, builds the tarball,
+   and publishes it with the `latest` dist-tag. Confirm with `npm view drawcast dist-tags.latest`.
+
+If publishing fails because the token expired, replace the secret and use **Re-run failed jobs**
+on the tag's workflow run.
+
 ## How a script becomes a video
 
 1. **Check.** The script is validated, with layout estimated from the element sizes. A `math`
