@@ -1,10 +1,9 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { setTimeout as delay } from "node:timers/promises";
 import { guess } from "../src/voice/guess.ts";
 import { ensureModels, modelsDir, modelsInstalled } from "../src/voice/models.ts";
 import { cachedNarration, narrate } from "../src/voice/narrate.ts";
@@ -363,12 +362,15 @@ test("cancelling narration stops its custom command and skips remaining sentence
   const script = { steps: [{ say: "This first sentence waits. There are four more words." }] };
   const lines = [];
   const job = narrate(script, voice, 1, (line) => lines.push(line), undefined, controller.signal);
-  const deadline = Date.now() + 5000;
-  while (!existsSync(pidFile) && Date.now() < deadline) await delay(10);
+  const pid = await t.waitFor(() => {
+    const pid = Number(readFileSync(pidFile, "utf8"));
+    assert.ok(Number.isSafeInteger(pid) && pid > 0);
+    return pid;
+  }, { interval: 10, timeout: 5000 });
   controller.abort(new Error("render ended"));
   await assert.rejects(job, /render ended/);
-  const pid = Number(readFileSync(pidFile, "utf8"));
-  assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+  // The shell can close before the OS reaps its killed child.
+  await t.waitFor(() => assert.throws(() => process.kill(pid, 0), { code: "ESRCH" }), { interval: 10, timeout: 2000 });
   assert.equal(opened, false);
   assert.equal(lines.filter((line) => line.includes("speaking")).length, 1);
   assert.deepEqual(readdirSync(path.join(home, "speech", voice.key)), []);
