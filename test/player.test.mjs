@@ -3,6 +3,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { build } from "esbuild";
 import { findBrowser, launchBrowser } from "../src/render/browser.ts";
+import { expand } from "../src/format/expand.ts";
 
 test("the browser timeline", async (t) => {
   if (!await findBrowser(false, () => {})) return t.skip("requires an installed Chrome, Chromium or Edge");
@@ -25,6 +26,41 @@ test("the browser timeline", async (t) => {
   const box = (id, x, extra = {}) => ({ type: "rectangle", id, x, y: 0, width: 100, height: 100, ...extra });
   const arrow = (from, to) => ({ type: "arrow", id: "edge", from, to });
   const at = (frame, id) => frame.elements.find((el) => el.id === id);
+
+  await t.test("phase changes move a crest continuously and keep the sum in sync", async () => {
+    const plot = (id, fn) => ({ type: "line", id, fn, p: 0, domain: [0, Math.PI * 2], range: [-2, 2], x: 0, y: 0, width: 192, height: 200 });
+    const script = expand({ drawcast: 1, steps: [{ do: [
+      { enter: "none", add: [plot("wave", "sin(x+p)"), plot("sum", "sin(x)+sin(x+p)")] },
+      { at: 0, duration: 2, update: { id: ["wave", "sum"], p: Math.PI } },
+      { at: 0, duration: 2, update: { id: "wave", dx: 20 } },
+      { at: 0, duration: 0.5, update: { id: "wave", strokeColor: "#ff0000" } },
+    ] }] });
+    const { frames: [initial, mid, end, midAgain] } = await run(script.steps, [0.5, 1.5, 2.5, 1.5]);
+    assert.deepEqual(mid, midAgain);
+    assert.equal(at(initial, "wave").y, 100);
+    assert.equal(at(mid, "wave").y, 50); // a displaced crest at x = 0
+    assert.equal(at(mid, "wave").x, 10);
+    assert.equal(at(mid, "wave").strokeColor, "#ff0000");
+    assert.equal(at(mid, "sum").y, 50);
+    assert.equal(at(end, "wave").height, 100);
+    assert.ok(at(end, "sum").height < 1e-10);
+  });
+
+  await t.test("parameterized plots preserve breaks and can leave the visible range between keyframes", async () => {
+    const plot = (id, fn) => ({ type: "line", id, fn, p: -1, domain: [-2, 2], range: [-2, 2], x: 0, y: 0, width: 200, height: 100 });
+    const { steps } = expand({ drawcast: 1, steps: [{ do: [
+      { enter: "none", add: [plot("pole", "1/(x-p)"), plot("hidden", "1/p")] },
+      { at: 0, duration: 2, update: { id: ["pole", "hidden"], p: 1 } },
+      { at: 0, duration: 2, send: "hidden" },
+      { at: 0, duration: 2, point: "hidden" },
+    ] }] });
+    const { frames: [mid, end] } = await run(steps, [1.5, 2.5]);
+    assert.equal(at(mid, "hidden"), undefined);
+    assert.equal(mid.pointers.length, 0);
+    assert.ok(at(mid, "pole/segment-1").x > 100);
+    assert.ok(at(end, "hidden"));
+    assert.ok(at(end, "pole/segment-1").x > 150);
+  });
 
   await t.test("connections follow both simultaneously moving ends, then freeze the removed end", async () => {
     const steps = [{ do: [

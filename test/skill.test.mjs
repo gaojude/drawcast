@@ -7,11 +7,24 @@ import { test } from "node:test";
 const root = path.join(import.meta.dirname, "..");
 const read = (file) => readFileSync(path.join(root, file), "utf8");
 
-test("the guide starts with the version it belongs to", () => {
+const guideFor = (...args) => execFileSync(process.execPath, [path.join(root, "src/cli.ts"), "guide", ...args], { encoding: "utf8" });
+
+test("the guide starts with the version and preserves the full reference on demand", () => {
   const { version } = JSON.parse(read("package.json"));
-  const guide = execFileSync(process.execPath, [path.join(root, "src/cli.ts"), "guide"], { encoding: "utf8" });
+  const guide = guideFor();
   assert.equal(guide.split("\n")[0], `drawcast ${version}`);
-  assert.equal(guide.slice(guide.indexOf("\n") + 2), read("docs/format.md"));
+  assert.equal(guide.slice(guide.indexOf("\n") + 2), read("docs/guide.md"));
+  assert.equal(guideFor("full"), `drawcast ${version}\n\n${read("docs/format.md")}`);
+});
+
+test("every advertised topic opens the corresponding section", () => {
+  const topics = [...read("docs/guide.md").matchAll(/^\| `(\w+)` \|/gm)].map((m) => m[1]);
+  assert.ok(topics.includes("plots"));
+  for (const topic of topics.filter((name) => name !== "full")) {
+    assert.match(guideFor(topic), new RegExp(`^#{2,3} ${topic}$`, "im"));
+  }
+  assert.doesNotMatch(guideFor("plots"), /^### Math$/m);
+  assert.throws(() => guideFor("unknown"), /Unknown guide topic/);
 });
 
 test("the skill only points at the guide of the latest release", () => {

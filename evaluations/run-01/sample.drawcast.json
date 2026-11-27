@@ -1,0 +1,1368 @@
+{
+  "drawcast": 1,
+  "title": "Adding two sound waves",
+  "cover": 2,
+  "steps": [
+    {
+      "say": "Imagine two speakers playing the same pure note at equal volume. Blue is the first sound wave. Orange is the second.",
+      "do": [
+        {
+          "at": 0,
+          "add": {
+            "id": "title",
+            "type": "text",
+            "x": 72,
+            "y": 34,
+            "text": "Adding two sound waves",
+            "fontSize": 43,
+            "fontFamily": "normal",
+            "strokeColor": "#233448",
+            "textAlign": "left"
+          },
+          "duration": 0.2,
+          "enter": "fade"
+        },
+        {
+          "at": 0,
+          "add": {
+            "id": "phase",
+            "type": "text",
+            "x": 1198,
+            "y": 41,
+            "text": "In phase",
+            "fontSize": 32,
+            "fontFamily": "normal",
+            "strokeColor": "#364758",
+            "textAlign": "right"
+          },
+          "duration": 0.2,
+          "enter": "fade"
+        },
+        {
+          "at": 0,
+          "add": {
+            "id": "read",
+            "type": "text",
+            "x": 1140,
+            "y": 110,
+            "text": "At the mark",
+            "fontSize": 21,
+            "fontFamily": "normal",
+            "strokeColor": "#536475",
+            "textAlign": "center"
+          },
+          "duration": 0.2,
+          "enter": "fade"
+        },
+        {
+          "at": 0,
+          "add": {
+            "id": "mark",
+            "type": "line",
+            "points": [
+              [
+                426.25,
+                134
+              ],
+              [
+                426.25,
+                576
+              ]
+            ],
+            "strokeColor": "#697986",
+            "roughness": 0,
+            "strokeStyle": "dotted",
+            "strokeWidth": 1
+          },
+          "duration": 0.2,
+          "enter": "fade"
+        },
+        {
+          "at": 0,
+          "add": {
+            "id": "base0",
+            "type": "line",
+            "points": [
+              [
+                340,
+                192
+              ],
+              [
+                1030,
+                192
+              ]
+            ],
+            "strokeColor": "#b9c3c8",
+            "roughness": 0,
+            "strokeWidth": 1
+          },
+          "duration": 0.2,
+          "enter": "fade"
+        },
+        {
+          "at": 0,
+          "add": {
+            "id": "row0",
+            "type": "text",
+            "x": 74,
+            "y": 174,
+            "text": "Wave A",
+            "fontSize": 32,
+            "fontFamily": "normal",
+            "strokeColor": "#1966ad",
+            "textAlign": "left"
+          },
+          "duration": 0.2,
+          "enter": "fade"
+        },
+        {
+          "at": 0,
+          "add": {
+            "id": "base1",
+            "type": "line",
+            "points": [
+              [
+                340,
+                326
+              ],
+              [
+                1030,
+                326
+              ]
+            ],
+            "strokeColor": "#b9c3c8",
+            "roughness": 0,
+            "strokeWidth": 1
+          },
+          "duration": 0.2,
+          "enter": "fade"
+        },
+        {
+          "at": 0,
+          "add": {
+            "id": "row1",
+            "type": "text",
+            "x": 74,
+            "y": 308,
+            "text": "Wave B",
+            "fontSize": 32,
+            "fontFamily": "normal",
+            "strokeColor": "#a34516",
+            "textAlign": "left"
+          },
+          "duration": 0.2,
+          "enter": "fade"
+        },
+        {
+          "at": 0,
+          "add": {
+            "id": "base2",
+            "type": "line",
+            "points": [
+              [
+                340,
+                494
+              ],
+              [
+                1030,
+                494
+              ]
+            ],
+            "strokeColor": "#b9c3c8",
+            "roughness": 0,
+            "strokeWidth": 1
+          },
+          "duration": 0.2,
+          "enter": "fade"
+        },
+        {
+          "at": 0,
+          "add": {
+            "id": "row2",
+            "type": "text",
+            "x": 74,
+            "y": 476,
+            "text": "A + B",
+            "fontSize": 32,
+            "fontFamily": "normal",
+            "strokeColor": "#12745f",
+            "textAlign": "left"
+          },
+          "duration": 0.2,
+          "enter": "fade"
+        },
+        {
+          "at": "Blue",
+          "add": {
+            "id": "waveA",
+            "type": "line",
+            "fn": "sin(x)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 112,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#1966ad",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.8,
+          "enter": "draw"
+        },
+        {
+          "at": "Orange",
+          "add": {
+            "id": "waveB0",
+            "type": "line",
+            "fn": "sin(x)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.8,
+          "enter": "draw"
+        }
+      ]
+    },
+    {
+      "say": "Follow the dotted line. Both waves peak at plus one at the same instant. Add them and the green wave peaks at plus two. Its amplitude has doubled.",
+      "do": [
+        {
+          "at": "dotted",
+          "point": [
+            426.25,
+            151
+          ]
+        },
+        {
+          "at": "plus one",
+          "add": {
+            "id": "n0",
+            "type": "text",
+            "x": 1140,
+            "y": 172,
+            "text": "+1",
+            "fontSize": 32,
+            "fontFamily": "normal",
+            "strokeColor": "#1966ad",
+            "textAlign": "center"
+          },
+          "duration": 0.2,
+          "enter": "fade"
+        },
+        {
+          "at": "plus one",
+          "add": {
+            "id": "n1",
+            "type": "text",
+            "x": 1140,
+            "y": 306,
+            "text": "+1",
+            "fontSize": 32,
+            "fontFamily": "normal",
+            "strokeColor": "#a34516",
+            "textAlign": "center"
+          },
+          "duration": 0.2,
+          "enter": "fade"
+        },
+        {
+          "at": "green wave",
+          "add": {
+            "id": "sum0",
+            "type": "line",
+            "fn": "2 sin(x)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 1,
+          "enter": "draw"
+        },
+        {
+          "at": "plus two",
+          "add": {
+            "id": "n2",
+            "type": "text",
+            "x": 1140,
+            "y": 474,
+            "text": "+2",
+            "fontSize": 32,
+            "fontFamily": "normal",
+            "strokeColor": "#12745f",
+            "textAlign": "center"
+          },
+          "duration": 0.2,
+          "enter": "fade"
+        },
+        {
+          "at": "plus two",
+          "point": [
+            426.25,
+            414
+          ]
+        }
+      ],
+      "pause": 0.25
+    },
+    {
+      "say": "Delay the orange wave by a quarter of a cycle. At the mark, blue is still plus one, but orange is crossing zero. Their sum is plus one here.",
+      "do": [
+        {
+          "at": 0,
+          "update": {
+            "id": [
+              "n1",
+              "n2"
+            ],
+            "opacity": 0
+          },
+          "duration": 0.2
+        },
+        {
+          "at": 0,
+          "update": {
+            "id": "phase",
+            "text": "Quarter cycle apart"
+          },
+          "duration": 0.2
+        },
+        {
+          "at": 0.42,
+          "remove": [
+            "waveB0",
+            "sum0"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 0.42,
+          "add": {
+            "id": "waveB1",
+            "type": "line",
+            "fn": "sin(x - 0.196349541)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 0.42,
+          "add": {
+            "id": "sum1",
+            "type": "line",
+            "fn": "sin(x) + sin(x - 0.196349541)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 0.59,
+          "remove": [
+            "waveB1",
+            "sum1"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 0.59,
+          "add": {
+            "id": "waveB2",
+            "type": "line",
+            "fn": "sin(x - 0.392699082)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 0.59,
+          "add": {
+            "id": "sum2",
+            "type": "line",
+            "fn": "sin(x) + sin(x - 0.392699082)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 0.76,
+          "remove": [
+            "waveB2",
+            "sum2"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 0.76,
+          "add": {
+            "id": "waveB3",
+            "type": "line",
+            "fn": "sin(x - 0.589048623)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 0.76,
+          "add": {
+            "id": "sum3",
+            "type": "line",
+            "fn": "sin(x) + sin(x - 0.589048623)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 0.93,
+          "remove": [
+            "waveB3",
+            "sum3"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 0.93,
+          "add": {
+            "id": "waveB4",
+            "type": "line",
+            "fn": "sin(x - 0.785398163)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 0.93,
+          "add": {
+            "id": "sum4",
+            "type": "line",
+            "fn": "sin(x) + sin(x - 0.785398163)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.1,
+          "remove": [
+            "waveB4",
+            "sum4"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 1.1,
+          "add": {
+            "id": "waveB5",
+            "type": "line",
+            "fn": "sin(x - 0.981747704)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.1,
+          "add": {
+            "id": "sum5",
+            "type": "line",
+            "fn": "sin(x) + sin(x - 0.981747704)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.27,
+          "remove": [
+            "waveB5",
+            "sum5"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 1.27,
+          "add": {
+            "id": "waveB6",
+            "type": "line",
+            "fn": "sin(x - 1.178097245)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.27,
+          "add": {
+            "id": "sum6",
+            "type": "line",
+            "fn": "sin(x) + sin(x - 1.178097245)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.44,
+          "remove": [
+            "waveB6",
+            "sum6"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 1.44,
+          "add": {
+            "id": "waveB7",
+            "type": "line",
+            "fn": "sin(x - 1.374446786)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.44,
+          "add": {
+            "id": "sum7",
+            "type": "line",
+            "fn": "sin(x) + sin(x - 1.374446786)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.61,
+          "remove": [
+            "waveB7",
+            "sum7"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 1.61,
+          "add": {
+            "id": "waveB8",
+            "type": "line",
+            "fn": "sin(x - 1.570796327)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.61,
+          "add": {
+            "id": "sum8",
+            "type": "line",
+            "fn": "sin(x) + sin(x - 1.570796327)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": "At the mark",
+          "update": {
+            "id": "n1",
+            "text": "0",
+            "opacity": 100
+          },
+          "duration": 0.2
+        },
+        {
+          "at": "At the mark",
+          "update": {
+            "id": "n2",
+            "text": "+1",
+            "opacity": 100
+          },
+          "duration": 0.2
+        },
+        {
+          "at": "At the mark",
+          "point": [
+            426.25,
+            326
+          ]
+        }
+      ],
+      "pause": 0.6
+    },
+    {
+      "say": "Delay it to half a cycle. At the mark, a peak meets an equal trough. Plus one and minus one make zero. The waves cancel at every instant, leaving silence at this listening point.",
+      "do": [
+        {
+          "at": 0,
+          "update": {
+            "id": [
+              "n1",
+              "n2"
+            ],
+            "opacity": 0
+          },
+          "duration": 0.2
+        },
+        {
+          "at": 0,
+          "update": {
+            "id": "phase",
+            "text": "Half a cycle apart"
+          },
+          "duration": 0.2
+        },
+        {
+          "at": 0.42,
+          "remove": [
+            "waveB8",
+            "sum8"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 0.42,
+          "add": {
+            "id": "waveB9",
+            "type": "line",
+            "fn": "sin(x - 1.767145868)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 0.42,
+          "add": {
+            "id": "sum9",
+            "type": "line",
+            "fn": "sin(x) + sin(x - 1.767145868)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 0.59,
+          "remove": [
+            "waveB9",
+            "sum9"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 0.59,
+          "add": {
+            "id": "waveB10",
+            "type": "line",
+            "fn": "sin(x - 1.963495408)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 0.59,
+          "add": {
+            "id": "sum10",
+            "type": "line",
+            "fn": "sin(x) + sin(x - 1.963495408)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 0.76,
+          "remove": [
+            "waveB10",
+            "sum10"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 0.76,
+          "add": {
+            "id": "waveB11",
+            "type": "line",
+            "fn": "sin(x - 2.159844949)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 0.76,
+          "add": {
+            "id": "sum11",
+            "type": "line",
+            "fn": "sin(x) + sin(x - 2.159844949)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 0.93,
+          "remove": [
+            "waveB11",
+            "sum11"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 0.93,
+          "add": {
+            "id": "waveB12",
+            "type": "line",
+            "fn": "sin(x - 2.356194490)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 0.93,
+          "add": {
+            "id": "sum12",
+            "type": "line",
+            "fn": "sin(x) + sin(x - 2.356194490)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.1,
+          "remove": [
+            "waveB12",
+            "sum12"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 1.1,
+          "add": {
+            "id": "waveB13",
+            "type": "line",
+            "fn": "sin(x - 2.552544031)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.1,
+          "add": {
+            "id": "sum13",
+            "type": "line",
+            "fn": "sin(x) + sin(x - 2.552544031)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.27,
+          "remove": [
+            "waveB13",
+            "sum13"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 1.27,
+          "add": {
+            "id": "waveB14",
+            "type": "line",
+            "fn": "sin(x - 2.748893572)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.27,
+          "add": {
+            "id": "sum14",
+            "type": "line",
+            "fn": "sin(x) + sin(x - 2.748893572)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.44,
+          "remove": [
+            "waveB14",
+            "sum14"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 1.44,
+          "add": {
+            "id": "waveB15",
+            "type": "line",
+            "fn": "sin(x - 2.945243113)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.44,
+          "add": {
+            "id": "sum15",
+            "type": "line",
+            "fn": "sin(x) + sin(x - 2.945243113)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.61,
+          "remove": [
+            "waveB15",
+            "sum15"
+          ],
+          "duration": 0.085
+        },
+        {
+          "at": 1.61,
+          "add": {
+            "id": "waveB16",
+            "type": "line",
+            "fn": "-sin(x)",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 246,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#a34516",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": 1.61,
+          "add": {
+            "id": "sum16",
+            "type": "line",
+            "fn": "0",
+            "domain": [
+              0,
+              12.566370614359172
+            ],
+            "range": [
+              -2,
+              2
+            ],
+            "x": 340,
+            "y": 414,
+            "width": 690,
+            "height": 160,
+            "strokeColor": "#12745f",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.085,
+          "enter": "fade"
+        },
+        {
+          "at": "At the mark",
+          "update": {
+            "id": "n1",
+            "text": "−1",
+            "opacity": 100
+          },
+          "duration": 0.2
+        },
+        {
+          "at": "At the mark",
+          "update": {
+            "id": "n2",
+            "text": "0",
+            "opacity": 100
+          },
+          "duration": 0.2
+        },
+        {
+          "at": "At the mark",
+          "point": [
+            426.25,
+            366
+          ]
+        }
+      ],
+      "pause": 0.6
+    }
+  ]
+}

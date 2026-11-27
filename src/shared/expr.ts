@@ -33,7 +33,7 @@ const CONSTANTS: Record<string, number> = { pi: Math.PI, e: Math.E };
 type Fn = (x: number) => number;
 
 /** Parses `source` into a function of x. Throws with a message that says what is wrong and where. */
-export function parseFunction(source: string): Fn {
+export function parseFunction(source: string, parameter?: () => number): Fn {
   const tokens = source.match(/(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?|[a-z_][a-z_0-9]*|\*\*|[-+*/^(),]|\S/gi) ?? [];
   let i = 0;
   const peek = () => tokens[i];
@@ -103,6 +103,10 @@ export function parseFunction(source: string): Fn {
       i++;
       const name = t.toLowerCase();
       if (name === "x") return (x) => x;
+      if (name === "p") {
+        if (parameter) return parameter;
+        return fail('Set "p" to its starting number on this plot');
+      }
       if (Object.hasOwn(CONSTANTS, name)) return () => CONSTANTS[name];
       if (!Object.hasOwn(FUNCTIONS, name)) fail(`"${t}" is not x, a constant (pi, e) or a function (${Object.keys(FUNCTIONS).join(", ")})`);
       const f = FUNCTIONS[name];
@@ -193,20 +197,28 @@ export const isPlotRef = (v: unknown): v is PlotRef => Array.isArray(v) && v.len
  * `path` also gives the curve between two such points on one plot, for something to travel along it.
  */
 export class Plots {
-  private plots = new Map<string, ReturnType<typeof plotOf> & { segments: Point[][]; angle: number; center: Point }>();
+  private plots = new Map<string, ReturnType<typeof plotOf> & { spec: ElementSpec; segments: Point[][]; angle: number; center: Point }>();
 
   /** Register the samples in plot units and return the unrotated canvas strokes the player draws. */
   add(spec: ElementSpec): Point[][] {
-    const plot = plotOf(parseFunction(spec.fn!), { x: spec.x!, y: spec.y!, width: spec.width!, height: spec.height! }, spec.domain!, spec.range);
+    const fn = parseFunction(spec.fn!, spec.p === undefined ? undefined : () => spec.p!);
+    const plot = plotOf(fn, { x: spec.x!, y: spec.y!, width: spec.width!, height: spec.height! }, spec.domain!, spec.range);
     const segments = samplesInRange(plot, spec.range);
     const strokes = segments.map((part) => part.map(([x, y]) => plot.toCanvas(x, y)));
     const xs = strokes.flat().map(([x]) => x), ys = strokes.flat().map(([, y]) => y);
     const center: Point = [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2];
-    if (strokes.length) this.plots.set(spec.id, { ...plot, segments, angle: spec.angle ?? 0, center });
+    if (strokes.length) this.plots.set(spec.id, { ...plot, spec, segments, angle: spec.angle ?? 0, center });
     return strokes;
   }
 
   has = (id: string) => this.plots.has(id);
+
+  /** Resolve later references at the updated value, including any preceding moves. */
+  setParameter(id: string, p: number): Point[][] | undefined {
+    const plot = this.plots.get(id);
+    if (plot?.spec.p === undefined) return undefined;
+    return this.add({ ...plot.spec, ...plot.box, angle: plot.angle, p });
+  }
 
   move(id: string, dx: number, dy: number, angle?: number) {
     const plot = this.plots.get(id);

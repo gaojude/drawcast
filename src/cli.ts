@@ -12,7 +12,7 @@ import { SPEAKERS, builtInVoices } from "./voice/voice.ts";
 const HELP = `drawcast: turn a narrated Excalidraw script into a video
 
 Usage
-  drawcast guide                      how to write a script (the file format, with examples)
+  drawcast guide [topic]              quick start, a topic, or the full script reference
   drawcast check <script>             find problems in a script without rendering it
   drawcast snapshot <script>          save the canvas as a PNG, to look at the layout
   drawcast render <script>            speak the narration and render the MP4
@@ -79,7 +79,8 @@ async function main(signal: AbortSignal): Promise<number> {
   if (values.help || !command) return console.log(HELP), command || values.help ? 0 : 1;
 
   const takesScript = ["check", "snapshot", "render"].includes(command);
-  if (positionals.length > (takesScript ? 2 : 1)) throw new Error(`Unexpected argument for ${command}: ${positionals[takesScript ? 2 : 1]}.`);
+  const maxArgs = takesScript || command === "guide" ? 2 : 1;
+  if (positionals.length > maxArgs) throw new Error(`Unexpected argument for ${command}: ${positionals[maxArgs]}.`);
   const allowed = command === "render" || command === "snapshot"
     ? ["output", "width", "voice", "speed", "no-captions", "tts-command", ...(command === "snapshot" ? ["sheet", "at", "step"] : ["fps"])]
     : [];
@@ -89,10 +90,22 @@ async function main(signal: AbortSignal): Promise<number> {
   }
 
   switch (command) {
-    case "guide":
-      // The version comes first: the guide tells an agent to compare it with `drawcast --version`.
-      process.stdout.write(`drawcast ${version}\n\n${readFileSync(path.join(packageRoot, "docs", "format.md"), "utf8")}`);
+    case "guide": {
+      const topics = ["plots", "math", "elements", "actions", "layout", "narration"];
+      if (file && file !== "full" && !topics.includes(file)) throw new Error(`Unknown guide topic "${file}". Choose ${topics.join(", ")} or full.`);
+      let guide = readFileSync(path.join(packageRoot, "docs", file ? "format.md" : "guide.md"), "utf8");
+      if (file && file !== "full") {
+        const lines = guide.split(/\r?\n/);
+        const start = lines.findIndex((line) => line.replace(/^#+ /, "").toLowerCase() === file);
+        if (start < 0) throw new Error(`Guide section "${file}" is missing.`);
+        const level = lines[start].indexOf(" ");
+        const nextHeading = new RegExp(`^#{1,${level}} `);
+        const end = lines.findIndex((line, i) => i > start && nextHeading.test(line));
+        guide = lines.slice(start, end < 0 ? undefined : end).join("\n").trimEnd() + "\n";
+      }
+      process.stdout.write(`drawcast ${version}\n\n${guide}`);
       return 0;
+    }
 
     case "voices": {
       const width = Math.max(...EDGE_VOICES.map((v) => EDGE_PREFIX.length + v.name.length));

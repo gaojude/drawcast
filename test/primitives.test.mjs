@@ -56,6 +56,20 @@ test("a line with fn becomes the points of the plot", () => {
   assert.equal(c.roughness, 0);
 });
 
+test("a plot parameter updates references at the new value and keeps the same axes", async () => {
+  const wave = { id: "wave", type: "line", fn: "sin(x+p)", p: 0, domain: [0, 6], range: [-1, 1], x: 20, y: 30, width: 200, height: 100 };
+  const actions = [{ add: wave }, { update: { id: "wave", p: Math.PI / 2, dx: 50 } }, { point: ["wave", 0] }];
+  assert.deepEqual((await report({ do: actions })).errors, []);
+  const [added, , pointed] = expand({ drawcast: 1, steps: [{ do: actions }] }).steps[0].do;
+  assert.equal(added.add.fn, wave.fn);
+  assert.deepEqual(pointed.point, [70, 30]);
+  for (const [changes, message] of [
+    [{ p: undefined }, /starting number/], [{ range: undefined }, /fixed "range"/], [{ p: Infinity }, /finite number/],
+  ]) assert.match((await report({ do: [{ add: { ...wave, ...changes } }] })).errors.join("\n"), message);
+  assert.match((await report({ do: [{ add: box("b", 0) }, { update: { id: "b", p: 1 } }] })).errors.join("\n"), /starting "p"/);
+  assert.match((await report({ do: [{ add: wave }, { update: { id: "wave", p: "pi" } }] })).errors.join("\n"), /must be a number/);
+});
+
 test("plots lift the pen at clipped and undefined stretches, including when travelling in reverse", () => {
   const spec = { id: "p", type: "line", fn: "1 / x", domain: [-2, 2], range: [-2, 2], x: 0, y: 0, width: 300, height: 200 };
   const plot = expand({ drawcast: 1, steps: [{ do: [{ add: spec }] }] }).steps[0].do[0].add;

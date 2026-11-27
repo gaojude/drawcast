@@ -15,10 +15,9 @@ node dist/cli.js render examples/dns.drawcast.json
 `src/format/check.ts` the checker, `src/math` typesets formulas, and `src/render` drives the browser
 and ffmpeg.
 
-`docs/format.md` is what `drawcast guide` prints, after a first line with the version, so a change to
-the format is a change to that file too. So is a change to how an agent should work: the skill in
-`skills/drawcast/SKILL.md` only tells the agent to read `npx -y drawcast@latest guide`, because an
-installed skill is not updated with the command and anything more in it would go stale.
+`docs/guide.md` is the quick start printed by `drawcast guide`. `docs/format.md` supplies
+`guide full` and the named topics, which are extracted by heading. Keep the workflow and
+reference in the CLI so installed skills can pick up changes.
 
 ## How a script becomes a video
 

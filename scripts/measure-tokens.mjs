@@ -42,4 +42,4 @@ for (const file of process.argv.slice(2)) {
 
 console.log("What an agent reads");
 row("skills/drawcast/SKILL.md", count(readFileSync(path.join(root, "skills/drawcast/SKILL.md"), "utf8")), "loaded when the skill is used");
-row("drawcast guide (docs/format.md)", count(readFileSync(path.join(root, "docs/format.md"), "utf8")), "read once per task");
+row("drawcast guide (docs/guide.md)", count(readFileSync(path.join(root, "docs/guide.md"), "utf8")), "read once per task");

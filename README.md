@@ -79,15 +79,16 @@ Microsoft's online voice. Name a built-in voice (`--voice lin`) to keep it all o
 ## Use
 
 ```
-drawcast guide                 the script format, with examples
+drawcast guide [topic]         quick start, one topic, or the full reference
 drawcast check <script>        errors and layout warnings, without rendering
 drawcast snapshot <script>     stills as PNG: --sheet (every step on one picture), --step 2,5, --at 12.5
 drawcast render <script>       the MP4 (-o out.mp4, --voice lin, --speed 1.1, --no-captions)
 drawcast voices                the voices
 ```
 
-`drawcast guide` prints the full reference, which is also in [`docs/format.md`](docs/format.md). In
-short: a script is a list of steps, each with narration (`say`) and actions (`do`). An action adds,
+`drawcast guide` prints a short authoring workflow. Use `guide plots` for function curves,
+`guide math` for LaTeX or `guide full` for the [full reference](docs/format.md).
+A script is a list of steps, each with narration (`say`) and actions (`do`). An action adds,
 updates or removes an Excalidraw element, moves an element along a path, sends a dot along an arrow,
 pulses something, moves the camera, or points at something, and its `at` names the phrase of the
 narration it starts on. The renderer finds when the voice reaches that phrase: the
@@ -123,11 +124,8 @@ Any agent that can run a shell command can make a video:
 - **Any other agent:** tell it to run `npx -y drawcast@latest guide` and make a video of what you
   want explained.
 
-The skill says one thing: run `npx -y drawcast@latest guide` and follow it. The steps (which command
-to run, `check`, `snapshot`, `render`) and the format reference all live in the command, and the
-guide always comes from the latest release, so an installed skill never goes out of date. The first
-line of the guide is its version: when `drawcast --version` matches it, the agent uses the installed
-`drawcast`, and otherwise `npx -y drawcast@latest`.
+The skill uses `npx -y drawcast@latest guide` by default. When you supply a particular CLI,
+the agent reads its guide and uses the same command throughout.
 
 ## What it costs in tokens
 
@@ -144,9 +142,8 @@ The last column is the canvas as it stands when the video ends, saved the way Ex
 scene and minified. It has no narration and no timing in it, and it is still two to four times the
 size of the script that draws it, narrates it and times it.
 
-What an agent reads first does not grow with the video: the skill is about 190 tokens and
-`drawcast guide` about 6,100. Layout problems come back from `check` as text, so finding them costs
-no screenshots, and the rest is one contact sheet of every step rather than a picture per step.
+The default guide fits in about 700 tokens. Topics are read on demand. A single
+`snapshot --sheet` checks the script and draws a contact sheet of the steps.
 
 These are counts from `o200k_base`, a tokenizer from OpenAI that runs offline; another model's
 tokenizer will give somewhat different numbers. The scene sizes move by a fraction of a percent

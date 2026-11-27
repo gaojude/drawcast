@@ -7,7 +7,7 @@
 import { convertToExcalidrawElements, exportToCanvas } from "@excalidraw/excalidraw";
 import { type ColorSpace, avcCodecs } from "../shared/h264.ts";
 import { DEFAULT_CANVAS, type Formula, type Script, type StepAudio } from "../shared/types.ts";
-import { type FormulaFile, type ImageInfo, type Pointer, type Schedule, type Timeline, timeline } from "./compile.ts";
+import { type FormulaFile, type Frame, type ImageInfo, type Pointer, type Schedule, type Timeline, timeline } from "./compile.ts";
 import type { Rect } from "./elements.ts";
 
 /** Everything about a video but its timing, so the page can get ready while the narration is still being spoken. */
@@ -44,7 +44,7 @@ interface Surface {
   stage: HTMLCanvasElement;
   /** Excalidraw's picture of the elements, kept for the frames in which only the pointer or caption moves */
   board: HTMLCanvasElement | null;
-  boardKey: string;
+  scene: Pick<Frame, "elements" | "view"> | null;
   frameKey: string;
 }
 
@@ -52,7 +52,7 @@ function surface(): Surface {
   const stage = document.createElement("canvas");
   stage.width = request.output.width;
   stage.height = request.output.height;
-  return { stage, board: null, boardKey: "", frameKey: "" };
+  return { stage, board: null, scene: null, frameKey: "" };
 }
 
 /** Where `frame` paints. */
@@ -202,7 +202,7 @@ function startOver(): void {
   line = timeline(request.script, images, formula);
   known = null;
   // what was painted for another timing is not this timing's picture
-  for (const s of [still, ...lanes.map((lane) => lane.surface)]) s.boardKey = s.frameKey = "";
+  for (const s of [still, ...lanes.map((lane) => lane.surface)]) s.scene = null;
 }
 
 /** Schedules the whole script at once, from the start, against audio for every step. */
@@ -278,19 +278,26 @@ function drawCaption(g: CanvasRenderingContext2D, text: string) {
 async function paint(s: Surface, t: number, bare = false, upTo?: number): Promise<boolean> {
   const at = line.frameAt(t, upTo);
   const f = bare ? { ...at, pointers: [], caption: null } : at;
-  const key = JSON.stringify([f.elements, f.view]);
+  const before = s.scene;
+  // Settled tracks reuse their element. A plotted line can have hundreds of points;
+  // compare its contents only when the timeline actually produces a different object.
+  const unchanged = before &&
+    f.view.x === before.view.x && f.view.y === before.view.y &&
+    f.view.w === before.view.w && f.view.h === before.view.h &&
+    f.elements.length === before.elements.length &&
+    f.elements.every((el, i) => el === before.elements[i] || JSON.stringify(el) === JSON.stringify(before.elements[i]));
   const overlay = JSON.stringify([f.pointers, f.caption]);
-  if (key === s.boardKey && overlay === s.frameKey) return false;
-  if (key !== s.boardKey) {
+  if (unchanged && overlay === s.frameKey) return false;
+  if (!unchanged) {
     // nothing is remembered until the new board is there, in case drawing it fails
-    s.boardKey = s.frameKey = "";
+    s.scene = null;
     s.board = await drawBoard(f.elements, f.view);
   }
   const g = s.stage.getContext("2d", { alpha: false })!;
   g.drawImage(s.board!, 0, 0);
   for (const p of f.pointers) drawPointer(g, p, f.view);
   if (f.caption) drawCaption(g, f.caption);
-  s.boardKey = key;
+  s.scene = { elements: f.elements, view: f.view };
   s.frameKey = overlay;
   return true;
 }

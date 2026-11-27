@@ -94,7 +94,7 @@ const ELEMENT_KEYS: Record<string, string[]> = {
   text: ["x", "y", "text", "fontSize", "fontFamily", "textAlign"],
   math: ["x", "y", "tex", "fontSize", "textAlign"],
   arrow: ["from", "to", "via", "rounded", "label", "fontSize", "fontFamily", "startArrowhead", "endArrowhead"],
-  line: ["points", "closed", "rounded", "fn", "domain", "range", "x", "y", "width", "height"],
+  line: ["points", "closed", "rounded", "fn", "p", "domain", "range", "x", "y", "width", "height"],
   freedraw: ["points"],
   image: ["x", "y", "width", "height", "src", "on"],
 };
@@ -377,6 +377,8 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
       const pair = (v: unknown) => Array.isArray(v) && v.length === 2 && v.every(isNumber) && v[0] < v[1];
       if (!pair(el.domain)) return fail(where, `a plot needs "domain": [from, to], the x values its box spans, smaller first.`);
       if (el.range !== undefined && !pair(el.range)) return fail(where, `"range" must be [bottom, top], the y values its box spans, smaller first.`);
+      if (el.p !== undefined && !isNumber(el.p)) return fail(where, '"p" must be a finite number.');
+      if (el.p !== undefined && !el.range) return fail(where, 'A plot with "p" needs a fixed "range" so its scale stays the same as it changes.');
       try {
         const segments = plots.add({ ...el, angle: isNumber(el.angle) ? el.angle : 0 } as ElementSpec);
         if (!segments.length) return fail(where, `"${el.fn}" has no values to draw across ${quote(el.domain)}${el.range ? ` within ${quote(el.range)}` : ""}.`);
@@ -386,7 +388,7 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
       }
       box = { x: el.x!, y: el.y!, w: el.width!, h: el.height! };
     } else {
-      const plotOnly = ["x", "y", "width", "height", "domain", "range"].filter((k) => el[k] !== undefined);
+      const plotOnly = ["x", "y", "width", "height", "domain", "range", "p"].filter((k) => el[k] !== undefined);
       if (plotOnly.length) fail(where, `${plotOnly.join(", ")} are for a plot, a line with "fn". A line is placed by its "points".`);
       const min = el.closed ? 3 : 2;
       if (!Array.isArray(el.points) || el.points.length < min || !el.points.every((p) => isPoint(p) || isPlotRef(p))) return fail(where, `needs "points": at least ${min} points [[x, y], ...] in canvas coordinates.`);
@@ -500,12 +502,12 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
       } else if (raw.update !== undefined) {
         const u = raw.update;
         if (!isObject(u)) return fail(where, `"update" must be an object with an "id".`);
-        unknownKeys(where, u, ["id", "x", "y", "dx", "dy", "width", "height", "text", "tex", "label", "along", "span", "fontSize", ...STYLE]);
+        unknownKeys(where, u, ["id", "x", "y", "dx", "dy", "width", "height", "p", "text", "tex", "label", "along", "span", "fontSize", ...STYLE]);
         checkStyle(where, u);
         plainText(where, "text", u.text);
         const ids = Array.isArray(u.id) ? u.id : [u.id];
         if (!ids.length) fail(where, `"update" needs at least one element id.`);
-        for (const key of ["x", "y", "dx", "dy"]) if (u[key] !== undefined && !isNumber(u[key])) fail(where, `${key} must be a number.`);
+        for (const key of ["x", "y", "dx", "dy", "p"]) if (u[key] !== undefined && !isNumber(u[key])) fail(where, `${key} must be a number.`);
         for (const key of ["width", "height"]) if (u[key] !== undefined && !(isNumber(u[key]) && u[key] > 0)) fail(where, `${key} must be a positive number.`);
         for (const key of ["text", "label"]) if (u[key] !== undefined && typeof u[key] !== "string") fail(where, `"${key}" must be text.`);
         if (u.label !== undefined) plainText(where, "label", u.label);
@@ -547,6 +549,12 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
           if (u.along !== undefined && PATHS.includes(el.type)) fail(where, `${quote(target)} is a ${el.type}, which cannot travel; use a shape, text or image. To send something along an arrow, use "send".`);
           const dx = isNumber(u.dx) ? u.dx : 0;
           const dy = isNumber(u.dy) ? u.dy : 0;
+          if (isNumber(u.p)) {
+            const segments = plots.setParameter(target as string, u.p);
+            if (!segments) fail(where, `"p" changes a plot added with a starting "p"; ${quote(target)} has none.`);
+            else if (!segments.length) fail(where, `${quote(target)} has no visible values at p = ${u.p}. Check its range.`);
+            else el.points = segments.flatMap((segment, i) => segment.map(([x, y], j) => ({ x, y, move: i > 0 && j === 0 })));
+          }
           if (isNumber(u.angle)) el.angle = u.angle;
           plots.move(target as string, dx, dy, isNumber(u.angle) ? u.angle : undefined);
           if (el.arrow && (dx || dy)) {

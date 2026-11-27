@@ -3,6 +3,7 @@ import { convertToExcalidrawElements, getCommonBounds } from "@excalidraw/excali
 import { type ElementSpec, MATH_PIXELS_PER_EM, type Point, type Style, alignOffset } from "../shared/types.ts";
 import { type Pt, smooth } from "./motion.ts";
 import { ARROW_GAP, type ArrowEnd, arrowCourse as connection, arrowLabelCenter } from "../shared/arrows.ts";
+import { parseFunction, plotSegments } from "../shared/expr.ts";
 
 /** An Excalidraw element. Its shape is Excalidraw's business; we only touch the fields we set. */
 export type El = Record<string, any>;
@@ -133,6 +134,25 @@ export function makeLine(spec: ElementSpec): El {
     roundness: spec.rounded ? { type: 2 } : null,
   });
   return spec.breaks?.length ? { ...line, breaks: spec.breaks, closeSegments: spec.closed } : line;
+}
+
+/** Sample a parameterized line in its original coordinates, then apply its independently animated translation. */
+export function parameterizedLine(spec: ElementSpec, original: El) {
+  let sampled: number | undefined;
+  const fn = parseFunction(spec.fn!, () => sampled!);
+  const box = { x: spec.x!, y: spec.y!, width: spec.width!, height: spec.height! };
+  let geometry: ReturnType<typeof pathGeometry> & { breaks: number[] } | undefined;
+  return (el: El): El | undefined => {
+    if (el.plotParameter === undefined) return el; // includes the original growing stroke
+    if (sampled !== el.plotParameter) {
+      sampled = el.plotParameter;
+      const segments = plotSegments(fn, box, spec.domain!, spec.range);
+      if (spec.closed && segments.length === 1) segments[0].push(segments[0][0]);
+      const points = segments.flatMap((part, i) => part.map(([x, y], j) => ({ x, y, move: i > 0 && j === 0 })));
+      geometry = points.length ? { ...pathGeometry(points), breaks: points.flatMap((p, i) => p.move ? [i] : []) } : undefined;
+    }
+    return geometry ? { ...el, ...geometry, x: geometry.x + (el.x - original.x), y: geometry.y + (el.y - original.y), closeSegments: spec.closed } : undefined;
+  };
 }
 
 /** Excalidraw lines are continuous. Each visible stretch of a clipped plot needs its own stroke. */
