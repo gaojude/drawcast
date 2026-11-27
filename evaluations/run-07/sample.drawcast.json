@@ -1,0 +1,47 @@
+{
+  "drawcast": 1,
+  "voice": "maple",
+  "steps": [
+    {
+      "say": "The open square is the hole. A tile can slide into it if they share an edge.",
+      "do": [
+        {
+          "enter": "none",
+          "add": [
+            {"id": "title", "type": "text", "x": 640, "y": 47, "text": "Sliding tiles", "textAlign": "center", "fontSize": 47, "fontFamily": "hand", "strokeColor": "#25364b"},
+            {"id": "board", "type": "rectangle", "x": 425, "y": 126, "width": 430, "height": 430, "backgroundColor": "#e6eced", "strokeColor": "#56686c", "strokeWidth": 2, "roughness": 0},
+            {"id": "top-left", "type": "rectangle", "x": 441, "y": 142, "width": 194, "height": 194, "backgroundColor": "#ffffff", "strokeColor": "#b5c3c5", "roughness": 0},
+            {"id": "top-right", "type": "rectangle", "x": 645, "y": 142, "width": 194, "height": 194, "backgroundColor": "#ffffff", "strokeColor": "#b5c3c5", "roughness": 0},
+            {"id": "bottom-left", "type": "rectangle", "x": 441, "y": 346, "width": 194, "height": 194, "backgroundColor": "#ffffff", "strokeColor": "#b5c3c5", "roughness": 0},
+            {"id": "bottom-right", "type": "rectangle", "x": 645, "y": 346, "width": 194, "height": 194, "backgroundColor": "#ffffff", "strokeColor": "#b5c3c5", "roughness": 0},
+            {"id": "one", "type": "rectangle", "on": ["top-left"], "width": 182, "height": 182, "label": "1", "fontSize": 82, "fontFamily": "normal", "backgroundColor": "#a5d8ff", "strokeColor": "#154465", "roughness": 0},
+            {"id": "two", "type": "rectangle", "on": ["top-right"], "width": 182, "height": 182, "label": "2", "fontSize": 82, "fontFamily": "normal", "backgroundColor": "#ffd89e", "strokeColor": "#664315", "roughness": 0},
+            {"id": "three", "type": "rectangle", "on": ["bottom-left"], "width": 182, "height": 182, "label": "3", "fontSize": 82, "fontFamily": "normal", "backgroundColor": "#a8e3cf", "strokeColor": "#195442", "roughness": 0}
+          ]
+        },
+        {"at": "hole", "point": "bottom-right"}
+      ]
+    },
+    {
+      "say": "Tile two sits just above the hole. Slide it down one square.",
+      "do": [
+        {"at": "Tile two", "pulse": "two"},
+        {"at": "Slide it down", "duration": 1.05, "update": {"id": "two", "along": [["two"], ["bottom-right"]]}}
+      ]
+    },
+    {
+      "say": "Two left a hole in the top right. Now tile one shares an edge with it.",
+      "do": [
+        {"at": "a hole", "point": "top-right"},
+        {"at": "tile one", "pulse": "one"}
+      ]
+    },
+    {
+      "say": "Slide one to the right. The hole is now in the top left.",
+      "do": [
+        {"at": "Slide one", "duration": 1.05, "update": {"id": "one", "along": [["one"], ["top-right"]]}},
+        {"at": "top left", "point": "top-left"}
+      ]
+    }
+  ]
+}

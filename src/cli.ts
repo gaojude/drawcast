@@ -35,6 +35,7 @@ Options
   --step <n>              snapshot: the canvas as step n is done (every action finished). Several:
                           2,5,9 or 3-6 or all, a file each
   --sheet                 snapshot: the steps (default all) on one picture, in a grid
+  --motion                inspect: sample movement between the opening and ending frames
   --at <seconds>          snapshot: the video at that moment, with pointer and captions
                           inspect: save the frame at that time to <video>.inspect.at<seconds>.png
   -h, --help, -v, --version
@@ -71,6 +72,7 @@ async function main(signal: AbortSignal): Promise<number> {
       at: { type: "string" },
       step: { type: "string" },
       sheet: { type: "boolean" },
+      motion: { type: "boolean" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
     },
@@ -86,7 +88,7 @@ async function main(signal: AbortSignal): Promise<number> {
   if (command !== "guide" && positionals.length > maxArgs) throw new Error(`Unexpected argument for ${command}: ${positionals[maxArgs]}.`);
   const allowed = command === "render" || command === "snapshot"
     ? ["output", "width", "voice", "speed", "no-captions", "tts-command", ...(command === "snapshot" ? ["sheet", "at", "step"] : ["fps"])]
-    : command === "inspect" ? ["output", "at"] : [];
+    : command === "inspect" ? ["output", "at", "motion"] : [];
   for (const [option, value] of Object.entries(values)) {
     if (!allowed.includes(option)) throw new Error(`--${option} does not apply to ${command}.`);
     if (typeof value === "string" && !value.trim()) throw new Error(`--${option} needs a nonempty value.`);
@@ -140,8 +142,9 @@ async function main(signal: AbortSignal): Promise<number> {
       if (!existsSync(file)) throw new Error(`${file} does not exist.`);
       const at = number(values.at, "at");
       const stem = path.join(path.dirname(file), path.parse(file).name);
-      const output = values.output ?? `${stem}.inspect${at === undefined ? "" : `.at${at}`}.png`;
-      const times = await inspectVideo(file, output, at, signal);
+      const kind = values.motion ? ".motion" : at === undefined ? "" : `.at${at}`;
+      const output = values.output ?? `${stem}.inspect${kind}.png`;
+      const times = await inspectVideo(file, output, at, signal, values.motion);
       console.log(`${output} (encoded frames at ${times.map((s) => Number(s.toFixed(3))).join(", ")} s)`);
       return 0;
     }

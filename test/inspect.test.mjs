@@ -44,6 +44,7 @@ test("inspect samples the encoded video in display order and extracts the frame 
     [[input, "--at", "1"], /video duration \(1 s\)/],
     [[input, "--at=-1"], /nonnegative/],
     [[input, "--at", "abc"], /--at must be a number/],
+    [[input, "--at", "0.3", "--motion"], /Choose --motion/],
     [[input, "--sheet"], /--sheet does not apply/],
     [[custom], /Could not inspect/],
   ]) {
@@ -68,4 +69,22 @@ test("inspect samples the encoded video in display order and extracts the frame 
   const replaced = run(input, "--at", "0", "-o", custom);
   assert.equal(replaced.status, 0, replaced.stderr);
   assert.equal(readFileSync(custom).toString("ascii", 1, 4), "PNG");
+});
+
+test("motion inspection finds two brief changes between long holds", async (t) => {
+  const ffmpeg = findFfmpeg();
+  if (!ffmpeg) return t.skip("requires ffmpeg");
+  const dir = mkdtempSync(path.join(os.tmpdir(), "drawcast-motion-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const video = path.join(dir, "two moves.mp4");
+  const pattern = "nullsrc=s=48x32:r=10:d=10,geq=lum='40+20*clip(N-20,0,4)+20*clip(N-73,0,4)':cb=128:cr=128";
+  execFileSync(ffmpeg, ["-v", "error", "-f", "lavfi", "-i", pattern, "-c:v", "libx264", video]);
+  const sheet = run(video, "--motion");
+  assert.equal(sheet.status, 0, sheet.stderr);
+  assert.match(sheet.stdout, /two moves\.inspect\.motion\.png/);
+  const times = sheet.stdout.match(/encoded frames at ([\d., ]+) s/)[1].split(", ").map(Number);
+  assert.equal(times[0], 0);
+  assert.equal(times.at(-1), 9.9);
+  assert.ok(times.some(t => t > 2 && t <= 2.4), times);
+  assert.ok(times.some(t => t > 7.3 && t <= 7.7), times);
 });

@@ -27,6 +27,10 @@ Follow `drawcast guide` for the authoring workflow. Use the same CLI invocation 
 `check` gives the same diagnostics without opening a browser. The shaded strip on the sheet
 shows the caption area. Use `--step 4,7` to look more closely at selected steps.
 
+After rendering, `drawcast inspect lesson.mp4 --motion` saves a sheet with the first and last
+frames and up to four moments of sustained change above the caption strip. It prints their times
+in reading order. Use `--at <seconds>` for a full-size frame at a specific instant.
+
 Node.js 22.12 or newer is required. The first use of a built-in voice downloads a speech model
 of about 365 MB. `drawcast setup` can download it ahead of time.
 

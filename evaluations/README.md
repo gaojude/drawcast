@@ -19,3 +19,4 @@ The traces record timestamped tool inputs and outcomes. Long command outputs are
 | Trial | Author wall time | Render process time | Outcome |
 | --- | ---: | ---: | --- |
 | [6 · Insertion sort](run-06/trace.md) | 209.672 s | 12.55 s + 4.64 s | Mark the first frame on the preview sheet and place tiles by the centers of named shapes. [Walkthrough](run-06/walkthrough.mp4) |
+| [7 · Sliding tiles](run-07/trace.md) | 158.601 s | 6.02 s | Capture brief movements in one encoded inspection sheet. [Walkthrough](run-07/walkthrough.mp4) |
