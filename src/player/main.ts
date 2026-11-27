@@ -122,10 +122,11 @@ function limitEmojiFont() {
  */
 async function loadFonts(script: Script) {
   await limitEmojiFont();
-  const specs = script.steps.flatMap((s) => s.do ?? []).flatMap((a) => (a.add ? [a.add].flat() : []));
+  const actions = script.steps.flatMap((s) => s.do ?? []);
+  const specs = actions.flatMap((a) => a.add ?? []);
   const texts = [
     ...specs.filter((s) => s.label || s.text).map((s) => ({ text: `${s.label ?? ""}${s.text ?? ""}`, fontFamily: { hand: 5, normal: 6, code: 3 }[s.fontFamily ?? "hand"] })),
-    ...script.steps.flatMap((s) => (s.do ?? []).map((a) => `${a.update?.text ?? ""}${a.update?.label ?? ""}`)).map((text) => ({ text, fontFamily: 5 })),
+    ...actions.flatMap((a) => a.update ?? []).map((u) => ({ text: `${u.text ?? ""}${u.label ?? ""}`, fontFamily: 5 })),
   ].filter((t) => t.text);
   if (texts.length) {
     const probes = convertToExcalidrawElements(texts.map((t, i) => ({ type: "text", x: 0, y: i * 40, ...t })) as any);

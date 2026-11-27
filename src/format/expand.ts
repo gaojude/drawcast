@@ -62,31 +62,32 @@ export function expand(script: Script, resolvedPoints?: WeakMap<AxisRef | ShapeC
     return placed;
   };
 
+  const expandUpdate = (update: UpdateSpec): UpdateSpec => {
+    const ids = [update.id].flat();
+    if (update.color) {
+      const allFilled = ids.every((id) => fillable.has(id));
+      const mixed = !allFilled && ids.some((id) => fillable.has(id));
+      // Mixed targets move together. The player assigns the palette fill to just the shapes.
+      update = mixed ? { ...update, strokeColor: update.strokeColor ?? PALETTE[update.color][0] } : colored(update, allFilled);
+    }
+    if (Array.isArray(update.along)) {
+      const { points: along, breaks } = points(update.along);
+      update = { ...update, along, ...(breaks ? { breaks } : {}) };
+    }
+    for (const id of ids) {
+      if (update.p !== undefined) plots.setParameter(id, update.p);
+      plots.move(id, update.dx ?? 0, update.dy ?? 0, update.angle);
+    }
+    return update;
+  };
+
   const action = (a: Action): Action => {
     if (a.add) {
       const add = Array.isArray(a.add) ? a.add.map(element) : element(a.add);
       for (const el of [a.add].flat()) if (FILLED.has(el.type) || (el.type === "line" && el.closed)) fillable.add(el.id);
       return { ...a, add };
     }
-    if (a.update) {
-      let update: UpdateSpec = a.update;
-      const ids = [update.id].flat();
-      if (update.color) {
-        const allFilled = ids.every((id) => fillable.has(id));
-        const mixed = !allFilled && ids.some((id) => fillable.has(id));
-        // Mixed targets move together. The player assigns the palette fill to just the shapes.
-        update = mixed ? { ...update, strokeColor: update.strokeColor ?? PALETTE[update.color][0] } : colored(update, allFilled);
-      }
-      if (Array.isArray(update.along)) {
-        const { points: along, breaks } = points(update.along);
-        update = { ...update, along, ...(breaks ? { breaks } : {}) };
-      }
-      for (const id of ids) {
-        if (update.p !== undefined) plots.setParameter(id, update.p);
-        plots.move(id, update.dx ?? 0, update.dy ?? 0, update.angle);
-      }
-      return { ...a, update };
-    }
+    if (a.update) return { ...a, update: Array.isArray(a.update) ? a.update.map(expandUpdate) : expandUpdate(a.update) };
     if (a.remove) for (const id of [a.remove].flat()) plots.remove(id);
     if (a.point !== undefined) return { ...a, point: ref(a.point) };
     return a;

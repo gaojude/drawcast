@@ -542,6 +542,101 @@ export async function check(input: unknown, baseDir: string, resolvedPoints?: We
     }
   };
 
+  const checkUpdate = (where: string, u: unknown, seen?: Set<string>) => {
+    if (!isObject(u)) return fail(where, `each update must be an object with an "id".`);
+    unknownKeys(where, u, ["id", "x", "y", "dx", "dy", "width", "height", "p", "text", "tex", "label", "along", "span", "fontSize", ...STYLE]);
+    checkStyle(where, u);
+    plainText(where, "text", u.text);
+    const ids = Array.isArray(u.id) ? u.id : [u.id];
+    if (!ids.length) fail(where, `"update" needs at least one element id.`);
+    for (const key of ["x", "y", "dx", "dy", "p"]) if (u[key] !== undefined && !isNumber(u[key])) fail(where, `${key} must be a number.`);
+    for (const key of ["width", "height"]) if (u[key] !== undefined && !(isNumber(u[key]) && u[key] > 0)) fail(where, `${key} must be a positive number.`);
+    for (const key of ["text", "label"]) if (u[key] !== undefined && typeof u[key] !== "string") fail(where, `"${key}" must be text.`);
+    if (u.label !== undefined) plainText(where, "label", u.label);
+    /** with `along`: where the travel ends, which is where each element's middle is afterwards */
+    let arrival: P | null = null;
+    if (u.along !== undefined) {
+      let route: Pt[] | null = null;
+      if (Array.isArray(u.along) && u.along.length >= 2 && u.along.every(isCoordinate)) {
+        route = pathPoints(where, "along", u.along);
+      }
+      else if (typeof u.along === "string" && checkRef(where, "along", u.along)) {
+        const path = live.get(u.along)!;
+        if (!PATHS.includes(path.type)) fail(where, `"along" names ${quote(u.along)}, a ${path.type}; it must be an arrow or a line to travel along, or points [[x, y], ...].`);
+        else {
+          route = path.arrow ? course(path.arrow) : path.points ?? null;
+          if (route && path.angle) route = rotatePath(route, path.angle);
+        }
+      } else if (typeof u.along !== "string") fail(where, `"along" must be the id of an arrow or line, or at least two points [[x, y], ...].`);
+      if (u.span !== undefined && !(Array.isArray(u.span) && u.span.length === 2 && u.span.every(isNumber) && 0 <= u.span[0] && u.span[0] < u.span[1] && u.span[1] <= 1)) {
+        fail(where, `"span" must be [from, to], fractions of the path between 0 and 1, smaller first.`);
+      }
+      if (route?.length) arrival = partialPolyline(route, Array.isArray(u.span) && isNumber(u.span[1]) ? u.span[1] : 1).at(-1)!;
+      if (["x", "y", "dx", "dy"].some((k) => u[k] !== undefined)) fail(where, `"along" says where the element ends up; leave out x, y, dx and dy.`);
+    } else if (u.span !== undefined) fail(where, `"span" only goes with "along".`);
+    for (const target of ids) {
+      if (typeof target === "string" && seen) {
+        if (seen.has(target)) {
+          fail(where, `element ${quote(target)} is updated twice in this list. Combine its changes in one entry.`);
+          continue;
+        }
+        seen.add(target);
+      }
+      if (!checkRef(where, "id", typeof target === "string" ? target : undefined)) continue;
+      const el = live.get(target as string)!;
+      if (el.type === "axes" && ["x", "y", "width", "height", "strokeWidth", "strokeColor", "color", "fillStyle", "strokeStyle", "backgroundColor", "roughness"].some((key) => u[key] !== undefined)) {
+        fail(where, "Set the scale, position and stroke on the axes when adding them. Use dx and dy to move the complete chart axes.");
+      }
+      if (PATHS.includes(el.type) && ["x", "y", "width", "height"].some((k) => u[k] !== undefined)) {
+        fail(where, `${quote(target)} is a ${el.type}; move it with dx and dy (x, y, width and height are for shapes, text and images).`);
+      }
+      if (u.text !== undefined && el.type !== "text") {
+        fail(where, `"text" can only replace the content of a text element; ${quote(target)} is a ${el.type}${el.type === "math" ? `, whose formula is replaced with "tex"` : ""}.`);
+      }
+      if (u.tex !== undefined && el.type !== "math") fail(where, `"tex" can only replace the formula of a math element; ${quote(target)} is a ${el.type}.`);
+      if (el.type === "math" && (u.width !== undefined || u.height !== undefined)) fail(where, `${quote(target)} is a formula, which cannot be stretched: its size is the fontSize it was added with.`);
+      if (u.label !== undefined && !el.labelled) {
+        fail(where, `${quote(target)} was added without a label, so there is none to change. Give it one when it is added${el.type === "text" ? `; a text element changes with "text"` : ""}.`);
+      }
+      if (u.fontSize !== undefined && !["text", "math"].includes(el.type)) {
+        fail(where, `"fontSize" changes the size of a text or math element; ${quote(target)} is a ${el.type}${SHAPES.includes(el.type) ? ", which changes size with width and height" : ""}.`);
+      }
+      if (u.along !== undefined && PATHS.includes(el.type)) fail(where, `${quote(target)} is a ${el.type}, which cannot travel; use a shape, text or image. To send something along an arrow, use "send".`);
+      const dx = isNumber(u.dx) ? u.dx : 0;
+      const dy = isNumber(u.dy) ? u.dy : 0;
+      if (isNumber(u.p)) {
+        const segments = plots.setParameter(target as string, u.p);
+        if (!segments) fail(where, `"p" changes a plot added with a starting "p"; ${quote(target)} has none.`);
+        else if (!segments.length) fail(where, `${quote(target)} has no visible values at p = ${u.p}. Check its range.`);
+        else el.points = segments.flatMap((segment, i) => segment.map(([x, y], j) => ({ x, y, move: i > 0 && j === 0 })));
+      }
+      if (isNumber(u.angle)) el.angle = u.angle;
+      plots.move(target as string, dx, dy, isNumber(u.angle) ? u.angle : undefined);
+      if (el.arrow && (dx || dy)) {
+        const path = course(el.arrow);
+        if (path) el.arrow = { from: [path[0].x + dx, path[0].y + dy], to: [path.at(-1)!.x + dx, path.at(-1)!.y + dy], via: path.slice(1, -1).map((p) => ({ x: p.x + dx, y: p.y + dy })) };
+      }
+      if (el.points && (dx || dy)) el.points = el.points.map((p) => ({ ...p, x: p.x + dx, y: p.y + dy }));
+      const fontSize = isNumber(u.fontSize) ? u.fontSize : el.fontSize;
+      const formula = el.type === "math" && u.tex !== undefined ? formulaBox(where, u.tex, fontSize ?? 20) : null;
+      if (el.box) {
+        const b = el.box;
+        const text = el.type === "text" && typeof u.text === "string" ? textBox(u.text, fontSize ?? 20, el.fontFamily) : null;
+        const scale = el.fontSize && fontSize ? fontSize / el.fontSize : 1;
+        const w = formula?.w ?? text?.w ?? (isNumber(u.width) ? u.width : b.w * scale);
+        const h = formula?.h ?? text?.h ?? (isNumber(u.height) ? u.height : b.h * scale);
+        // `x` is the point the element was placed by, which for centred text is its middle
+        const x = isNumber(u.x) ? u.x : b.x + alignOffset(b.w, el.align);
+        el.box = {
+          x: arrival ? arrival.x - w / 2 : x - alignOffset(w, el.align) + dx,
+          y: arrival ? arrival.y - h / 2 : (isNumber(u.y) ? u.y : b.y) + dy,
+          w, h,
+        };
+        if (el.fontSize !== undefined) el.fontSize = fontSize;
+      }
+    }
+  };
+
   steps.forEach((value, si) => {
     const at = `step ${si + 1}`;
     if (!isObject(value)) return fail(at, "a step must be an object.");
@@ -591,92 +686,11 @@ export async function check(input: unknown, baseDir: string, resolvedPoints?: We
         if (Array.isArray(raw.add) && !raw.add.length) fail(where, `"add" needs at least one element.`);
         for (const el of Array.isArray(raw.add) ? raw.add : [raw.add]) addElement(where, el);
       } else if (raw.update !== undefined) {
-        const u = raw.update;
-        if (!isObject(u)) return fail(where, `"update" must be an object with an "id".`);
-        unknownKeys(where, u, ["id", "x", "y", "dx", "dy", "width", "height", "p", "text", "tex", "label", "along", "span", "fontSize", ...STYLE]);
-        checkStyle(where, u);
-        plainText(where, "text", u.text);
-        const ids = Array.isArray(u.id) ? u.id : [u.id];
-        if (!ids.length) fail(where, `"update" needs at least one element id.`);
-        for (const key of ["x", "y", "dx", "dy", "p"]) if (u[key] !== undefined && !isNumber(u[key])) fail(where, `${key} must be a number.`);
-        for (const key of ["width", "height"]) if (u[key] !== undefined && !(isNumber(u[key]) && u[key] > 0)) fail(where, `${key} must be a positive number.`);
-        for (const key of ["text", "label"]) if (u[key] !== undefined && typeof u[key] !== "string") fail(where, `"${key}" must be text.`);
-        if (u.label !== undefined) plainText(where, "label", u.label);
-        /** with `along`: where the travel ends, which is where each element's middle is afterwards */
-        let arrival: P | null = null;
-        if (u.along !== undefined) {
-          let route: Pt[] | null = null;
-          if (Array.isArray(u.along) && u.along.length >= 2 && u.along.every(isCoordinate)) {
-            route = pathPoints(where, "along", u.along);
-          }
-          else if (typeof u.along === "string" && checkRef(where, "along", u.along)) {
-            const path = live.get(u.along)!;
-            if (!PATHS.includes(path.type)) fail(where, `"along" names ${quote(u.along)}, a ${path.type}; it must be an arrow or a line to travel along, or points [[x, y], ...].`);
-            else {
-              route = path.arrow ? course(path.arrow) : path.points ?? null;
-              if (route && path.angle) route = rotatePath(route, path.angle);
-            }
-          } else if (typeof u.along !== "string") fail(where, `"along" must be the id of an arrow or line, or at least two points [[x, y], ...].`);
-          if (u.span !== undefined && !(Array.isArray(u.span) && u.span.length === 2 && u.span.every(isNumber) && 0 <= u.span[0] && u.span[0] < u.span[1] && u.span[1] <= 1)) {
-            fail(where, `"span" must be [from, to], fractions of the path between 0 and 1, smaller first.`);
-          }
-          if (route?.length) arrival = partialPolyline(route, Array.isArray(u.span) && isNumber(u.span[1]) ? u.span[1] : 1).at(-1)!;
-          if (["x", "y", "dx", "dy"].some((k) => u[k] !== undefined)) fail(where, `"along" says where the element ends up; leave out x, y, dx and dy.`);
-        } else if (u.span !== undefined) fail(where, `"span" only goes with "along".`);
-        for (const target of ids) {
-          if (!checkRef(where, "id", typeof target === "string" ? target : undefined)) continue;
-          const el = live.get(target as string)!;
-          if (el.type === "axes" && ["x", "y", "width", "height", "strokeWidth", "strokeColor", "color", "fillStyle", "strokeStyle", "backgroundColor", "roughness"].some((key) => u[key] !== undefined)) {
-            fail(where, "Set the scale, position and stroke on the axes when adding them. Use dx and dy to move the complete chart axes.");
-          }
-          if (PATHS.includes(el.type) && ["x", "y", "width", "height"].some((k) => u[k] !== undefined)) {
-            fail(where, `${quote(target)} is a ${el.type}; move it with dx and dy (x, y, width and height are for shapes, text and images).`);
-          }
-          if (u.text !== undefined && el.type !== "text") {
-            fail(where, `"text" can only replace the content of a text element; ${quote(target)} is a ${el.type}${el.type === "math" ? `, whose formula is replaced with "tex"` : ""}.`);
-          }
-          if (u.tex !== undefined && el.type !== "math") fail(where, `"tex" can only replace the formula of a math element; ${quote(target)} is a ${el.type}.`);
-          if (el.type === "math" && (u.width !== undefined || u.height !== undefined)) fail(where, `${quote(target)} is a formula, which cannot be stretched: its size is the fontSize it was added with.`);
-          if (u.label !== undefined && !el.labelled) {
-            fail(where, `${quote(target)} was added without a label, so there is none to change. Give it one when it is added${el.type === "text" ? `; a text element changes with "text"` : ""}.`);
-          }
-          if (u.fontSize !== undefined && !["text", "math"].includes(el.type)) {
-            fail(where, `"fontSize" changes the size of a text or math element; ${quote(target)} is a ${el.type}${SHAPES.includes(el.type) ? ", which changes size with width and height" : ""}.`);
-          }
-          if (u.along !== undefined && PATHS.includes(el.type)) fail(where, `${quote(target)} is a ${el.type}, which cannot travel; use a shape, text or image. To send something along an arrow, use "send".`);
-          const dx = isNumber(u.dx) ? u.dx : 0;
-          const dy = isNumber(u.dy) ? u.dy : 0;
-          if (isNumber(u.p)) {
-            const segments = plots.setParameter(target as string, u.p);
-            if (!segments) fail(where, `"p" changes a plot added with a starting "p"; ${quote(target)} has none.`);
-            else if (!segments.length) fail(where, `${quote(target)} has no visible values at p = ${u.p}. Check its range.`);
-            else el.points = segments.flatMap((segment, i) => segment.map(([x, y], j) => ({ x, y, move: i > 0 && j === 0 })));
-          }
-          if (isNumber(u.angle)) el.angle = u.angle;
-          plots.move(target as string, dx, dy, isNumber(u.angle) ? u.angle : undefined);
-          if (el.arrow && (dx || dy)) {
-            const path = course(el.arrow);
-            if (path) el.arrow = { from: [path[0].x + dx, path[0].y + dy], to: [path.at(-1)!.x + dx, path.at(-1)!.y + dy], via: path.slice(1, -1).map((p) => ({ x: p.x + dx, y: p.y + dy })) };
-          }
-          if (el.points && (dx || dy)) el.points = el.points.map((p) => ({ ...p, x: p.x + dx, y: p.y + dy }));
-          const fontSize = isNumber(u.fontSize) ? u.fontSize : el.fontSize;
-          const formula = el.type === "math" && u.tex !== undefined ? formulaBox(where, u.tex, fontSize ?? 20) : null;
-          if (el.box) {
-            const b = el.box;
-            const text = el.type === "text" && typeof u.text === "string" ? textBox(u.text, fontSize ?? 20, el.fontFamily) : null;
-            const scale = el.fontSize && fontSize ? fontSize / el.fontSize : 1;
-            const w = formula?.w ?? text?.w ?? (isNumber(u.width) ? u.width : b.w * scale);
-            const h = formula?.h ?? text?.h ?? (isNumber(u.height) ? u.height : b.h * scale);
-            // `x` is the point the element was placed by, which for centred text is its middle
-            const x = isNumber(u.x) ? u.x : b.x + alignOffset(b.w, el.align);
-            el.box = {
-              x: arrival ? arrival.x - w / 2 : x - alignOffset(w, el.align) + dx,
-              y: arrival ? arrival.y - h / 2 : (isNumber(u.y) ? u.y : b.y) + dy,
-              w, h,
-            };
-            if (el.fontSize !== undefined) el.fontSize = fontSize;
-          }
-        }
+        if (Array.isArray(raw.update)) {
+          if (!raw.update.length) fail(where, `"update" needs at least one change.`);
+          const seen = new Set<string>();
+          raw.update.forEach((u, i) => checkUpdate(`${where}, entry ${i + 1}`, u, seen));
+        } else checkUpdate(where, raw.update);
       } else if (raw.remove !== undefined) {
         const ids = Array.isArray(raw.remove) ? raw.remove : [raw.remove];
         if (!ids.length) fail(where, `"remove" needs at least one element id.`);

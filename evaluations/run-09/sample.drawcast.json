@@ -1,0 +1,66 @@
+{
+  "drawcast": 1,
+  "title": "Why typing clears Redo",
+  "steps": [
+    {
+      "say": "Start with the word cat. It's the only version in our editor's history.",
+      "do": [
+        { "enter": "none", "add": [
+          { "id": "title", "type": "text", "x": 72, "y": 57, "text": "Why typing clears Redo", "fontFamily": "normal", "fontSize": 52, "strokeColor": "#182e3c" },
+          { "id": "rule", "type": "line", "points": [[72, 146], [1208, 146]], "strokeColor": "#8ea3ab", "roughness": 0, "strokeWidth": 1 },
+          { "id": "docTitle", "type": "text", "x": 72, "y": 186, "text": "Document", "fontFamily": "normal", "fontSize": 30, "strokeColor": "#365362" },
+          { "id": "historyTitle", "type": "text", "x": 702, "y": 186, "text": "Edit history", "fontFamily": "normal", "fontSize": 30, "strokeColor": "#365362" },
+          { "id": "page", "type": "rectangle", "x": 72, "y": 245, "width": 495, "height": 153, "backgroundColor": "#f3f7f8", "strokeColor": "#77929a", "rounded": false, "roughness": 0 },
+          { "id": "document", "type": "text", "x": 103, "y": 269, "text": "CAT", "fontFamily": "code", "fontSize": 73, "strokeColor": "#172d3a" },
+          { "id": "redo", "type": "text", "x": 72, "y": 442, "text": "Redo unavailable", "fontFamily": "normal", "fontSize": 29, "strokeColor": "#57676d" },
+          { "id": "first", "type": "rectangle", "x": 702, "y": 245, "width": 181, "height": 93, "label": "CAT", "fontFamily": "code", "fontSize": 40, "strokeColor": "#0b706a", "backgroundColor": "#d5f2ec", "roughness": 0 },
+          { "id": "firstRole", "type": "text", "x": 929, "y": 274, "text": "Current", "fontFamily": "normal", "fontSize": 27, "strokeColor": "#0b706a" }
+        ] }
+      ]
+    },
+    {
+      "say": "Type an S and the word becomes cats. Undo can now take us back to cat.",
+      "do": [
+        { "at": "S", "update": { "id": "document", "text": "CATS" } },
+        { "at": "S", "update": { "id": "first", "strokeColor": "#57676d", "backgroundColor": "#f3f7f8" } },
+        { "at": "S", "update": { "id": "firstRole", "text": "Undo to here", "strokeColor": "#57676d" } },
+        { "at": "S", "duration": 0.3, "add": { "id": "next", "type": "rectangle", "x": 702, "y": 435, "width": 181, "height": 93, "label": "CATS", "fontFamily": "code", "fontSize": 40, "strokeColor": "#0b706a", "backgroundColor": "#d5f2ec", "roughness": 0 } },
+        { "at": "S", "duration": 0.3, "add": { "id": "path", "type": "arrow", "from": "first", "to": "next", "roughness": 0, "strokeColor": "#435e69" } },
+        { "at": "S", "enter": "fade", "add": { "id": "nextRole", "type": "text", "x": 929, "y": 464, "text": "Current", "fontFamily": "normal", "fontSize": 27, "strokeColor": "#0b706a" } },
+        { "at": "back", "point": "first" }
+      ]
+    },
+    {
+      "say": "Press Undo. The S disappears from the document, but the editor keeps that edit. Redo could still put the S back.",
+      "do": [
+        { "at": "Undo", "update": { "id": "document", "text": "CAT" } },
+        { "at": "Undo", "update": { "id": "first", "strokeColor": "#0b706a", "backgroundColor": "#d5f2ec" } },
+        { "at": "Undo", "update": { "id": "firstRole", "text": "Current", "strokeColor": "#0b706a" } },
+        { "at": "Undo", "update": { "id": "next", "strokeColor": "#93510f", "backgroundColor": "#fff0ce" } },
+        { "at": "Undo", "update": { "id": "nextRole", "text": "Redo to here", "strokeColor": "#93510f" } },
+        { "at": "Undo", "update": { "id": "redo", "text": "Redo available", "strokeColor": "#93510f" } },
+        { "at": "Redo", "pulse": "next" }
+      ]
+    },
+    {
+      "say": "Now type a different letter, X. This editor keeps one line of history. After cat, the next edit is now X, so the old S edit is discarded.",
+      "do": [
+        { "at": "X", "update": { "id": "document", "text": "CATX" } },
+        { "at": "X", "update": { "id": "first", "strokeColor": "#57676d", "backgroundColor": "#f3f7f8" } },
+        { "at": "X", "update": { "id": "firstRole", "text": "Undo to here", "strokeColor": "#57676d" } },
+        { "at": "X", "duration": 0.03, "update": { "id": "next", "label": "CATX", "strokeColor": "#0b706a", "backgroundColor": "#d5f2ec" } },
+        { "at": "X", "update": { "id": "nextRole", "text": "Current", "strokeColor": "#0b706a" } },
+        { "at": "X", "update": { "id": "redo", "text": "Redo unavailable", "strokeColor": "#57676d" } },
+        { "at": "next edit", "send": { "along": "path", "color": "teal" } }
+      ]
+    },
+    {
+      "say": "Undo would remove the X. There's no S left to redo.",
+      "pause": 0.5,
+      "do": [
+        { "at": "Undo", "point": "first" },
+        { "at": "redo", "pulse": "redo" }
+      ]
+    }
+  ]
+}

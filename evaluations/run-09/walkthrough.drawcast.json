@@ -1,0 +1,204 @@
+{
+  "drawcast": 1,
+  "voice": "maple",
+  "title": "One edit in two views",
+  "steps": [
+    {
+      "say": "This is an encoded frame from the undo lesson. The document already reads cat X. Its current history entry is still fading into view. Correcting that transition took a second render.",
+      "do": [
+        {
+          "enter": "none",
+          "add": [
+            {
+              "id": "h",
+              "type": "text",
+              "x": 106,
+              "y": 45,
+              "text": "One edit, two visible states",
+              "fontSize": 44,
+              "fontFamily": "normal",
+              "strokeColor": "#233646"
+            },
+            {
+              "id": "before",
+              "type": "image",
+              "src": "before.png",
+              "x": 106,
+              "y": 145,
+              "width": 768,
+              "height": 432
+            },
+            {
+              "id": "stamp",
+              "type": "text",
+              "x": 900,
+              "y": 270,
+              "text": "18.333 s",
+              "fontSize": 32,
+              "fontFamily": "normal",
+              "strokeColor": "#233646"
+            }
+          ]
+        },
+        {
+          "at": "history entry",
+          "point": [
+            570,
+            425
+          ]
+        }
+      ]
+    },
+    {
+      "say": "The first author repeated the same cue six times to update six objects. A group can now hold all their changes. Here the document says cat, and redo still offers cats.",
+      "do": [
+        {
+          "at": 0,
+          "remove": [
+            "before",
+            "stamp"
+          ]
+        },
+        {
+          "at": 0,
+          "duration": 0,
+          "update": {
+            "id": "h",
+            "text": "Updating the document and its history"
+          }
+        },
+        {
+          "at": 0,
+          "enter": "none",
+          "add": [
+            {
+              "id": "d",
+              "type": "text",
+              "x": 140,
+              "y": 185,
+              "text": "Document",
+              "fontSize": 32,
+              "fontFamily": "normal",
+              "strokeColor": "#233646"
+            },
+            {
+              "id": "hist",
+              "type": "text",
+              "x": 675,
+              "y": 185,
+              "text": "History",
+              "fontSize": 32,
+              "fontFamily": "normal",
+              "strokeColor": "#233646"
+            },
+            {
+              "id": "doc",
+              "type": "text",
+              "x": 140,
+              "y": 260,
+              "text": "CAT",
+              "fontFamily": "code",
+              "fontSize": 65
+            },
+            {
+              "id": "state",
+              "type": "rectangle",
+              "x": 675,
+              "y": 242,
+              "width": 330,
+              "height": 104,
+              "label": "CATS",
+              "fontFamily": "code",
+              "fontSize": 45,
+              "color": "orange"
+            },
+            {
+              "id": "status",
+              "type": "text",
+              "x": 140,
+              "y": 408,
+              "text": "Redo available",
+              "fontSize": 34,
+              "fontFamily": "normal",
+              "strokeColor": "#233646"
+            },
+            {
+              "id": "role",
+              "type": "text",
+              "x": 675,
+              "y": 408,
+              "text": "Next redo",
+              "fontSize": 34,
+              "fontFamily": "normal",
+              "strokeColor": "#233646"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "say": "Type X. The document, the saved version, and redo availability change on this frame. One cue carries a list of distinct updates, with a duration of zero.",
+      "do": [
+        {
+          "at": "X",
+          "duration": 0,
+          "update": [
+            {
+              "id": "doc",
+              "text": "CATX"
+            },
+            {
+              "id": "state",
+              "label": "CATX",
+              "color": "teal"
+            },
+            {
+              "id": "status",
+              "text": "Redo unavailable"
+            },
+            {
+              "id": "role",
+              "text": "Current"
+            }
+          ]
+        },
+        {
+          "at": "One cue",
+          "add": {
+            "id": "code",
+            "type": "text",
+            "x": 140,
+            "y": 532,
+            "text": "duration: 0     update: [ ... ]",
+            "fontSize": 28,
+            "fontFamily": "normal",
+            "strokeColor": "#233646"
+          },
+          "enter": "fade"
+        }
+      ]
+    },
+    {
+      "say": "The original render took eight and a half seconds. Fixing the fade took another four and a quarter with cached speech. The quick start now includes the instant update and the pause that holds the ending.",
+      "pause": 0.5,
+      "do": [
+        {
+          "at": "original",
+          "duration": 0,
+          "update": {
+            "id": "h",
+            "text": "The cost of a second render"
+          }
+        },
+        {
+          "at": "another",
+          "duration": 0,
+          "update": {
+            "id": "code",
+            "text": "First pass   8.54 s        Correcting the fade   +4.25 s"
+          }
+        }
+      ]
+    }
+  ]
+}

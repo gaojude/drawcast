@@ -213,7 +213,13 @@ class Builder {
     // Nothing is changed before it has been drawn: an action whose phrase is spoken while what it acts on
     // is still being drawn (or waits to be) starts once that is done, and does not get undone by the drawing.
     t0 = Math.max(t0, ...this.targets(a).map((id) => this.drawn.get(id) ?? t0));
-    if (a.update) return this.update(a.update, t0, a.duration ?? (a.update.along ? ALONG : FADE));
+    if (a.update) {
+      let end = t0;
+      for (const change of list(a.update)) {
+        end = Math.max(end, this.update(change, t0, a.duration ?? (change.along ? ALONG : FADE)));
+      }
+      return end;
+    }
     if (a.remove) return this.remove(list(a.remove), t0, a.duration ?? 0.3);
     if (a.camera) return this.camera(a.camera, t0, a.duration ?? 0.8);
     if (a.point) return this.point(a.point, t0, a.duration ?? 1.2);
@@ -225,7 +231,7 @@ class Builder {
   /** The ids an action other than `add` acts on, or follows. */
   private targets(a: Action): string[] {
     const ids = (v: unknown) => [v].flat().filter((x): x is string => typeof x === "string");
-    if (a.update) return [...ids(a.update.id), ...ids(a.update.along)];
+    if (a.update) return list(a.update).flatMap((change) => [...ids(change.id), ...ids(change.along)]);
     if (a.remove) return ids(a.remove);
     if (a.pulse) return ids(a.pulse);
     if (a.point) return ids(a.point);

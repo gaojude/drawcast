@@ -148,7 +148,8 @@ export interface Action {
   add?: ElementSpec | ElementSpec[];
   /** How added elements appear: drawn stroke by stroke (default), faded in, or at once. */
   enter?: Enter;
-  update?: UpdateSpec;
+  /** Distinct changes in a list start together. */
+  update?: UpdateSpec | UpdateSpec[];
   remove?: string | string[];
   camera?: CameraSpec;
   /** Laser pointer: circles an element or a point for a moment, leaving no mark. */

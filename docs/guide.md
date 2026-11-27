@@ -28,7 +28,13 @@ Place elements on the 1280 by 720 canvas above y=620 for captions. A shape's x,y
 
 The MP4 opens with the finished picture from step 1, marked **first frame** on the sheet. Set `cover` to another step number to open on that picture, or `false` to start directly with the animation.
 
-Copy `at` phrases from the step's `say` in spoken order. Repeat a phrase to start actions together. With no `at`, an action follows the preceding one. Put `duration` (seconds) beside the action verb. Use `update` to change an existing object's position, colour or label, `pulse` for emphasis, `point` for a pointer and `remove` to clear space.
+Copy `at` phrases from `say` in spoken order. Without `at`, the action follows the previous one. Group different changes under one cue using an `update` list. Set `duration` to zero for an instant state change:
+
+```json
+{"at":"undo","duration":0,"update":[{"id":"doc","text":"CAT"},{"id":"status","label":"Redo available"}]}
+```
+
+Use `pulse` for emphasis, `point` for a pointer and `remove` to clear space. A step's `pause` adds seconds of silence at the end.
 
 Request the topics your scene needs together, e.g. `drawcast guide plots math elements`. Topics print once in the order listed.
 

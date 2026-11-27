@@ -120,9 +120,13 @@ the action for everything it adds, or on one element.
 
 Changes an element that is on the canvas, animated over 0.4 s. `id` is one id or a list.
 
+Give `update` a list of changes to different targets to start them all together. Put `at` and
+`duration` on the action. A duration of zero switches text, labels and colors in the same frame.
+
 ```json
 { "at": "fails", "update": { "id": "server", "backgroundColor": "#ffc9c9", "strokeColor": "#e03131" } }
 { "update": { "id": ["a", "b"], "dx": 0, "dy": 120 } }
+{ "at": "undo", "duration": 0, "update": [{ "id": "doc", "text": "CAT" }, { "id": "status", "label": "Redo available" }] }
 ```
 
 It can set `x`, `y`, `width`, `height` (shapes, text and images), `dx`, `dy` (a move relative to where
