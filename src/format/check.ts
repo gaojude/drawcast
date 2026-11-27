@@ -11,7 +11,7 @@ import path from "node:path";
 import { findPhrase, tokens, widthEm } from "../shared/text.ts";
 import { Plots, isPlotRef, type PlotRef } from "../shared/expr.ts";
 import { type AxisRef, axesLayout, axesPoint, isAxisRef } from "../shared/axes.ts";
-import { partialPolyline, type Pt } from "../player/motion.ts";
+import { partialPolyline, rotatePath, type Pt } from "../player/motion.ts";
 import { arrowCourse, arrowLabelCenter, type ArrowEnd } from "../shared/arrows.ts";
 import { DEFAULT_CANVAS, type ElementSpec, type Formula, PALETTE, type Point, type Script, type TextAlign, alignOffset } from "../shared/types.ts";
 
@@ -562,7 +562,10 @@ export async function check(input: unknown, baseDir: string, axisPoints?: WeakMa
           else if (typeof u.along === "string" && checkRef(where, "along", u.along)) {
             const path = live.get(u.along)!;
             if (!PATHS.includes(path.type)) fail(where, `"along" names ${quote(u.along)}, a ${path.type}; it must be an arrow or a line to travel along, or points [[x, y], ...].`);
-            else route = path.arrow ? course(path.arrow) : path.points ?? null;
+            else {
+              route = path.arrow ? course(path.arrow) : path.points ?? null;
+              if (route && path.angle) route = rotatePath(route, path.angle);
+            }
           } else if (typeof u.along !== "string") fail(where, `"along" must be the id of an arrow or line, or at least two points [[x, y], ...].`);
           if (u.span !== undefined && !(Array.isArray(u.span) && u.span.length === 2 && u.span.every(isNumber) && 0 <= u.span[0] && u.span[0] < u.span[1] && u.span[1] <= 1)) {
             fail(where, `"span" must be [from, to], fractions of the path between 0 and 1, smaller first.`);

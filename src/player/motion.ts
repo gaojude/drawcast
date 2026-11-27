@@ -11,6 +11,25 @@ export const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.mi
 export const lerp = (a: number, b: number, u: number) => a + (b - a) * u;
 export const dist = (a: Pt, b: Pt) => Math.hypot(b.x - a.x, b.y - a.y);
 
+/** Rotate the route before measuring travel along it, preserving any gaps between strokes. */
+export function rotatePath(points: Pt[], angle: number, center?: Pt): Pt[] {
+  if (!angle || !points.length) return points;
+  if (!center) {
+    let left = Infinity, right = -Infinity, top = Infinity, bottom = -Infinity;
+    for (const p of points) {
+      left = Math.min(left, p.x);
+      right = Math.max(right, p.x);
+      top = Math.min(top, p.y);
+      bottom = Math.max(bottom, p.y);
+    }
+    center = { x: (left + right) / 2, y: (top + bottom) / 2 };
+  }
+  const { x: cx, y: cy } = center, cos = Math.cos(angle), sin = Math.sin(angle);
+  return points.map((p) => ({
+    ...p, x: cx + (p.x - cx) * cos - (p.y - cy) * sin, y: cy + (p.x - cx) * sin + (p.y - cy) * cos,
+  }));
+}
+
 /** Minimum-jerk profile: the bell-shaped velocity curve of a reaching hand. */
 export const minJerk = (u: number) => {
   u = clamp(u, 0, 1);

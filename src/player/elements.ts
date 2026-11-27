@@ -1,7 +1,7 @@
 /** Building Excalidraw elements from the specs in a script. */
 import { convertToExcalidrawElements, getCommonBounds } from "@excalidraw/excalidraw";
 import { type ElementSpec, MATH_PIXELS_PER_EM, type Point, type Style, alignOffset } from "../shared/types.ts";
-import { type Pt, smooth } from "./motion.ts";
+import { type Pt, rotatePath, smooth } from "./motion.ts";
 import { ARROW_GAP, type ArrowEnd, arrowCourse as connection, arrowLabelCenter } from "../shared/arrows.ts";
 import { parseFunction, plotSegments } from "../shared/expr.ts";
 
@@ -113,14 +113,7 @@ export function scenePoints(el: El): Pt[] {
   const pts = absolutePoints(el);
   if (!el.angle) return pts;
   const box = bbox({ ...el, angle: 0 });
-  const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
-  const cos = Math.cos(el.angle), sin = Math.sin(el.angle);
-  for (const p of pts) {
-    const dx = p.x - cx, dy = p.y - cy;
-    p.x = cx + dx * cos - dy * sin;
-    p.y = cy + dx * sin + dy * cos;
-  }
-  return pts;
+  return rotatePath(pts, el.angle, { x: box.x + box.w / 2, y: box.y + box.h / 2 });
 }
 
 export function makeLine(spec: ElementSpec): El {
