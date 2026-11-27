@@ -1,0 +1,177 @@
+{
+  "drawcast": 1,
+  "title": "Where two text colors meet",
+  "voice": "maple",
+  "steps": [
+    {
+      "say": "The library author wanted the answer to arrive in green. Guessing the width of the first phrase produced a sixteen pixel overlap in the layout check.",
+      "do": [
+        {
+          "enter": "none",
+          "add": [
+            {
+              "id": "title",
+              "type": "text",
+              "x": 68,
+              "y": 42,
+              "text": "Where two text colors meet",
+              "fontSize": 49,
+              "fontFamily": "normal",
+              "strokeColor": "#20333e"
+            },
+            {
+              "id": "line",
+              "type": "text",
+              "x": 80,
+              "y": 200,
+              "text": "60 − 40 = 20 more books",
+              "fontSize": 54,
+              "fontFamily": "normal",
+              "strokeColor": "#20333e"
+            },
+            {
+              "id": "metric",
+              "type": "text",
+              "x": 80,
+              "y": 362,
+              "text": "16 pixels of overlap",
+              "fontSize": 36,
+              "fontFamily": "normal",
+              "strokeColor": "#904020"
+            },
+            {
+              "id": "foot",
+              "type": "text",
+              "x": 80,
+              "y": 431,
+              "text": "The checker caught it before the first render.",
+              "fontSize": 27,
+              "fontFamily": "normal",
+              "strokeColor": "#20333e"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "say": "Give the two pieces a shared join. The prefix ends just to its left. The answer starts on its right and can appear on its own cue.",
+      "do": [
+        {
+          "at": "shared join",
+          "duration": 0,
+          "remove": [
+            "line"
+          ]
+        },
+        {
+          "at": "shared join",
+          "duration": 0,
+          "update": [
+            {
+              "id": "metric",
+              "text": "Prefix ends at x = 610"
+            },
+            {
+              "id": "foot",
+              "text": "The result starts at x = 620, with its own color and cue."
+            }
+          ]
+        },
+        {
+          "at": "prefix",
+          "add": {
+            "id": "prefix",
+            "type": "text",
+            "x": 610,
+            "y": 191,
+            "text": "60 − 40 =",
+            "fontSize": 64,
+            "fontFamily": "normal",
+            "strokeColor": "#20333e",
+            "textAlign": "right"
+          }
+        },
+        {
+          "at": "answer",
+          "add": {
+            "id": "answer",
+            "type": "text",
+            "x": 620,
+            "y": 191,
+            "text": "20 more books",
+            "fontSize": 64,
+            "fontFamily": "normal",
+            "strokeColor": "#136950"
+          }
+        }
+      ]
+    },
+    {
+      "say": "The author also opened the movie again to see the ending without captions. Step review now puts the final frame in the last tile. On this film that is frame seven hundred and sixty five.",
+      "do": [
+        {
+          "at": "author",
+          "duration": 0,
+          "update": [
+            {
+              "id": "metric",
+              "text": "One encoded review"
+            },
+            {
+              "id": "foot",
+              "text": "inspect sample.mp4 --step all"
+            }
+          ]
+        },
+        {
+          "at": "final frame",
+          "duration": 0,
+          "update": [
+            {
+              "id": "metric",
+              "text": "Final frame at 25.467 seconds"
+            },
+            {
+              "id": "foot",
+              "text": "Both ways of extracting it produce the same PNG."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "say": "The first render took just over seven seconds on the author's stopwatch. The command now reports its wall time in detail, along with the overlapping intervals for speech and video work.",
+      "do": [
+        {
+          "at": "first render",
+          "duration": 0,
+          "update": [
+            {
+              "id": "metric",
+              "text": "7.414 s on the process stopwatch"
+            },
+            {
+              "id": "foot",
+              "text": "Eight new Maple sentences  ·  765 encoded frames"
+            }
+          ]
+        },
+        {
+          "at": "overlapping",
+          "duration": 0,
+          "update": [
+            {
+              "id": "metric",
+              "text": "Speech and video run together"
+            },
+            {
+              "id": "foot",
+              "text": "Their elapsed intervals overlap during a render."
+            }
+          ]
+        }
+      ],
+      "pause": 1
+    }
+  ]
+}

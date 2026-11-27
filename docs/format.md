@@ -31,7 +31,8 @@ After rendering, `drawcast inspect lesson.mp4 --step all` samples the encoded fr
 step's finish using the actual narration schedule stored in the MP4. Select a step, list or range
 with `--step 3`, `--step 2,5` or `--step 2-5`. When steps overlap, inspection prefers the
 last available frame before the next step starts. Closely spaced steps can share a frame.
-Inspection prints the step and timestamp for each tile and splits long selections across sheets.
+The final step shows the last frame of the MP4, including its final hold. Inspection prints the
+step and timestamp for each tile and splits long selections across sheets.
 Older Drawcast videos and other MP4s can be inspected by timestamp or motion.
 
 `drawcast inspect lesson.mp4 --motion` saves a sheet with the first and last
@@ -50,6 +51,9 @@ Leave `voice` unset unless the user asks for one (see Narration). The sheet mark
 that appears as the MP4's first frame. Choose the opening you want with `cover`.
 Speech is cached, so rendering again after changing
 only the drawing is quicker. When a command fails, its message says what is missing.
+
+Render reports total elapsed time plus wall times for speech preparation and synthesis, and for
+encoding and muxing. Speech and video can run together, so the phase times can overlap.
 
 ## Script
 
@@ -221,6 +225,11 @@ Every element needs an `id`, unique in the script, and a `type`. Property names 
 `x`, `y` is the top left corner. Points are in canvas coordinates. On a `text` or `math` element,
 `"textAlign": "center"` makes `x` its middle and `"right"` its right edge, which places it without
 knowing how wide it will be.
+
+To reveal the result of an equation in a second color, place the two text elements on the same
+`y`. Right-align the prefix at their join and start the result one space to its right.
+For instance, `{"x":800,"y":320,"textAlign":"right","text":"9 − 6 ="}` pairs with
+`{"x":810,"y":320,"text":"3"}`. Each part can have its own color and narration cue.
 
 Use `["slot"]` as a point to refer to the center of a rectangle, ellipse or diamond already on the
 canvas. For example, `"on":["slot"]` centers a new tile there. Move an existing tile between centers

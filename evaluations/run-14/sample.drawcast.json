@@ -1,0 +1,52 @@
+{
+  "drawcast": 1,
+  "title": "100 new books at the library",
+  "voice": "maple",
+  "canvas": {"width": 1280, "height": 720, "background": "#fffefa"},
+  "steps": [
+    {
+      "say": "The library just received one hundred new books. This circle represents the whole delivery.",
+      "do": [
+        {"at": 0, "enter": "none", "add": [
+          {"id": "location", "type": "text", "x": 660, "y": 85, "text": "AT THE LIBRARY", "fontFamily": "normal", "fontSize": 22, "strokeColor": "#4c6158"},
+          {"id": "title", "type": "text", "x": 656, "y": 119, "text": "100 new books", "fontSize": 62, "strokeColor": "#192e2a"}
+        ]},
+        {"at": "circle", "enter": "fade", "duration": 0.4, "add": {"id": "whole", "type": "slice", "center": [345,340], "radius": 235, "share": 100, "roughness": 0, "strokeColor": "#c6ccc6", "backgroundColor": "#edf0ea"}}
+      ]
+    },
+    {
+      "say": "Fiction accounts for forty of the books.",
+      "do": [
+        {"at": "Fiction", "duration": 0.65, "add": {"id": "fiction", "type": "slice", "after": "whole", "share": 40, "label": "Fiction\n40%", "fontSize": 29, "roughness": 0, "strokeColor": "#234c79", "backgroundColor": "#b5d6f4"}}
+      ]
+    },
+    {
+      "say": "History fills the next slice, with thirty-five books.",
+      "do": [
+        {"at": "History", "duration": 0.65, "add": {"id": "history", "type": "slice", "after": "fiction", "share": 35, "label": "History\n35%", "fontSize": 29, "roughness": 0, "strokeColor": "#74421c", "backgroundColor": "#f3c48c"}}
+      ]
+    },
+    {
+      "say": "Science takes the last quarter, with twenty-five books.",
+      "do": [
+        {"at": "Science", "duration": 0.65, "add": {"id": "science", "type": "slice", "after": "history", "share": 25, "label": "Science\n25%", "fontSize": 29, "roughness": 0, "strokeColor": "#1a604b", "backgroundColor": "#a7dac3"}}
+      ]
+    },
+    {
+      "say": "History and science together add up to sixty books.",
+      "do": [
+        {"at": "History", "enter": "fade", "duration": 0.3, "add": {"id": "combined", "type": "text", "x": 660, "y": 259, "text": "History + Science", "fontFamily": "normal", "fontSize": 26, "strokeColor": "#394a44"}},
+        {"at": "together", "duration": 0.65, "add": {"id": "sum", "type": "text", "x": 657, "y": 301, "text": "35 + 25 = 60", "fontSize": 48, "strokeColor": "#192e2a"}}
+      ]
+    },
+    {
+      "say": "Compare their sixty with fiction's forty. That's twenty more books.",
+      "do": [
+        {"at": "Compare", "enter": "fade", "duration": 0.3, "add": {"id": "versus", "type": "text", "x": 660, "y": 407, "text": "Compared with fiction", "fontFamily": "normal", "fontSize": 26, "strokeColor": "#394a44"}},
+        {"at": "sixty", "duration": 0.65, "add": {"id": "difference", "type": "text", "x": 657, "y": 452, "text": "60 − 40 =", "fontSize": 44, "strokeColor": "#192e2a"}},
+        {"at": "twenty", "duration": 0.55, "add": {"id": "result", "type": "text", "x": 899, "y": 452, "text": "20 more books", "fontSize": 44, "strokeColor": "#1a604b"}}
+      ],
+      "pause": 2.3
+    }
+  ]
+}
