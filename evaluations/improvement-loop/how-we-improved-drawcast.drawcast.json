@@ -1,0 +1,149 @@
+{
+  "drawcast": 1,
+  "title": "How agents helped improve Drawcast",
+  "voice": "maple",
+  "cover": 2,
+  "steps": [
+    {
+      "say": "How do you find the next thing to fix in a command line tool? We gave a fresh agent the Drawcast skill, the local command, and one request. Show a music student how two sound waves cancel.",
+      "do": [
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"section1","type":"text","x":60,"y":32,"text":"DRAWCAST  /  FIVE AUTHOR TRIALS","fontSize":22,"fontFamily":"code","strokeColor":"#08786c"}},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"title1","type":"text","x":60,"y":83,"text":"How agents helped improve Drawcast","fontSize":49,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"fresh agent","duration":0.32,"enter":"fade","add":{"id":"authorLab","type":"text","x":62,"y":204,"text":"The author gets","fontSize":29,"fontFamily":"normal","strokeColor":"#485b68"}},
+        {"at":"fresh agent","duration":0.32,"enter":"fade","add":{"id":"inputs","type":"text","x":62,"y":267,"text":"01   The repository skill\n02   The built CLI\n03   A sample prompt","fontSize":31,"fontFamily":"code","strokeColor":"#1f2933"}},
+        {"at":"one request","duration":0.4,"enter":"draw","add":{"id":"introDivide","type":"line","points":[[600,192],[600,546]],"strokeColor":"#adbac3","strokeWidth":2,"roughness":0}},
+        {"at":"one request","duration":0.32,"enter":"fade","add":{"id":"wavePrompt","type":"text","x":667,"y":209,"text":"“Show me how two sound\nwaves cancel.”","fontSize":35,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"sound waves","duration":0.6,"enter":"draw","add":{"id":"introWave","type":"line","x":669,"y":348,"width":500,"height":131,"fn":"sin(x)+sin(x+p)","p":0,"domain":[0,12.56637],"range":[-2,2],"strokeColor":"#08786c","strokeWidth":4,"roughness":0}},
+        {"at":"waves cancel","duration":1.4,"update":{"id":"introWave","p":3.141592653589793}}
+      ],
+      "pause": 0.45
+    },
+    {
+      "say": "We saved every tool call with its timestamp and timed the render separately. Then we watched the exported video. Could the author draw what the prompt asked for? Where did the guide or the renderer cost time? Each fix went into a pull request, with its trace and a narrated walkthrough. The next author started from that change.",
+      "do": [
+        {"at":0,"remove":["section1","title1","authorLab","inputs","introDivide","wavePrompt","introWave"],"duration":0.12},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"section2","type":"text","x":60,"y":32,"text":"METHOD  /  ONE FRESH AUTHOR PER RUN","fontSize":22,"fontFamily":"code","strokeColor":"#08786c"}},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"title2","type":"text","x":60,"y":83,"text":"What we kept from each run","fontSize":49,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"every tool call","duration":0.32,"enter":"fade","add":{"id":"methodTitle0","type":"text","x":62,"y":242,"text":"Record the run","fontSize":34,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"every tool call","duration":0.32,"enter":"fade","add":{"id":"methodDesc0","type":"text","x":62,"y":306,"text":"Tool calls + timestamps\nAuthor time + render time","fontSize":24,"fontFamily":"normal","strokeColor":"#485b68"}},
+        {"at":"watched","duration":0.32,"enter":"fade","add":{"id":"methodTitle1","type":"text","x":471,"y":242,"text":"Inspect the MP4","fontSize":34,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"watched","duration":0.32,"enter":"fade","add":{"id":"methodDesc1","type":"text","x":471,"y":306,"text":"Look for missing visuals\nand unnecessary work.","fontSize":24,"fontFamily":"normal","strokeColor":"#485b68"}},
+        {"at":"watched","duration":0.45,"enter":"draw","add":{"id":"firstArrow","type":"arrow","from":[346,267],"to":[444,267],"strokeColor":"#08786c","strokeWidth":3,"roughness":0}},
+        {"at":"pull request","duration":0.32,"enter":"fade","add":{"id":"methodTitle2","type":"text","x":869,"y":242,"text":"Open a PR","fontSize":34,"fontFamily":"normal","strokeColor":"#08786c"}},
+        {"at":"pull request","duration":0.32,"enter":"fade","add":{"id":"methodDesc2","type":"text","x":869,"y":306,"text":"Fix + trace + video","fontSize":24,"fontFamily":"normal","strokeColor":"#485b68"}},
+        {"at":"pull request","duration":0.45,"enter":"draw","add":{"id":"secondArrow","type":"arrow","from":[741,267],"to":[839,267],"strokeColor":"#08786c","strokeWidth":3,"roughness":0}},
+        {"at":"next author","duration":0.45,"enter":"draw","add":{"id":"loopback","type":"arrow","from":[1040,391],"to":[220,391],"via":[[1040,462],[220,462]],"strokeColor":"#08786c","strokeWidth":3,"roughness":0}},
+        {"at":"next author","duration":0.32,"enter":"fade","add":{"id":"loopcaption","type":"text","x":380,"y":503,"text":"Next prompt, fresh agent, previous PR","fontSize":29,"fontFamily":"normal","strokeColor":"#08786c"}}
+      ],
+      "pause": 0.45
+    },
+    {
+      "say": "The wave lesson looked fine in the preview. Its trace told a different story. Sixteen shifts took thirty-two extra plots. In the exported video, neighboring curves briefly appeared together. This crop catches the instant when the old curve is fading out and its replacement is fading in.",
+      "do": [
+        {"at":0,"remove":["section2","title2","methodTitle0","methodDesc0","methodTitle1","methodDesc1","methodTitle2","methodDesc2","firstArrow","secondArrow","loopback","loopcaption"],"duration":0.12},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"section3","type":"text","x":60,"y":32,"text":"RUN 01  /  WAVE INTERFERENCE","fontSize":22,"fontFamily":"code","strokeColor":"#08786c"}},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"title3","type":"text","x":60,"y":83,"text":"Why we inspected the exported video","fontSize":49,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"trace","duration":0.32,"enter":"fade","add":{"id":"tracefile","type":"text","x":60,"y":209,"text":"run-01 / tools.jsonl","fontSize":24,"fontFamily":"code","strokeColor":"#485b68"}},
+        {"at":"Sixteen","duration":0.32,"enter":"fade","add":{"id":"shiftCount","type":"text","x":60,"y":282,"text":"16 phase shifts","fontSize":43,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"extra plots","duration":0.32,"enter":"fade","add":{"id":"extraCount","type":"text","x":60,"y":352,"text":"32 extra plots","fontSize":43,"fontFamily":"normal","strokeColor":"#ae491e"}},
+        {"at":"exported video","duration":0.32,"enter":"fade","add":{"id":"wavecropLabel","type":"text","x":579,"y":203,"text":"A frame from the original script, replayed","fontSize":24,"fontFamily":"normal","strokeColor":"#485b68"}},
+        {"at":"neighboring curves","duration":0.4,"enter":"fade","add":{"id":"wavecrop","type":"image","x":579,"y":269,"width":632,"src":"wave-crossfade.png"}},
+        {"at":"replacement","duration":0.32,"enter":"fade","add":{"id":"oldOverlap","type":"text","x":60,"y":538,"text":"Each crossfade briefly shows both strokes.","fontSize":29,"fontFamily":"normal","strokeColor":"#ae491e"}}
+      ],
+      "pause": 0.45
+    },
+    {
+      "say": "Here is the merged pull request. It lets the author define the wave and its sum once. Watch the phase advance by half a cycle. The sum shrinks to zero in one continuous motion.",
+      "do": [
+        {"at":0,"remove":["section3","title3","tracefile","shiftCount","extraCount","wavecropLabel","wavecrop","oldOverlap"],"duration":0.12},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"section4","type":"text","x":60,"y":32,"text":"gaojude/drawcast  /  pull/10","fontSize":22,"fontFamily":"code","strokeColor":"#08786c"}},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"title4","type":"text","x":60,"y":83,"text":"One parameter moves the wave and its sum","fontSize":49,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":0,"duration":0.4,"enter":"fade","add":{"id":"realPR","type":"image","x":67,"y":165,"width":1060,"src":"pr-10.png"}},
+        {"at":"wave and its sum","duration":0.32,"enter":"fade","add":{"id":"waveLabel","type":"text","x":70,"y":414,"text":"Wave B","fontSize":25,"fontFamily":"normal","strokeColor":"#ae491e"}},
+        {"at":"wave and its sum","duration":0.32,"enter":"fade","add":{"id":"sumLabel","type":"text","x":70,"y":500,"text":"A + B","fontSize":25,"fontFamily":"normal","strokeColor":"#08786c"}},
+        {"at":"wave and its sum","duration":0.6,"enter":"draw","add":{"id":"waveB","type":"line","x":264,"y":389,"width":907,"height":84,"fn":"sin(x+p)","p":0,"domain":[0,12.56637],"range":[-2,2],"strokeColor":"#ae491e","strokeWidth":4,"roughness":0}},
+        {"at":"wave and its sum","duration":0.6,"enter":"draw","add":{"id":"waveSum","type":"line","x":264,"y":475,"width":907,"height":83,"fn":"sin(x)+sin(x+p)","p":0,"domain":[0,12.56637],"range":[-2,2],"strokeColor":"#08786c","strokeWidth":4,"roughness":0}},
+        {"at":"phase advance","duration":3,"update":{"id":["waveB","waveSum"],"p":3.141592653589793}},
+        {"at":"zero","duration":0.32,"enter":"fade","add":{"id":"zeroCaption","type":"text","x":67,"y":569,"text":"p = π","fontSize":22,"fontFamily":"code","strokeColor":"#1f2933"}}
+      ],
+      "pause": 0.45
+    },
+    {
+      "say": "The first trace also showed the agent reading a long guide and validating the script twice. We moved detail behind topic names. The short guide points straight to the preview, which already validates the script.",
+      "do": [
+        {"at":0,"remove":["section4","title4","realPR","waveLabel","sumLabel","waveB","waveSum","zeroCaption"],"duration":0.12},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"section5","type":"text","x":60,"y":32,"text":"AUTHORING TIME  /  GUIDE AND SKILL","fontSize":22,"fontFamily":"code","strokeColor":"#08786c"}},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"title5","type":"text","x":60,"y":83,"text":"What does an author need on the first call?","fontSize":49,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"long guide","duration":0.32,"enter":"fade","add":{"id":"tokBefore","type":"text","x":62,"y":197,"text":"6,125","fontSize":80,"fontFamily":"normal","strokeColor":"#485b68"}},
+        {"at":"long guide","duration":0.32,"enter":"fade","add":{"id":"origLab","type":"text","x":64,"y":300,"text":"tokens in the original guide","fontSize":30,"fontFamily":"normal","strokeColor":"#485b68"}},
+        {"at":"moved detail","duration":0.45,"enter":"draw","add":{"id":"guideArrow","type":"arrow","from":[493,249],"to":[641,249],"strokeColor":"#08786c","strokeWidth":3,"roughness":0}},
+        {"at":"moved detail","duration":0.32,"enter":"fade","add":{"id":"tokNow","type":"text","x":705,"y":197,"text":"735","fontSize":80,"fontFamily":"normal","strokeColor":"#08786c"}},
+        {"at":"moved detail","duration":0.32,"enter":"fade","add":{"id":"finalLab","type":"text","x":706,"y":300,"text":"tokens on merged main","fontSize":30,"fontFamily":"normal","strokeColor":"#08786c"}},
+        {"at":"topic names","duration":0.32,"enter":"fade","add":{"id":"topicCmd","type":"text","x":65,"y":421,"text":"drawcast guide plots actions","fontSize":31,"fontFamily":"code","strokeColor":"#1f2933"}},
+        {"at":"preview","duration":0.32,"enter":"fade","add":{"id":"previewCmd","type":"text","x":65,"y":499,"text":"drawcast snapshot lesson.drawcast.json --sheet","fontSize":31,"fontFamily":"code","strokeColor":"#1f2933"}}
+      ],
+      "pause": 0.45
+    },
+    {
+      "say": "To test render speed, we replayed the same wave script with cached speech and fixed sketch seeds. Reusing unchanged scene elements cut the median by a third of a second. All decoded frames and audio blocks matched. Each author had a different prompt, so we compared render times on this one clip.",
+      "do": [
+        {"at":0,"remove":["section5","title5","tokBefore","origLab","guideArrow","tokNow","finalLab","topicCmd","previewCmd"],"duration":0.12},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"section6","type":"text","x":60,"y":32,"text":"RENDER TIME  /  SAME-SCRIPT COMPARISON","fontSize":22,"fontFamily":"code","strokeColor":"#08786c"}},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"title6","type":"text","x":60,"y":83,"text":"How much time did the renderer save?","fontSize":49,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"same wave script","duration":0.32,"enter":"fade","add":{"id":"benchdetail","type":"text","x":63,"y":164,"text":"39.77 s wave lesson   ·   1080p30   ·   5 paired runs","fontSize":26,"fontFamily":"normal","strokeColor":"#485b68"}},
+        {"at":"Reusing","duration":0.32,"enter":"fade","add":{"id":"benchOld","type":"text","x":62,"y":282,"text":"Before","fontSize":31,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"Reusing","duration":0.32,"enter":"fade","add":{"id":"benchNew","type":"text","x":62,"y":372,"text":"After","fontSize":31,"fontFamily":"normal","strokeColor":"#08786c"}},
+        {"at":"Reusing","duration":0.4,"enter":"draw","add":{"id":"barOld","type":"line","points":[[255,302],[960,302]],"strokeColor":"#485b68","strokeWidth":16,"roughness":0}},
+        {"at":"Reusing","duration":0.4,"enter":"draw","add":{"id":"barNew","type":"line","points":[[255,392],[906,392]],"strokeColor":"#08786c","strokeWidth":16,"roughness":0}},
+        {"at":"median","duration":0.32,"enter":"fade","add":{"id":"medOld","type":"text","x":991,"y":277,"text":"4.235 s","fontSize":35,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"median","duration":0.32,"enter":"fade","add":{"id":"medNew","type":"text","x":938,"y":367,"text":"3.905 s","fontSize":35,"fontFamily":"normal","strokeColor":"#08786c"}},
+        {"at":"decoded frames","duration":0.32,"enter":"fade","add":{"id":"fidelity","type":"text","x":63,"y":513,"text":"1,193 video frames and 1,863 audio blocks matched.","fontSize":29,"fontFamily":"normal","strokeColor":"#1f2933"}}
+      ],
+      "pause": 0.45
+    },
+    {
+      "say": "The next author reused the phase parameter to change the steepness of a sigmoid curve. Fourteen hand-placed axis parts became one set of labeled axes in pull request eleven. That change also gave authors a command to inspect the finished movie.",
+      "do": [
+        {"at":0,"remove":["section6","title6","benchdetail","benchOld","benchNew","barOld","barNew","medOld","medNew","fidelity"],"duration":0.12},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"section7","type":"text","x":60,"y":32,"text":"PR #11  /  SIGMOID GAIN","fontSize":22,"fontFamily":"code","strokeColor":"#08786c"}},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"title7","type":"text","x":60,"y":83,"text":"The next prompt exercised the previous fix","fontSize":49,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"steepness","duration":0.4,"enter":"fade","add":{"id":"gain","type":"image","x":62,"y":177,"width":660,"src":"../run-02/gain-at-22.png"}},
+        {"at":"steepness","duration":0.32,"enter":"fade","add":{"id":"gainNote","type":"text","x":766,"y":195,"text":"Same parameter,\nnew curve","fontSize":37,"fontFamily":"normal","strokeColor":"#08786c"}},
+        {"at":"Fourteen","duration":0.32,"enter":"fade","add":{"id":"gainAxes","type":"text","x":766,"y":332,"text":"14 parts → 1 axes element","fontSize":28,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"command","duration":0.32,"enter":"fade","add":{"id":"inspect","type":"text","x":765,"y":455,"text":"drawcast inspect","fontSize":27,"fontFamily":"code","strokeColor":"#1f2933"}}
+      ],
+      "pause": 0.45
+    },
+    {
+      "say": "The thermostat author could draw axes, but still had to convert temperatures into pixels. Pull request twelve let labels and arrows name a measurement directly. In the capacitor trial, the preview raised three warnings. We replayed the original draft. Pull request thirteen removed two false alarms and kept the real label collision.",
+      "do": [
+        {"at":0,"remove":["section7","title7","gain","gainNote","gainAxes","inspect"],"duration":0.12},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"section8","type":"text","x":60,"y":32,"text":"PR #12  /  PR #13","fontSize":22,"fontFamily":"code","strokeColor":"#08786c"}},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"title8","type":"text","x":60,"y":83,"text":"Two traces led to two different fixes","fontSize":49,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"thermostat","duration":0.32,"enter":"fade","add":{"id":"thermo","type":"text","x":62,"y":185,"text":"#12   Thermostat feedback","fontSize":31,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"convert temperatures","duration":0.32,"enter":"fade","add":{"id":"beforeCoord","type":"text","x":62,"y":274,"text":"19 °C → canvas pixels","fontSize":29,"fontFamily":"code","strokeColor":"#485b68"}},
+        {"at":"measurement directly","duration":0.32,"enter":"fade","add":{"id":"afterCoord","type":"text","x":62,"y":369,"text":"[\"axes\", time, 19]","fontSize":34,"fontFamily":"code","strokeColor":"#08786c"}},
+        {"at":"capacitor","duration":0.4,"enter":"draw","add":{"id":"fixDivider","type":"line","points":[[629,177],[629,515]],"strokeColor":"#adbac3","strokeWidth":2,"roughness":0}},
+        {"at":"capacitor","duration":0.32,"enter":"fade","add":{"id":"cap","type":"text","x":681,"y":185,"text":"#13   Capacitor charging","fontSize":31,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"three warnings","duration":0.32,"enter":"fade","add":{"id":"warn3","type":"text","x":681,"y":274,"text":"3 warnings on the first draft","fontSize":28,"fontFamily":"normal","strokeColor":"#485b68"}},
+        {"at":"two false alarms","duration":0.32,"enter":"fade","add":{"id":"warn2","type":"text","x":681,"y":365,"text":"2 false alarms removed","fontSize":29,"fontFamily":"normal","strokeColor":"#08786c"}},
+        {"at":"real label collision","duration":0.32,"enter":"fade","add":{"id":"warn1","type":"text","x":681,"y":423,"text":"1 real collision retained","fontSize":29,"fontFamily":"normal","strokeColor":"#1f2933"}}
+      ],
+      "pause": 0.45
+    },
+    {
+      "say": "For the fifth prompt, the author had to show a lost acknowledgment. Follow order forty-two. The sender tries twice, and the receiver records it once. The first draft rendered successfully. Six decoded frames confirmed the retry and the single ledger entry. We found no actionable improvement for this prompt, so pull request fourteen recorded the evidence and we stopped.",
+      "do": [
+        {"at":0,"remove":["section8","title8","thermo","beforeCoord","afterCoord","fixDivider","cap","warn3","warn2","warn1"],"duration":0.12},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"section9","type":"text","x":60,"y":32,"text":"PR #14  /  LOST ACKNOWLEDGMENT","fontSize":22,"fontFamily":"code","strokeColor":"#08786c"}},
+        {"at":0,"duration":0.32,"enter":"fade","add":{"id":"title9","type":"text","x":60,"y":83,"text":"What counted as a reason to stop?","fontSize":49,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"fifth prompt","duration":0.4,"enter":"fade","add":{"id":"ackFrame","type":"image","x":56,"y":181,"width":831,"src":"../run-05/lesson-frame.png"}},
+        {"at":"first draft","duration":0.32,"enter":"fade","add":{"id":"stop1","type":"text","x":912,"y":212,"text":"1 draft","fontSize":37,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"rendered successfully","duration":0.32,"enter":"fade","add":{"id":"stop2","type":"text","x":912,"y":283,"text":"1 render","fontSize":37,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"Six decoded frames","duration":0.32,"enter":"fade","add":{"id":"stop3","type":"text","x":912,"y":354,"text":"6 frames checked","fontSize":30,"fontFamily":"normal","strokeColor":"#1f2933"}},
+        {"at":"no actionable","duration":0.32,"enter":"fade","add":{"id":"stop4","type":"text","x":61,"y":541,"text":"Zero actionable findings for this prompt.","fontSize":37,"fontFamily":"normal","strokeColor":"#08786c"}}
+      ],
+      "pause": 1
+    }
+  ]
+}
