@@ -1,0 +1,218 @@
+{
+  "drawcast": 1,
+  "title": "A library book finds its shelf",
+  "voice": "maple",
+  "canvas": {
+    "width": 1280,
+    "height": 720,
+    "background": "#fffefa"
+  },
+  "steps": [
+    {
+      "say": "A reader has left this star-covered book in the return bin.",
+      "do": [
+        {
+          "at": 0,
+          "duration": 0,
+          "enter": "none",
+          "add": [
+            {
+              "id": "title",
+              "type": "text",
+              "x": 640,
+              "y": 79,
+              "text": "A library book finds its shelf",
+              "fontSize": 47,
+              "strokeColor": "#253e45",
+              "textAlign": "center"
+            },
+            {
+              "id": "bin",
+              "type": "image",
+              "x": 85,
+              "y": 305,
+              "width": 236,
+              "height": 185,
+              "svg": "<svg xmlns='http://www.w3.org/2000/svg' width='236' height='185' viewBox='0 0 236 185'><g stroke='#334e54' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'>\n<path d='M19 75 L35 42 H208 L220 75 L206 159 H30 Z' fill='#c1dad9'/>\n<path d='M27 75 L42 52 H201 L211 75 Z' fill='#49686a'/>\n<path d='M18 76 L216 76 L204 159 L32 159 Z' fill='#bedad8'/>\n<path d='M37 157 H201 M49 87 L55 145' fill='none' stroke='#88adab'/>\n<rect x='98' y='101' width='44' height='17' rx='4' fill='#f6f8f3'/>\n<path d='M109 109 H131' stroke-width='2'/>\n</g></svg>"
+            },
+            {
+              "id": "cart",
+              "type": "image",
+              "x": 512,
+              "y": 310,
+              "width": 246,
+              "height": 180,
+              "svg": "<svg xmlns='http://www.w3.org/2000/svg' width='246' height='180' viewBox='0 0 246 180'><g stroke='#334e54' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'>\n<path d='M12 76 H211 V53 Q211 44 220 44 H233' fill='none' stroke-width='7'/>\n<path d='M24 77 L34 140 H200 L205 77' fill='none' stroke-width='6'/>\n<rect x='14' y='68' width='201' height='11' rx='3' fill='#bbd7d6'/>\n<rect x='31' y='131' width='171' height='11' rx='3' fill='#bbd7d6'/>\n<path d='M48 143 V151 M186 143 V151' stroke-width='5'/>\n<circle cx='48' cy='156' r='8' fill='#617b7c'/><circle cx='186' cy='156' r='8' fill='#617b7c'/>\n<path d='M48 156h.1 M186 156h.1' stroke='#fff' stroke-width='4'/>\n</g></svg>"
+            },
+            {
+              "id": "shelf",
+              "type": "image",
+              "x": 930,
+              "y": 236,
+              "width": 270,
+              "height": 254,
+              "svg": "<svg xmlns='http://www.w3.org/2000/svg' width='270' height='254' viewBox='0 0 270 254'><g stroke='#334e54' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'>\n<rect x='8' y='16' width='249' height='210' rx='2' fill='#edf0e6' stroke='#adb9ad'/>\n<path d='M8 16 H256 V26 H8 Z M7 18 H18 V236 H7 Z M246 18 H257 V236 H246 Z' fill='#b7cdbe'/>\n<path d='M18 140 H246 V149 H18 Z M18 214 H246 V223 H18 Z' fill='#b7cdbe'/>\n<g fill='#b9cecb'><rect x='27' y='64' width='16' height='75' rx='2'/><rect x='45' y='57' width='19' height='82' rx='2'/><path d='M68 69 L84 66 L100 136 L84 140 Z'/></g>\n<g fill='#d3d7ba'><rect x='208' y='84' width='14' height='55' rx='1'/><rect x='224' y='67' width='15' height='72' rx='2'/></g>\n<path d='M28 80 H42 M46 122 H62 M209 98 H221 M225 81 H238' fill='none' stroke-width='2'/>\n<path d='M163 197 H227 V204 H163 Z M153 205 H231 V213 H153 Z' fill='#c1d1cc'/>\n</g></svg>"
+            },
+            {
+              "id": "first-arrow",
+              "type": "arrow",
+              "from": [
+                368,
+                414
+              ],
+              "to": [
+                453,
+                414
+              ],
+              "strokeColor": "#789290",
+              "strokeWidth": 2,
+              "roughness": 1
+            },
+            {
+              "id": "second-arrow",
+              "type": "arrow",
+              "from": [
+                798,
+                414
+              ],
+              "to": [
+                883,
+                414
+              ],
+              "strokeColor": "#789290",
+              "strokeWidth": 2,
+              "roughness": 1
+            },
+            {
+              "id": "bin-name",
+              "type": "text",
+              "x": 205,
+              "y": 510,
+              "text": "Return bin",
+              "fontSize": 30,
+              "strokeColor": "#253e45",
+              "textAlign": "center"
+            },
+            {
+              "id": "cart-name",
+              "type": "text",
+              "x": 635,
+              "y": 510,
+              "text": "Sorting cart",
+              "fontSize": 30,
+              "strokeColor": "#253e45",
+              "textAlign": "center"
+            },
+            {
+              "id": "shelf-name",
+              "type": "text",
+              "x": 1063,
+              "y": 510,
+              "text": "Library shelf",
+              "fontSize": 30,
+              "strokeColor": "#253e45",
+              "textAlign": "center"
+            },
+            {
+              "id": "star-book",
+              "type": "image",
+              "x": 171,
+              "y": 294,
+              "width": 66,
+              "height": 93,
+              "svg": "<svg xmlns='http://www.w3.org/2000/svg' width='66' height='93' viewBox='0 0 66 93'><g stroke='#334e54' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'>\n<path d='M7 3 H59 Q62 3 62 7 V86 Q62 90 58 90 H8 Q3 90 3 85 V10 Q3 4 7 3 Z' fill='#f78369'/>\n<path d='M10 5 V89' fill='none' stroke-width='2'/>\n<path d='M13 85 H61 V89 H13 Z' stroke-width='1.5' fill='#fff0cf'/>\n<path d='M34 25 L38 34 L48 35 L40 42 L42 52 L34 47 L25 52 L27 42 L19 35 L29 34 Z' fill='#ffdc93' stroke-width='2'/>\n<path d='M24 65 H48 M29 71 H43' stroke-width='2'/>\n</g></svg>"
+            },
+            {
+              "id": "bin-lip",
+              "type": "image",
+              "x": 103,
+              "y": 380,
+              "width": 200,
+              "height": 10,
+              "svg": "<svg xmlns='http://www.w3.org/2000/svg' width='200' height='10' viewBox='0 0 200 10'><g stroke='#334e54' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M1 1 H198 L197 8 H2 Z' fill='#ddeae7'/></g></svg>"
+            }
+          ]
+        }
+      ],
+      "pause": 0.25
+    },
+    {
+      "say": "From the return bin, the book travels to the sorting cart.",
+      "do": [
+        {
+          "at": "the book travels",
+          "duration": 1.65,
+          "update": {
+            "id": "star-book",
+            "along": [
+              [
+                204,
+                340.5
+              ],
+              [
+                236,
+                285
+              ],
+              [
+                317,
+                258
+              ],
+              [
+                522,
+                259
+              ],
+              [
+                592,
+                284
+              ],
+              [
+                626,
+                331.5
+              ]
+            ]
+          }
+        }
+      ],
+      "pause": 0.4
+    },
+    {
+      "say": "From the cart, the book moves to its place on the shelf. It's ready for the next reader.",
+      "do": [
+        {
+          "at": "the book moves",
+          "duration": 1.8,
+          "update": {
+            "id": "star-book",
+            "along": [
+              [
+                626,
+                331.5
+              ],
+              [
+                671,
+                277
+              ],
+              [
+                751,
+                246
+              ],
+              [
+                930,
+                246
+              ],
+              [
+                1029,
+                270
+              ],
+              [
+                1083,
+                329.5
+              ]
+            ]
+          }
+        }
+      ],
+      "pause": 0.8
+    }
+  ]
+}

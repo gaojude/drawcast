@@ -1,0 +1,110 @@
+{
+  "drawcast": 1,
+  "voice": "maple",
+  "title": "Why the sorting cart disappeared",
+  "steps": [
+    {
+      "say": "A new author followed the inline artwork example. The first video cropped the cover of the book, and the entire sorting cart disappeared.",
+      "do": [
+        {
+          "enter": "none",
+          "add": [
+            {
+              "id": "title",
+              "type": "text",
+              "x": 60,
+              "y": 36,
+              "text": "Why the sorting cart disappeared",
+              "fontSize": 45,
+              "fontFamily": "normal",
+              "strokeColor": "#273d49"
+            },
+            {
+              "id": "left",
+              "type": "text",
+              "x": 67,
+              "y": 157,
+              "text": "First encode",
+              "fontSize": 32,
+              "fontFamily": "normal",
+              "strokeColor": "#273d49"
+            },
+            {
+              "id": "before",
+              "type": "image",
+              "x": 62,
+              "y": 212,
+              "width": 562,
+              "height": 316,
+              "src": "before.png"
+            }
+          ]
+        },
+        {
+          "at": "sorting cart",
+          "point": [
+            338,
+            383
+          ]
+        }
+      ]
+    },
+    {
+      "say": "The drawing had a view box with the correct proportions, but no explicit pixel dimensions on the SVG itself. The same script now keeps all of the artwork inside its image.",
+      "do": [
+        {
+          "at": "view box",
+          "add": {
+            "id": "right",
+            "type": "text",
+            "x": 668,
+            "y": 157,
+            "text": "Same viewBox, corrected encode",
+            "fontSize": 32,
+            "fontFamily": "normal",
+            "strokeColor": "#273d49"
+          }
+        },
+        {
+          "at": "same script",
+          "enter": "fade",
+          "add": {
+            "id": "after",
+            "type": "image",
+            "x": 660,
+            "y": 212,
+            "width": 562,
+            "height": 316,
+            "src": "after.png"
+          }
+        },
+        {
+          "at": "artwork",
+          "point": [
+            941,
+            383
+          ]
+        }
+      ]
+    },
+    {
+      "say": "The first author needed a second render after adding dimensions to five illustrations. The regression check compares the original view box artwork with its explicitly sized equivalent.",
+      "do": [
+        {
+          "at": "second render",
+          "add": {
+            "id": "timing",
+            "type": "text",
+            "x": 65,
+            "y": 545,
+            "text": "6.162 s first render   +   2.604 s cached correction",
+            "fontSize": 26,
+            "fontFamily": "normal",
+            "strokeColor": "#296259"
+          }
+        }
+      ],
+      "pause": 0.9
+    }
+  ]
+}

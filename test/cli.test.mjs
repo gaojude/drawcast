@@ -85,6 +85,39 @@ test("snapshots size and move inline SVG alongside a file with the same name as 
   assert.deepEqual([pixel(before, 110, 15), pixel(after, 110, 15)], [0x0000ff, 0x0000ff]);
 });
 
+test("viewBox-only inline SVG keeps both corners in a snapshot at its display size", async (t) => {
+  if (!existsSync(path.join(import.meta.dirname, "../dist/player/index.html"))) return t.skip("requires the built player");
+  const ffmpeg = findFfmpeg();
+  if (!ffmpeg || !await findBrowser(false, () => {})) return t.skip("requires a browser and ffmpeg");
+  const dir = mkdtempSync(path.join(os.tmpdir(), "drawcast-viewbox-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const svg = (size = "") => `<svg xmlns="http://www.w3.org/2000/svg" ${size} viewBox="-10,20,40,30">
+      <rect x="-10" y="20" width="8" height="5" fill="red"/>
+      <rect x="22" y="45" width="8" height="5" fill="blue"/>
+    </svg>`;
+  const file = path.join(dir, "script.json");
+  writeFileSync(file, JSON.stringify({ drawcast: 1, canvas: { width: 1280, height: 720 }, captions: false, steps: [
+    { do: [{ enter: "none", add: [
+      { type: "image", id: "stretched", svg: svg(), x: 10, y: 10, width: 100, height: 32 },
+      { type: "image", id: "root-width", svg: svg('width="48px"'), x: 120, y: 10 },
+      { type: "image", id: "root-height", svg: svg('height="30"'), x: 180, y: 10 },
+      { type: "image", id: "default-size", svg: svg(), x: 10, y: 60 },
+    ] }] },
+  ] }));
+  const output = path.join(dir, "shot.png");
+  await renderSnapshot(await loadScript(file), { output, log() {} });
+  const frame = execFileSync(ffmpeg, ["-v", "error", "-i", output, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], { maxBuffer: 1280 * 720 * 3 });
+  const pixel = (x, y) => frame.readUIntBE((1280 * y + x) * 3, 3);
+  for (const [id, x, y, width, height] of [
+    ["stretched", 10, 10, 100, 32], ["root-width", 120, 10, 48, 36], ["root-height", 180, 10, 40, 30],
+    ["default-size", 10, 60, 200, 150],
+  ]) {
+    assert.equal(pixel(x + 2, y + 2), 0xff0000, id + " top left");
+    assert.equal(pixel(x + width - 3, y + height - 3), 0x0000ff, id + " bottom right");
+    assert.equal(pixel(x + width + 1, y + height - 3), 0xffffff, id + " right boundary");
+  }
+});
+
 test("an invalid encoder is reported before any narration is requested", () => {
   const result = spawnSync(process.execPath, [cli, "render", sample, "--voice", "maple"], {
     encoding: "utf8", env: { ...process.env, DRAWCAST_FFMPEG: path.join(os.tmpdir(), "drawcast-missing-encoder-test.exe") },

@@ -6,7 +6,7 @@
  */
 import { convertToExcalidrawElements, exportToCanvas } from "@excalidraw/excalidraw";
 import { type ColorSpace, avcCodecs } from "../shared/h264.ts";
-import { DEFAULT_CANVAS, type Formula, type Script, type StepAudio } from "../shared/types.ts";
+import { DEFAULT_CANVAS, imageKey, type Formula, type Script, type StepAudio } from "../shared/types.ts";
 import { type FormulaFile, type Frame, type ImageInfo, type Pointer, type Schedule, type Timeline, timeline } from "./compile.ts";
 import type { Rect } from "./elements.ts";
 
@@ -157,15 +157,31 @@ function formulaFiles(math: Record<string, Formula>): FormulaFile {
   };
 }
 
+/** Chromium crops a viewBox-only SVG when Excalidraw draws its natural-size source rectangle. */
+function inlineSvgForCanvas(svg: string, originalUrl: string, width: number): string {
+  const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+  const root = doc.documentElement;
+  if (!(root instanceof SVGSVGElement) || root.hasAttribute("width") || root.hasAttribute("height")) return originalUrl;
+  const box = root.viewBox.baseVal;
+  if (!box || box.width <= 0 || box.height <= 0 || width <= 0) return originalUrl;
+  // One concrete dimension gives the image a viewport. The viewBox supplies its aspect ratio and origin.
+  root.setAttribute("width", String(width));
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(doc))}`;
+}
+
 async function loadImages(sources: Record<string, string>): Promise<Map<string, ImageInfo>> {
   const out = new Map<string, ImageInfo>();
+  const specs = request.script.steps.flatMap((s) => s.do ?? []).flatMap((a) => a.add ?? []);
+  const inline = new Map(specs.filter((spec) => spec.svg).map((spec) => [imageKey(spec), spec]));
   await Promise.all(
     Object.entries(sources).map(async ([src, dataURL], i) => {
       const img = new Image();
       img.src = dataURL;
       await img.decode();
       const fileId = `image-${i}`;
-      files[fileId] = { id: fileId, dataURL, mimeType: dataURL.slice(5, dataURL.indexOf(";")), created: 1 };
+      const spec = inline.get(src);
+      const canvasUrl = spec?.svg ? inlineSvgForCanvas(spec.svg, dataURL, spec.width ?? img.naturalWidth) : dataURL;
+      files[fileId] = { id: fileId, dataURL: canvasUrl, mimeType: dataURL.slice(5, dataURL.indexOf(";")), created: 1 };
       out.set(src, { fileId, width: img.naturalWidth, height: img.naturalHeight });
     }),
   );

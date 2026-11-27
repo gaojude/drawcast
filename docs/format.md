@@ -248,7 +248,8 @@ the middle of an arrow.
 default handwriting, which covers Chinese), `"normal"` and `"code"`.
 
 For an illustrated object with several parts that travel together, put self-contained SVG markup
-in one image. Animate its id with `update.along`. Use `src` for a PNG, JPEG, GIF, WebP or SVG file
+in one image. Its `viewBox` supplies the artwork's proportions, and the image element's dimensions
+set its size on the board. Animate its id with `update.along`. Use `src` for a PNG, JPEG, GIF, WebP or SVG file
 relative to the script. An inline book with its cover and spine can be written as:
 
 ```json

@@ -23,9 +23,17 @@ The traces record timestamped tool inputs and outcomes. Long command outputs are
 | [8 · Energy on a curved track](run-08/trace.md) | 168.615 s | 7.76 s | Compare exact instants in one decode and draw straight chords between plot points. [Walkthrough](run-08/walkthrough.mp4) |
 | [9 · Typing after Undo](run-09/trace.md) | 195.182 s | 8.54 s + 4.25 s | Update distinct objects together on a single frame. [Walkthrough](run-09/walkthrough.mp4) |
 | [10 · Undo and Redo replay](run-10/trace.md) | 143.499 s | 7.27 s | First draft delivered. Zero actionable findings on the repeated prompt. [Walkthrough](run-10/walkthrough.mp4) |
+
+## Household budget and library trials
+
+Seven fresh authors worked from `ccd6625` on main and then from each preceding PR. Each trace links to the source, author film and narrated walkthrough. The series ended at the maintainer's request after the run 17 SVG repair.
+
+| Trial | Author wall time | Render process time | Outcome |
+| --- | ---: | ---: | --- |
 | [11 · Household budget](run-11/trace.md) | 154.900 s | 10.247 s | Percentage-based pie slices, focused guide topics, tile sizing and media details during inspection. [Walkthrough](run-11/walkthrough.mp4) |
 | [12 · Budget replay](run-12/trace.md) | 103.854 s | 8.959 s | Continue a pie from the previous slice and find a complete narrated pie example in one topic. [Walkthrough](run-12/walkthrough.mp4) |
 | [13 · Library acquisitions](run-13/trace.md) | 97.791 s | 9.146 s | Review encoded frames by step and reveal the unallocated part of a pie with one shared circle. [Walkthrough](run-13/walkthrough.mp4) |
 | [14 · Library replay](run-14/trace.md) | 122.571 s | 7.414 s | Place independently cued text at a shared join, include the final hold in step review and report overlapping phase times. [Walkthrough](run-14/walkthrough.mp4) |
 | [15 · Reviewing the reveals](run-15/trace.md) | 114.216 s | 6.811 s | Choose one encoded motion sheet to check both the reveals and the ending. [Walkthrough](run-15/walkthrough.mp4) |
 | [16 · From bin to shelf](run-16/trace.md) | 146.951 s | 6.945 s + 2.811 s | Embed illustrated moving objects in the script and see sampled movements alongside their arrivals. [Walkthrough](run-16/walkthrough.mp4) |
+| [17 · The missing cart](run-17/trace.md) | 120.089 s | 6.162 s + 2.604 s | Preserve inline SVG artwork when its intrinsic size comes from its viewBox. [Walkthrough](run-17/walkthrough.mp4) |
