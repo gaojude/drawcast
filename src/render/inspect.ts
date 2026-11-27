@@ -37,8 +37,42 @@ async function readTimeline(file: string, signal?: AbortSignal) {
   return { starts, ticksPerSecond, duration: (end - starts[0]) / ticksPerSecond };
 }
 
-export async function inspectVideo(input: string, output: string, at?: number, signal?: AbortSignal): Promise<number[]> {
+/** Keep the opening and ending, then find up to four separated moments of sustained visual change. */
+async function motionFrames(file: string, times: number[], signal?: AbortSignal): Promise<number[]> {
+  const stream = createReadStream(file, { signal });
+  const lines = createInterface({ input: stream, crlfDelay: Infinity });
+  const scores: number[] = [];
+  let previous = 0;
+  try {
+    for await (const line of lines) {
+      if (!line.startsWith("lavfi.signalstats.YDIF=")) continue;
+      const change = Number(line.slice(line.indexOf("=") + 1));
+      // A one-frame cut (including a cover) has a large difference on only one side.
+      scores.push(Math.min(change, previous));
+      previous = change;
+    }
+  } finally {
+    lines.close();
+    stream.destroy();
+  }
+  if (scores.length !== times.length) throw new Error("The decoded motion frames do not match the MP4 timeline.");
+  const peaks: number[] = [];
+  const separation = Math.min(1, times.at(-1)! / 8);
+  while (peaks.length < 4) {
+    let best = -1;
+    for (let i = 1; i < scores.length - 1; i++) {
+      if (!(scores[i] > 0) || (best >= 0 && scores[i] <= scores[best])) continue;
+      if (peaks.every(j => j !== i && Math.abs(times[j] - times[i]) >= separation)) best = i;
+    }
+    if (best < 0) break;
+    peaks.push(best);
+  }
+  return [0, ...peaks.sort((a, b) => a - b), times.length - 1];
+}
+
+export async function inspectVideo(input: string, output: string, at?: number, signal?: AbortSignal, motion = false): Promise<number[]> {
   signal?.throwIfAborted();
+  if (at !== undefined && motion) throw new Error("Choose --motion for a sheet or --at for one frame.");
   if (at !== undefined && (!Number.isFinite(at) || at < 0)) throw new Error("--at must be a nonnegative number of seconds.");
   await prepareOutputFiles([input], [output], "input MP4");
   const ffmpeg = requireFfmpeg();
@@ -52,9 +86,15 @@ export async function inspectVideo(input: string, output: string, at?: number, s
     if (at !== undefined && at >= duration) throw new Error(`--at must be less than the video duration (${Number(duration.toFixed(6))} s).`);
     const seconds = (i: number) => (starts[i] - starts[0]) / ticksPerSecond;
     const count = Math.min(6, starts.length);
-    const indices = at === undefined
+    let indices = at === undefined
       ? Array.from({ length: count }, (_, i) => Math.round(i * (starts.length - 1) / Math.max(1, count - 1)))
       : [starts.findLastIndex((_, i) => seconds(i) <= at)];
+    if (motion && starts.length > count) {
+      // Score a small image above the caption strip. Export the selected original frames with captions.
+      const filter = "scale=160:90,crop=160:76:0:0,format=yuv420p,signalstats,metadata=print:key=lavfi.signalstats.YDIF:file=motion.txt";
+      await exec(ffmpeg, [...source, "-vf", filter, "-f", "null", "-"], { ...options, cwd: work });
+      indices = await motionFrames(path.join(work, "motion.txt"), starts.map((_, i) => seconds(i)), signal);
+    }
 
     const selected = indices.map((i) => `eq(n\\,${i})`).join("+");
     const columns = Math.min(indices.length, 3);

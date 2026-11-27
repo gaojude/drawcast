@@ -1,0 +1,137 @@
+{
+  "drawcast": 1,
+  "cover": 1,
+  "voice": "maple",
+  "title": "Finding a slide between settled frames",
+  "steps": [
+    {
+      "say": "The author rendered this puzzle in six seconds. Two slides explain the rule. The first inspection sampled six evenly spaced moments. Every tile looks settled.",
+      "do": [
+        {
+          "enter": "none",
+          "add": [
+            {
+              "id": "title",
+              "type": "text",
+              "x": 640,
+              "y": 32,
+              "textAlign": "center",
+              "text": "Where is the slide?",
+              "fontSize": 43,
+              "fontFamily": "normal",
+              "strokeColor": "#26394a"
+            },
+            {
+              "id": "before",
+              "type": "image",
+              "src": "sample.inspect.png",
+              "x": 106,
+              "y": 132,
+              "width": 1068,
+              "height": 405
+            },
+            {
+              "id": "cap",
+              "type": "text",
+              "x": 640,
+              "y": 550,
+              "textAlign": "center",
+              "text": "Six evenly spaced frames",
+              "fontSize": 28,
+              "fontFamily": "normal",
+              "strokeColor": "#26394a"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "say": "To check the movement, the author guessed two timestamps and opened two more pictures. Now one motion sheet can show both moves directly from the encoded video.",
+      "do": [
+        {
+          "at": "one motion sheet",
+          "remove": "before"
+        },
+        {
+          "at": "one motion sheet",
+          "enter": "fade",
+          "add": {
+            "id": "after",
+            "type": "image",
+            "src": "sample.inspect.motion.png",
+            "x": 106,
+            "y": 132,
+            "width": 1068,
+            "height": 405
+          }
+        },
+        {
+          "at": "one motion sheet",
+          "update": {
+            "id": "title",
+            "text": "drawcast inspect lesson.mp4 --motion"
+          }
+        },
+        {
+          "at": "one motion sheet",
+          "update": {
+            "id": "cap",
+            "text": "Opening, movement and ending"
+          }
+        }
+      ]
+    },
+    {
+      "say": "At nearly eight seconds the orange two is halfway down. At fourteen seconds the blue one is sliding right. The sampler looks for sustained changes above the captions and keeps the original frames.",
+      "do": [
+        {
+          "at": "orange two",
+          "point": [
+            1017,
+            226
+          ]
+        },
+        {
+          "at": "blue one",
+          "point": [
+            641,
+            406
+          ]
+        },
+        {
+          "at": "sampler",
+          "update": {
+            "id": "cap",
+            "text": "Changes above the captions determine the selection"
+          }
+        }
+      ]
+    },
+    {
+      "say": "On the same file, the author's three inspection commands took about one and a half seconds. The new sheet took about one second and removed the need to guess either time.",
+      "do": [
+        {
+          "at": "three inspection",
+          "update": {
+            "id": "title",
+            "text": "Reviewing the same 18.8-second MP4"
+          }
+        },
+        {
+          "at": "three inspection",
+          "update": {
+            "id": "cap",
+            "text": "Three commands   1.49 s"
+          }
+        },
+        {
+          "at": "one second",
+          "update": {
+            "id": "cap",
+            "text": "Three commands   1.49 s         Motion sheet   1.01 s"
+          }
+        }
+      ]
+    }
+  ]
+}
