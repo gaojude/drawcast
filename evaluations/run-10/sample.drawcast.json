@@ -1,0 +1,59 @@
+{
+  "drawcast": 1,
+  "voice": "maple",
+  "steps": [
+    {
+      "say": "Start with the word cat in a plain text editor. This is our starting version.",
+      "do": [
+        {"enter": "none", "add": [
+          {"id": "title", "type": "text", "x": 72, "y": 52, "text": "Why typing clears Redo", "fontFamily": "normal", "fontSize": 52, "strokeColor": "#202b39"},
+          {"id": "documentFrame", "type": "rectangle", "x": 72, "y": 181, "width": 540, "height": 304, "rounded": false, "roughness": 0, "strokeColor": "#4b6785", "backgroundColor": "#f1f7fd"},
+          {"id": "documentTitle", "type": "text", "x": 98, "y": 202, "text": "Document", "fontFamily": "normal", "fontSize": 26, "strokeColor": "#355675"},
+          {"id": "rule", "type": "line", "points": [[74,259],[610,259]], "roughness": 0, "strokeWidth": 1, "strokeColor": "#7790a9"},
+          {"id": "document", "type": "text", "x": 102, "y": 295, "text": "CAT", "fontFamily": "code", "fontSize": 78, "strokeColor": "#102f4d"},
+          {"id": "historyTitle", "type": "text", "x": 700, "y": 181, "text": "Available history", "fontFamily": "normal", "fontSize": 36, "strokeColor": "#202b39"},
+          {"id": "undoLabel", "type": "text", "x": 700, "y": 276, "text": "Undo returns to", "fontFamily": "normal", "fontSize": 27, "strokeColor": "#394655"},
+          {"id": "undo", "type": "rectangle", "x": 949, "y": 254, "width": 230, "height": 83, "label": "Empty", "fontFamily": "code", "fontSize": 34, "strokeColor": "#68737d", "backgroundColor": "#f1f3f5", "roughness": 0},
+          {"id": "redoLabel", "type": "text", "x": 700, "y": 396, "text": "Redo restores", "fontFamily": "normal", "fontSize": 27, "strokeColor": "#394655"},
+          {"id": "redo", "type": "rectangle", "x": 949, "y": 374, "width": 230, "height": 83, "label": "Empty", "fontFamily": "code", "fontSize": 34, "strokeColor": "#68737d", "backgroundColor": "#f1f3f5", "roughness": 0},
+          {"id": "action", "type": "text", "x": 72, "y": 522, "text": "Starting version", "fontFamily": "hand", "fontSize": 34, "strokeColor": "#355675"}
+        ]}
+      ]
+    },
+    {
+      "say": "Type S. The document reads cats, and Undo can take us back to cat.",
+      "do": [
+        {"at": "Type S", "duration": 0, "update": [
+          {"id": "document", "text": "CATS"},
+          {"id": "undo", "label": "CAT", "strokeColor": "#17654e", "backgroundColor": "#dbf4e9"},
+          {"id": "action", "text": "Typed S"}
+        ]},
+        {"at": "Undo", "pulse": "undo"}
+      ]
+    },
+    {
+      "say": "Choose Undo. The S disappears. Redo can still restore the version ending in S.",
+      "do": [
+        {"at": "Choose Undo", "duration": 0, "update": [
+          {"id": "document", "text": "CAT"},
+          {"id": "undo", "label": "Empty", "strokeColor": "#68737d", "backgroundColor": "#f1f3f5"},
+          {"id": "redo", "label": "CATS", "strokeColor": "#17654e", "backgroundColor": "#dbf4e9"},
+          {"id": "action", "text": "Undid S"}
+        ]},
+        {"at": "Redo", "pulse": "redo"}
+      ]
+    },
+    {
+      "say": "Type E. The editor keeps one sequence of edits. E replaces S as the edit after cat, so there is nothing left to redo.",
+      "do": [
+        {"at": "Type E", "duration": 0, "update": [
+          {"id": "document", "text": "CATE"},
+          {"id": "undo", "label": "CAT", "strokeColor": "#17654e", "backgroundColor": "#dbf4e9"},
+          {"id": "redo", "label": "Empty", "strokeColor": "#68737d", "backgroundColor": "#f1f3f5"},
+          {"id": "action", "text": "Typed E"}
+        ]},
+        {"at": "nothing left", "pulse": "redo"}
+      ]
+    }
+  ]
+}
