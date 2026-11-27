@@ -1,0 +1,15 @@
+# Timed Drawcast author trials
+
+Five fresh authors used the local CLI and the skill shipped with it. Each ran a different prompt, made a narrated MP4 and inspected it. The first trial started at `48814b6` on main. Each later trial started from the preceding PR. The fifth produced zero actionable findings for its prompt.
+
+| Trial | Author wall time | Render wall time | Outcome | Evidence |
+| --- | ---: | ---: | --- | --- |
+| [1 · Wave interference](run-01/trace.md) | 184.253 s | 12.444 s | Animated plot parameters, a shorter guide and less scene serialization | [Video](run-01/walkthrough.mp4) · [Trace](run-01/tools.jsonl) |
+| [2 · Sigmoid gain](run-02/trace.md) | 181.059 s | 14.125 s | Labeled axes, combined guide topics and inspection of the encoded MP4 | [Video](run-02/walkthrough.mp4) · [Trace](run-02/tools.jsonl) |
+| [3 · Thermostat](run-03/trace.md) | 170.752 s | 12.050 s | Points and annotations expressed in chart coordinates | [Video](run-03/walkthrough.mp4) · [Trace](run-03/tools.jsonl) |
+| [4 · Capacitor](run-04/trace.md) | 220.273 s | 11.350 s | Layout diagnostics distinguish visible axes and normal-font text widths | [Video](run-04/walkthrough.mp4) · [Trace](run-04/tools.jsonl) |
+| [5 · Lost acknowledgment](run-05/trace.md) | 135.988 s | 10.890 s | First draft delivered, zero actionable findings | [Video](run-05/walkthrough.mp4) · [Trace](run-05/tools.jsonl) |
+
+Author wall time runs from task start through the final report, including visual review and any requested diagnosis. The render column is a separate process stopwatch. The prompts and narration lengths differ. For a controlled speed comparison, see the [same-script A/B measurements and decoded-frame comparison](run-01/trace.md#renderer-timing).
+
+The traces record timestamped tool inputs and outcomes. Long command outputs are excerpted, image payloads are represented by media type, and machine-specific paths and agent progress messages are abridged. Each directory contains the sample script and the matching narrated evaluation walkthrough. From a built checkout, render a script with `node dist/cli.js render evaluations/run-05/sample.drawcast.json`.

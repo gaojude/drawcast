@@ -1,0 +1,60 @@
+{
+  "drawcast": 1,
+  "cover": 5,
+  "steps": [
+    {
+      "say": "The sender wants the receiver to record order forty-two. It sends the order with forty-two as its unique ID.",
+      "do": [
+        {"at": 0, "enter": "none", "add": {"id": "title", "type": "text", "x": 50, "y": 26, "text": "When an acknowledgment goes missing", "fontSize": 37, "fontFamily": "normal"}},
+        {"at": "sender", "add": {"id": "sender", "type": "rectangle", "x": 55, "y": 111, "width": 194, "height": 62, "label": "Sender", "color": "blue", "fontSize": 28}},
+        {"at": "receiver", "add": {"id": "receiver", "type": "rectangle", "x": 752, "y": 111, "width": 194, "height": 62, "label": "Receiver", "color": "teal", "fontSize": 28}},
+        {"at": "receiver", "add": {"id": "sender-life", "type": "line", "points": [[152, 180], [152, 533]], "strokeColor": "#adb5bd", "strokeStyle": "dashed", "roughness": 0}},
+        {"at": "receiver", "add": {"id": "receiver-life", "type": "line", "points": [[849, 180], [849, 533]], "strokeColor": "#adb5bd", "strokeStyle": "dashed", "roughness": 0}},
+        {"at": "sends", "duration": 0.55, "add": {"id": "first", "type": "arrow", "from": [156, 244], "to": [843, 244], "color": "blue"}},
+        {"at": "sends", "add": {"id": "first-label", "type": "text", "x": 494, "y": 201, "text": "Order 42", "textAlign": "center", "fontSize": 26, "strokeColor": "#1864ab"}},
+        {"at": "with forty-two", "duration": 1.1, "send": {"along": ["first"], "color": "blue"}}
+      ]
+    },
+    {
+      "say": "The receiver looks up that ID in its order book. This is the first request for forty-two, so it saves one order under that ID.",
+      "do": [
+        {"at": "order book", "add": {"id": "book-title", "type": "text", "x": 1099, "y": 194, "text": "Order book", "fontSize": 28, "textAlign": "center"}},
+        {"at": "order book", "add": {"id": "book", "type": "rectangle", "x": 977, "y": 243, "width": 243, "height": 116, "label": "Empty", "color": "gray", "fontSize": 25}},
+        {"at": "saves", "update": {"id": "book", "label": "ID 42\n1 order", "color": "teal"}},
+        {"at": "one order", "pulse": "book"}
+      ]
+    },
+    {
+      "say": "The receiver sends back an acknowledgment. The reply gets lost in transit. The sender keeps waiting, even though the order is already saved.",
+      "do": [
+        {"at": "sends back", "duration": 0.45, "add": {"id": "lost-path", "type": "arrow", "from": [843, 329], "to": [491, 329], "endArrowhead": null, "strokeColor": "#c92a2a", "strokeStyle": "dashed"}},
+        {"at": "acknowledgment", "add": {"id": "ack-label", "type": "text", "x": 668, "y": 287, "text": "ACK 42", "textAlign": "center", "fontSize": 25, "strokeColor": "#c92a2a"}},
+        {"at": "the reply", "duration": 0.65, "send": {"along": ["lost-path"], "color": "red"}},
+        {"at": "lost", "add": {"id": "cross-a", "type": "line", "points": [[479, 317], [503, 341]], "strokeColor": "#c92a2a", "strokeWidth": 4}},
+        {"at": "lost", "add": {"id": "cross-b", "type": "line", "points": [[503, 317], [479, 341]], "strokeColor": "#c92a2a", "strokeWidth": 4}},
+        {"at": "lost", "add": {"id": "lost", "type": "text", "x": 458, "y": 313, "text": "Lost", "fontSize": 25, "textAlign": "right", "strokeColor": "#c92a2a"}},
+        {"at": "keeps waiting", "add": {"id": "status", "type": "text", "x": 152, "y": 555, "text": "Waiting for ACK", "fontSize": 22, "textAlign": "center", "strokeColor": "#1864ab"}}
+      ]
+    },
+    {
+      "say": "When the timer runs out, the sender retries. The second message carries the same order ID, forty-two.",
+      "do": [
+        {"at": "timer runs out", "update": {"id": "status", "text": "Timed out"}},
+        {"at": "retries", "duration": 0.55, "add": {"id": "retry", "type": "arrow", "from": [156, 418], "to": [843, 418], "color": "blue"}},
+        {"at": "retries", "add": {"id": "retry-label", "type": "text", "x": 495, "y": 377, "text": "Retry: Order 42", "textAlign": "center", "fontSize": 26, "strokeColor": "#1864ab"}},
+        {"at": "second message", "duration": 1.1, "send": {"along": ["retry"], "color": "blue"}}
+      ]
+    },
+    {
+      "say": "The receiver finds forty-two in the book. That tells it the first request succeeded. It skips the write and sends another acknowledgment. This one arrives, and the sender stops retrying.",
+      "do": [
+        {"at": "finds forty-two", "pulse": "book"},
+        {"at": "skips the write", "add": {"id": "decision", "type": "text", "x": 1099, "y": 382, "text": "ID found\nSkip the write", "fontSize": 22, "textAlign": "center", "strokeColor": "#087f5b"}},
+        {"at": "sends another", "duration": 0.5, "add": {"id": "ack", "type": "arrow", "from": [843, 507], "to": [156, 507], "color": "green"}},
+        {"at": "sends another", "add": {"id": "final-label", "type": "text", "x": 495, "y": 466, "text": "ACK 42", "textAlign": "center", "fontSize": 26, "strokeColor": "#2b8a3e"}},
+        {"at": "this one", "duration": 0.85, "send": {"along": ["ack"], "color": "green"}},
+        {"at": "sender stops", "update": {"id": "status", "text": "Acknowledged", "strokeColor": "#2b8a3e"}}
+      ]
+    }
+  ]
+}
