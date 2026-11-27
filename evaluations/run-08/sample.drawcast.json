@@ -1,0 +1,44 @@
+{
+  "drawcast": 1,
+  "voice": "maple",
+  "steps": [
+    {
+      "say": "A bead starts from rest on a smooth track. The dashed line marks its starting height.",
+      "do": [
+        {"enter": "none", "add": [
+          {"id": "question", "type": "text", "x": 95, "y": 45, "text": "How high will the bead climb?", "fontFamily": "normal", "fontSize": 46, "strokeColor": "#153347"},
+          {"id": "track", "type": "line", "fn": "x^2", "domain": [-3, 3], "range": [0, 9], "x": 192, "y": 170, "width": 896, "height": 360, "strokeColor": "#334e60", "strokeWidth": 4, "roughness": 0},
+          {"id": "level", "type": "line", "points": [["track", -2.4], [640, 299.6], ["track", 2.4]], "strokeColor": "#5d8291", "strokeWidth": 2, "strokeStyle": "dashed", "roughness": 0},
+          {"id": "start-label", "type": "text", "x": 330, "y": 244, "text": "Released from rest", "fontFamily": "normal", "fontSize": 25, "strokeColor": "#355964"},
+          {"id": "start-mark", "type": "ellipse", "on": ["track", -2.4], "width": 16, "height": 16, "strokeColor": "#355964", "backgroundColor": "#ffffff", "strokeWidth": 3, "roughness": 0},
+          {"id": "bead", "type": "ellipse", "on": ["track", -2.4], "width": 32, "height": 32, "strokeColor": "#923d14", "backgroundColor": "#ff9f43", "strokeWidth": 3, "roughness": 0}
+        ]},
+        {"at": "dashed line", "pulse": "level"}
+      ]
+    },
+    {
+      "say": "Gravity turns potential energy into kinetic energy on the way down. At the bottom, potential energy is lowest, so the bead moves fastest.",
+      "do": [
+        {"at": "kinetic energy", "enter": "fade", "add": {"id": "energy", "type": "text", "x": 96, "y": 112, "text": "Downhill: potential energy becomes kinetic energy", "fontFamily": "normal", "fontSize": 26, "strokeColor": "#226a72"}},
+        {"at": "the bottom", "point": ["track", 0]},
+        {"at": "moves fastest", "enter": "fade", "add": {"id": "fastest", "type": "text", "x": 640, "y": 548, "text": "Maximum speed", "textAlign": "center", "fontFamily": "normal", "fontSize": 27, "strokeColor": "#226a72"}}
+      ]
+    },
+    {
+      "say": "Watch the bead speed up, sweep through the bottom, and slow on the climb.",
+      "do": [
+        {"at": "speed up", "duration": 3.8, "update": {"id": "bead", "along": [["track", -2.4], ["track", 2.4]]}},
+        {"at": "slow", "update": {"id": "energy", "text": "Uphill: kinetic energy becomes potential energy"}}
+      ]
+    },
+    {
+      "say": "With negligible friction, total mechanical energy stays constant. When the bead stops again, all its kinetic energy has turned back into potential energy. It reaches the same height.",
+      "do": [
+        {"at": "total mechanical energy", "update": {"id": "energy", "text": "Potential energy + kinetic energy = constant"}},
+        {"at": "stops again", "enter": "fade", "add": {"id": "turn-label", "type": "text", "x": 950, "y": 244, "text": "At rest again", "textAlign": "right", "fontFamily": "normal", "fontSize": 25, "strokeColor": "#355964"}},
+        {"at": "same height", "pulse": "level"},
+        {"at": "same height", "enter": "fade", "add": {"id": "equal", "type": "text", "x": 640, "y": 320, "text": "Same height", "textAlign": "center", "fontFamily": "normal", "fontSize": 25, "strokeColor": "#355964"}}
+      ]
+    }
+  ]
+}

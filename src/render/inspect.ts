@@ -70,10 +70,12 @@ async function motionFrames(file: string, times: number[], signal?: AbortSignal)
   return [0, ...peaks.sort((a, b) => a - b), times.length - 1];
 }
 
-export async function inspectVideo(input: string, output: string, at?: number, signal?: AbortSignal, motion = false): Promise<number[]> {
+export async function inspectVideo(input: string, output: string, at?: number | number[], signal?: AbortSignal, motion = false): Promise<number[]> {
   signal?.throwIfAborted();
-  if (at !== undefined && motion) throw new Error("Choose --motion for a sheet or --at for one frame.");
-  if (at !== undefined && (!Number.isFinite(at) || at < 0)) throw new Error("--at must be a nonnegative number of seconds.");
+  if (at !== undefined && motion) throw new Error("Choose --motion for automatic selection or --at for specific times.");
+  const requested = at === undefined ? undefined : [at].flat();
+  if (requested?.some(s => !Number.isFinite(s) || s < 0)) throw new Error("--at must be a nonnegative number of seconds.");
+  if (requested && (!requested.length || requested.length > 12)) throw new Error("--at accepts one to twelve times.");
   await prepareOutputFiles([input], [output], "input MP4");
   const ffmpeg = requireFfmpeg();
   const work = await mkdtemp(path.join(path.dirname(path.resolve(output)), ".drawcast-"));
@@ -83,12 +85,12 @@ export async function inspectVideo(input: string, output: string, at?: number, s
     const metadata = path.join(work, "packets.txt");
     await exec(ffmpeg, [...source, "-c:v", "copy", "-f", "framecrc", metadata], options);
     const { starts, ticksPerSecond, duration } = await readTimeline(metadata, signal);
-    if (at !== undefined && at >= duration) throw new Error(`--at must be less than the video duration (${Number(duration.toFixed(6))} s).`);
+    if (requested?.some(s => s >= duration)) throw new Error(`--at must be less than the video duration (${Number(duration.toFixed(6))} s).`);
     const seconds = (i: number) => (starts[i] - starts[0]) / ticksPerSecond;
     const count = Math.min(6, starts.length);
-    let indices = at === undefined
-      ? Array.from({ length: count }, (_, i) => Math.round(i * (starts.length - 1) / Math.max(1, count - 1)))
-      : [starts.findLastIndex((_, i) => seconds(i) <= at)];
+    let indices = requested
+      ? [...new Set(requested.map(s => starts.findLastIndex((_, i) => seconds(i) <= s)))].sort((a, b) => a - b)
+      : Array.from({ length: count }, (_, i) => Math.round(i * (starts.length - 1) / Math.max(1, count - 1)));
     if (motion && starts.length > count) {
       // Score a small image above the caption strip. Export the selected original frames with captions.
       const filter = "scale=160:90,crop=160:76:0:0,format=yuv420p,signalstats,metadata=print:key=lavfi.signalstats.YDIF:file=motion.txt";
@@ -98,7 +100,7 @@ export async function inspectVideo(input: string, output: string, at?: number, s
 
     const selected = indices.map((i) => `eq(n\\,${i})`).join("+");
     const columns = Math.min(indices.length, 3);
-    const filter = at === undefined
+    const filter = requested?.length !== 1
       ? `select=${selected},scale=512:-1,tile=${columns}x${Math.ceil(indices.length / columns)}:nb_frames=${indices.length}:padding=4:margin=4:color=white`
       : `select=${selected}`;
     const staged = path.join(work, "preview.png");

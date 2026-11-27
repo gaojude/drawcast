@@ -37,7 +37,7 @@ Options
   --sheet                 snapshot: the steps (default all) on one picture, in a grid
   --motion                inspect: sample movement between the opening and ending frames
   --at <seconds>          snapshot: the video at that moment, with pointer and captions
-                          inspect: save the frame at that time to <video>.inspect.at<seconds>.png
+                          inspect: one full-size frame, or a sheet at up to 12 comma-separated times
   -h, --help, -v, --version
 
 Files are kept in ${cacheDir()} (set DRAWCAST_HOME to move them).`;
@@ -140,9 +140,10 @@ async function main(signal: AbortSignal): Promise<number> {
     case "inspect": {
       if (!file) throw new Error("Which MP4? Usage: drawcast inspect <video.mp4> [--at <seconds>] [-o <file>]");
       if (!existsSync(file)) throw new Error(`${file} does not exist.`);
-      const at = number(values.at, "at");
+      const requested = values.at?.trim().split(/\s*,\s*|\s+/).map(s => number(s, "at")!);
+      const at = requested?.length === 1 ? requested[0] : requested;
       const stem = path.join(path.dirname(file), path.parse(file).name);
-      const kind = values.motion ? ".motion" : at === undefined ? "" : `.at${at}`;
+      const kind = values.motion ? ".motion" : Array.isArray(at) ? ".times" : at === undefined ? "" : `.at${at}`;
       const output = values.output ?? `${stem}.inspect${kind}.png`;
       const times = await inspectVideo(file, output, at, signal, values.motion);
       console.log(`${output} (encoded frames at ${times.map((s) => Number(s.toFixed(3))).join(", ")} s)`);

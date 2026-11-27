@@ -4,7 +4,7 @@ Use the same CLI invocation that printed this guide for the commands below.
 
 1. Write a `lesson.drawcast.json`. Give each spoken idea a visible change.
 2. Run `drawcast snapshot lesson.drawcast.json --sheet`. Read the diagnostics and look at the step layouts. Revise if needed.
-3. Run `drawcast render lesson.drawcast.json` and return the MP4. To review movement, use `drawcast inspect lesson.mp4 --motion`. Omit `--motion` for evenly spaced frames or use `--at <seconds>` for one instant.
+3. Run `drawcast render lesson.drawcast.json` and return the MP4. Review movement with `drawcast inspect lesson.mp4 --motion`, or compare exact times on one sheet with `--at 2,2.5,3`. Omit both for evenly spaced frames.
 
 Video defaults to 1080p at 30 fps. Use `--width` and `--fps` to change it. Speech is cached. Leave `voice` unset for online narration with local fallback, or choose a built-in offline voice.
 
