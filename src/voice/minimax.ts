@@ -37,12 +37,23 @@ export const MINIMAX_VOICES: { name: string; language: "zh" | "en"; description:
 const SAMPLE_RATE = 32000;
 /** A long sentence takes a few seconds; one that takes a minute is not coming. */
 const TIMEOUT_MS = 60_000;
-const ATTEMPTS = 5;
+
+/**
+ * How long to wait before each new try. A rate limit counts requests per minute, and a new account's
+ * limit is low enough for one render to reach it, so those waits add up to more than a minute. Tests
+ * shorten them.
+ */
+export const RETRY_WAITS = {
+  transient: [1000, 2000, 4000, 8000],
+  rateLimit: [5000, 10000, 20000, 30000, 30000],
+};
 
 /** status codes: the key is not one this platform knows */
 const WRONG_KEY = new Set([1004, 2049]);
-/** status codes worth asking again for: unknown error, timeout, and the two rate limits */
-const TRANSIENT = new Set([1000, 1001, 1002, 1039]);
+/** status codes: requests or tokens per minute */
+const RATE_LIMIT = new Set([1002, 1039]);
+/** status codes worth asking again for: unknown error, timeout, and the rate limits */
+const TRANSIENT = new Set([1000, 1001, ...RATE_LIMIT]);
 
 const keyFile = () => path.join(configDir(), "minimax-api-key");
 
@@ -93,10 +104,12 @@ export function parseMinimaxVoice(spec: string): { voiceId: string; model: strin
 class MinimaxError extends Error {
   readonly code: number | undefined;
   readonly transient: boolean;
-  constructor(message: string, code: number | undefined, transient: boolean) {
+  readonly rateLimited: boolean;
+  constructor(message: string, code: number | undefined, transient: boolean, rateLimited = false) {
     super(message);
     this.code = code;
     this.transient = transient;
+    this.rateLimited = rateLimited;
   }
 }
 
@@ -126,22 +139,27 @@ async function post(host: string, key: string, body: string, signal?: AbortSigna
     reply = JSON.parse(await response.text());
   } catch {
     signal?.throwIfAborted();
-    throw new MinimaxError(`${host} answered HTTP ${response.status} without the expected JSON`, undefined, transientHttp);
+    throw new MinimaxError(`${host} answered HTTP ${response.status} without the expected JSON`, undefined, transientHttp, response.status === 429);
   }
   const code = reply.base_resp?.status_code;
   if (code === 0 && reply.data?.audio) return Buffer.from(reply.data.audio, "hex");
   const message = `${reply.base_resp?.status_msg || `HTTP ${response.status}`} (status ${code ?? "missing"})`;
-  throw new MinimaxError(message, code, transientHttp || (code !== undefined && TRANSIENT.has(code)));
+  const rateLimited = response.status === 429 || (code !== undefined && RATE_LIMIT.has(code));
+  throw new MinimaxError(message, code, rateLimited || transientHttp || (code !== undefined && TRANSIENT.has(code)), rateLimited);
 }
 
 /** Asks again, after a growing wait, while the trouble looks passing: a rate limit, a timeout, a dropped connection. */
-async function postWithRetries(host: string, key: string, body: string, signal?: AbortSignal): Promise<Buffer> {
-  for (let attempt = 1; ; attempt++) {
+async function postWithRetries(host: string, key: string, body: string, signal?: AbortSignal, onWait?: (e: MinimaxError) => void): Promise<Buffer> {
+  for (let attempt = 0; ; attempt++) {
     try {
       return await post(host, key, body, signal);
     } catch (e) {
-      if (!(e instanceof MinimaxError) || !e.transient || attempt >= ATTEMPTS) throw e;
-      await delay(1000 * 2 ** (attempt - 1), undefined, { signal });
+      if (!(e instanceof MinimaxError) || !e.transient) throw e;
+      const waits = e.rateLimited ? RETRY_WAITS.rateLimit : RETRY_WAITS.transient;
+      if (attempt >= waits.length) throw e;
+      onWait?.(e);
+      // a little jitter, so that sentences that were refused together are not asked for together again
+      await delay(waits[attempt] * (1 + Math.random() * 0.25), undefined, { signal });
     }
   }
 }
@@ -177,6 +195,13 @@ export async function openMinimaxVoice(spec: { voiceId: string; model: string },
 
   /** The address that takes the key, found by the first sentence; the others wait for it. */
   let ready: Promise<string> | undefined;
+  // said once, so that a render that slows down to the account's rate limit does not look stuck
+  let toldOfLimit = false;
+  const onWait = (e: MinimaxError) => {
+    if (!e.rateLimited || toldOfLimit) return;
+    toldOfLimit = true;
+    log(`  MiniMax's rate limit for this account was reached (${e.message}); waiting, then asking again`);
+  };
 
   return async (sentence) => {
     signal?.throwIfAborted();
@@ -192,12 +217,12 @@ export async function openMinimaxVoice(spec: { voiceId: string; model: string },
     });
     const context = { ...spec, source: found.source, hosts, sentence };
     try {
-      if (ready) return decode(await postWithRetries(await ready, found.key, body, signal));
+      if (ready) return decode(await postWithRetries(await ready, found.key, body, signal, onWait));
       let pcm: Buffer | undefined;
       ready = (async () => {
         for (const [i, host] of hosts.entries()) {
           try {
-            pcm = await postWithRetries(host, found.key, body, signal);
+            pcm = await postWithRetries(host, found.key, body, signal, onWait);
             log(`  MiniMax ${spec.model} at ${host}, key ${found.source === "MINIMAX_API_KEY" ? "from MINIMAX_API_KEY" : "saved by drawcast key"}`);
             return host;
           } catch (e) {

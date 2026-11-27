@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { minimaxKey, minimaxKeyStatus, openMinimaxVoice, parseMinimaxVoice, removeMinimaxKey, saveMinimaxKey } from "../src/voice/minimax.ts";
+import { RETRY_WAITS, minimaxKey, minimaxKeyStatus, openMinimaxVoice, parseMinimaxVoice, removeMinimaxKey, saveMinimaxKey } from "../src/voice/minimax.ts";
 import { resolveVoice } from "../src/voice/voice.ts";
 
 const KEY = "sk-api-test-0123456789abcdef-WXYZ";
@@ -142,14 +142,25 @@ test("MiniMax's refusals become messages that say what to do", async (t) => {
   }
 });
 
-test("a rate limit is waited out and the sentence asked for again", async (t) => {
+test("a rate limit is waited out, said once, and the sentence asked for again", async (t) => {
   isolated(t);
   process.env.MINIMAX_API_KEY = KEY;
+  const waits = { ...RETRY_WAITS };
+  RETRY_WAITS.rateLimit = [1, 1, 1];
+  RETRY_WAITS.transient = [1];
+  t.after(() => Object.assign(RETRY_WAITS, waits));
+
   let calls = 0;
-  t.mock.method(globalThis, "fetch", async () => (++calls === 1 ? reply(1002, "rate limit") : reply(0, "success", hexPcm(8192))));
-  const say = await openMinimaxVoice({ voiceId: "v", model: "m" }, () => {});
+  t.mock.method(globalThis, "fetch", async () => (++calls <= 2 ? reply(1002, "rate limit exceeded(RPM)") : reply(0, "success", hexPcm(8192))));
+  const logs = [];
+  const say = await openMinimaxVoice({ voiceId: "v", model: "m" }, (line) => logs.push(line));
   assert.deepEqual([...(await say("a.")).samples], [0.25]);
-  assert.equal(calls, 2);
+  assert.equal(calls, 3);
+  assert.equal(logs.filter((line) => /rate limit/.test(line)).length, 1);
+
+  // a limit that does not lift is given up on once the waits are used up
+  t.mock.method(globalThis, "fetch", async () => new Response("busy", { status: 429 }));
+  await assert.rejects(say("b."), /could not say "b\."/);
 });
 
 test("drawcast key minimax saves a piped key, shows only its end, and removes it", (t) => {
