@@ -23,7 +23,7 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          npm run changeset -- status --output="$RUNNER_TEMP/changesets.json"
+          npm run changeset -- status --since="$BASE_SHA" --output="$RUNNER_TEMP/changesets.json"
           while IFS= read -r -d '' path; do
             id=${path#.changeset/}
             if jq -e --arg id "${id%.md}" 'any(.changesets[]; .id == $id)' "$RUNNER_TEMP/changesets.json" > /dev/null; then
