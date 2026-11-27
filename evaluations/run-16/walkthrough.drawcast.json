@@ -1,0 +1,218 @@
+{
+  "drawcast": 1,
+  "voice": "maple",
+  "title": "One book, two landings",
+  "steps": [
+    {
+      "say": "The author gave this orange book a cover, spine and bookmark. The original film carried the artwork in a separate file. Now the whole illustration fits in the script.",
+      "do": [
+        {
+          "enter": "none",
+          "add": [
+            {
+              "id": "title",
+              "type": "text",
+              "x": 60,
+              "y": 40,
+              "text": "One book, two landings",
+              "fontSize": 46,
+              "fontFamily": "normal",
+              "strokeColor": "#223b48"
+            },
+            {
+              "id": "sub",
+              "type": "text",
+              "x": 620,
+              "y": 205,
+              "text": "One image, one moving object",
+              "fontSize": 32,
+              "fontFamily": "normal",
+              "strokeColor": "#223b48"
+            },
+            {
+              "id": "code",
+              "type": "text",
+              "x": 620,
+              "y": 315,
+              "text": "type   \"image\"\nsvg     \"<svg …>…</svg>\"",
+              "fontSize": 34,
+              "fontFamily": "normal",
+              "strokeColor": "#155a51"
+            },
+            {
+              "id": "book",
+              "type": "image",
+              "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"76\" height=\"100\" viewBox=\"0 0 76 100\">\n  <path d=\"M8 3H69Q73 3 73 7V95Q73 98 68 98H9Q3 98 3 93V9Q3 4 8 3Z\" fill=\"#f4a23c\" stroke=\"#733d20\" stroke-width=\"3\"/>\n  <path d=\"M14 5V96M16 86H70\" fill=\"none\" stroke=\"#955128\" stroke-width=\"2\"/>\n  <path d=\"M5 88H70V94H8Q5 94 5 91Z\" fill=\"#fff3d3\"/>\n  <path d=\"M58 4H65V25L61 22L58 25Z\" fill=\"#ad4936\"/>\n  <circle cx=\"41\" cy=\"49\" r=\"16\" fill=\"#fff0c8\"/>\n  <path d=\"M27 54Q32 49 36 51Q42 51 44 42Q50 43 48 49Q52 49 55 47Q53 57 45 59H31\" fill=\"#875630\"/>\n</svg>",
+              "x": 187,
+              "y": 175,
+              "width": 205,
+              "height": 270
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "say": "One movement carries the book to the sorting cart. The next carries it to the shelf. Its cover and bookmark follow the same path.",
+      "do": [
+        {
+          "at": "One movement",
+          "duration": 0,
+          "remove": [
+            "sub",
+            "code"
+          ]
+        },
+        {
+          "at": "One movement",
+          "duration": 0,
+          "update": {
+            "id": "book",
+            "width": 95,
+            "height": 125,
+            "x": 160,
+            "y": 295
+          }
+        },
+        {
+          "at": "One movement",
+          "enter": "none",
+          "add": [
+            {
+              "id": "a",
+              "type": "text",
+              "x": 155,
+              "y": 463,
+              "text": "Return bin",
+              "fontSize": 30,
+              "fontFamily": "normal",
+              "strokeColor": "#223b48"
+            },
+            {
+              "id": "b",
+              "type": "text",
+              "x": 571,
+              "y": 463,
+              "text": "Sorting cart",
+              "fontSize": 30,
+              "fontFamily": "normal",
+              "strokeColor": "#223b48"
+            },
+            {
+              "id": "c",
+              "type": "text",
+              "x": 985,
+              "y": 463,
+              "text": "Shelf",
+              "fontSize": 30,
+              "fontFamily": "normal",
+              "strokeColor": "#223b48"
+            }
+          ]
+        },
+        {
+          "at": "sorting cart",
+          "duration": 1.2,
+          "update": {
+            "id": "book",
+            "along": [
+              [
+                207,
+                357
+              ],
+              [
+                393,
+                270
+              ],
+              [
+                645,
+                357
+              ]
+            ]
+          }
+        },
+        {
+          "at": "next",
+          "duration": 1.3,
+          "update": {
+            "id": "book",
+            "along": [
+              [
+                645,
+                357
+              ],
+              [
+                827,
+                264
+              ],
+              [
+                1020,
+                357
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "say": "The first motion sheet sampled the flights but missed the resting book on the cart. The updated sheet adds the completed step for each sampled movement. Here the middle row shows the cart landing before the second flight.",
+      "do": [
+        {
+          "at": "first",
+          "duration": 0,
+          "remove": [
+            "book",
+            "a",
+            "b",
+            "c"
+          ]
+        },
+        {
+          "at": "first",
+          "enter": "none",
+          "add": [
+            {
+              "id": "review",
+              "type": "image",
+              "src": "arrivals.png",
+              "x": 48,
+              "y": 123,
+              "width": 825
+            },
+            {
+              "id": "details",
+              "type": "text",
+              "x": 894,
+              "y": 171,
+              "text": "Encoded arrivals",
+              "fontSize": 35,
+              "fontFamily": "normal",
+              "strokeColor": "#223b48"
+            },
+            {
+              "id": "values",
+              "type": "text",
+              "x": 894,
+              "y": 273,
+              "text": "Cart      7.567 s\nShelf   11.433 s",
+              "fontSize": 31,
+              "fontFamily": "normal",
+              "strokeColor": "#155a51"
+            },
+            {
+              "id": "cmd",
+              "type": "text",
+              "x": 894,
+              "y": 434,
+              "text": "inspect --motion",
+              "fontSize": 26,
+              "fontFamily": "normal",
+              "strokeColor": "#223b48"
+            }
+          ]
+        }
+      ],
+      "pause": 0.8
+    }
+  ]
+}

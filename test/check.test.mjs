@@ -234,6 +234,21 @@ test("an image with intrinsic dimensions can be an arrow endpoint", async () => 
   assert.match((await report({ do: [{ add: { ...img, height: -5 } }] })).errors[0], /positive number/);
 });
 
+test("an image takes exactly one file path or well-formed SVG document", async () => {
+  const image = { type: "image", id: "book", x: 20, y: 10 };
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0h5"/></svg>';
+  const checkImage = (source) => report({ do: [{ add: { ...image, ...source } }] });
+  assert.deepEqual(await checkImage({ svg: '<?xml version="1.0"?>\n<!-- book -->' + svg }), { errors: [], warnings: [] });
+  for (const [source, error] of [
+    [{}, /exactly one/], [{ src: "book.svg", svg }, /exactly one/],
+    [{ src: false }, /file path|path of an image/],
+    [{ svg: null }, /nonempty string/], [{ svg: "   " }, /nonempty string/],
+    [{ svg: "<svg/>" }, /SVG namespace/], [{ svg: '<rect xmlns="http://www.w3.org/2000/svg"/>' }, /<svg> root/],
+    [{ svg: svg.replace("</svg>", "</path>") }, /well-formed XML/], [{ svg: svg + svg }, /well-formed XML/],
+    [{ svg, width: 0 }, /positive number/],
+  ]) assert.match((await checkImage(source)).errors[0], error);
+});
+
 test("layout checks use the position reached at the end of a partial path", async () => {
   const { errors, warnings } = await report({ do: [
     { add: box("a", 0, { width: 40, height: 40 }) },

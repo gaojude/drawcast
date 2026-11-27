@@ -8,6 +8,7 @@
  */
 import { statSync } from "node:fs";
 import path from "node:path";
+import { DOMParser, onWarningStopParsing } from "@xmldom/xmldom";
 import { findPhrase, tokens, widthEm } from "../shared/text.ts";
 import { Plots, isPlotRef, type PlotRef } from "../shared/expr.ts";
 import { axesLayout, axesPoint, isAxisRef } from "../shared/axes.ts";
@@ -141,7 +142,7 @@ const ELEMENT_KEYS: Record<string, string[]> = {
   arrow: ["from", "to", "via", "rounded", "label", "fontSize", "fontFamily", "startArrowhead", "endArrowhead"],
   line: ["points", "closed", "rounded", "fn", "p", "domain", "range", "x", "y", "width", "height"],
   freedraw: ["points"],
-  image: ["x", "y", "width", "height", "src", "on"],
+  image: ["x", "y", "width", "height", "src", "svg", "on"],
   axes: ["x", "y", "width", "height", "domain", "range", "xTicks", "yTicks", "xLabel", "yLabel", "fontSize"],
 };
 const ENUMS: Record<string, readonly unknown[]> = {
@@ -453,18 +454,31 @@ export async function check(input: unknown, baseDir: string, geometry?: Resolved
       anchor = { align: el.textAlign, fontSize };
       box = { x: el.x! - alignOffset(size.w, el.textAlign), y: el.y!, ...size };
     } else if (type === "image") {
-      if (typeof el.src !== "string") return fail(where, `needs "src", the path of an image file.`);
-      if (!IMAGE_TYPES.includes(path.extname(el.src).toLowerCase())) return fail(where, `src must be one of ${IMAGE_TYPES.join(", ")}.`);
-      try {
-        if (!statSync(path.resolve(baseDir, el.src)).isFile()) return fail(where, `the image ${quote(el.src)} must be a file.`);
-      } catch {
-        return fail(where, `the image ${quote(el.src)} was not found or could not be accessed (paths are relative to the script).`);
+      if ((el.src === undefined) === (el.svg === undefined)) return fail(where, 'an image needs exactly one of "src" (a file path) or "svg" (an SVG document).');
+      if (el.svg !== undefined) {
+        if (typeof el.svg !== "string" || !el.svg.trim()) return fail(where, '"svg" must be a nonempty string containing an SVG document.');
+        try {
+          const root = new DOMParser({ onError: onWarningStopParsing }).parseFromString(el.svg, "application/xml").documentElement;
+          if (root?.localName !== "svg" || root.namespaceURI !== "http://www.w3.org/2000/svg") {
+            return fail(where, '"svg" needs an <svg> root in the SVG namespace. Add xmlns="http://www.w3.org/2000/svg" to the root.');
+          }
+        } catch {
+          return fail(where, '"svg" must contain well-formed XML. Check its tags, attributes and escaping.');
+        }
+      } else {
+        if (typeof el.src !== "string") return fail(where, '"src" must be the path of an image file.');
+        if (!IMAGE_TYPES.includes(path.extname(el.src).toLowerCase())) return fail(where, `src must be one of ${IMAGE_TYPES.join(", ")}.`);
+        try {
+          if (!statSync(path.resolve(baseDir, el.src)).isFile()) return fail(where, `the image ${quote(el.src)} must be a file.`);
+        } catch {
+          return fail(where, `the image ${quote(el.src)} was not found or could not be accessed (paths are relative to the script).`);
+        }
       }
       for (const key of ["width", "height"] as const) {
         if (el[key] !== undefined && !(isNumber(el[key]) && el[key] > 0)) fail(where, `${key} must be a positive number.`);
       }
       if (!need(["x", "y"])) return;
-      // without the file's proportions the height is unknown; overlap checks need both
+      // Without intrinsic proportions, overlap checks need both dimensions.
       if (isNumber(el.width) && isNumber(el.height)) box = { x: el.x!, y: el.y!, w: el.width, h: el.height };
     } else if (type === "arrow") {
       const ok = [checkRef(where, "from", el.from, true), checkRef(where, "to", el.to, true)];

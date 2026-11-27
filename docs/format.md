@@ -37,7 +37,8 @@ Older Drawcast videos and other MP4s can be inspected by timestamp or motion.
 
 `drawcast inspect lesson.mp4 --motion` saves a sheet with the first and last
 frames and up to four moments of sustained change above the caption strip. It prints their times
-in reading order. Use `--at 2.5` for a full-size frame or `--at 2,2.5,3` to compare up to twelve
+in reading order. In a movie with a step index, the sheet also shows the completed step following
+each sampled movement. Use `--at 2.5` for a full-size frame or `--at 2,2.5,3` to compare up to twelve
 times in one sheet. Tiles show distinct frames in chronological order.
 
 Node.js 22.12 or newer is required. The first use of a built-in voice downloads a speech model
@@ -220,7 +221,7 @@ Every element needs an `id`, unique in the script, and a `type`. Property names 
 | `line` | `points`: `[[x, y], ...]`; or a plot (below) | `closed` (joins the ends, so `backgroundColor` fills it), `rounded` |
 | `freedraw` | `points`: `[[x, y], ...]`, drawn as a smooth pen stroke through them | |
 | `axes` | `x`, `y`, `width`, `height`, `domain`, `range` | `xTicks`, `yTicks`, `xLabel`, `yLabel`, `fontSize` (see Plots) |
-| `image` | `x`, `y`, `src` (PNG, JPEG, GIF, WebP or SVG; path relative to the script) | `width`, `height` (default: the file's size and proportions) |
+| `image` | `x`, `y`, plus `src` (an image path) or `svg` (inline artwork) | `width`, `height` (default: the image's size and proportions) |
 
 `x`, `y` is the top left corner. Points are in canvas coordinates. On a `text` or `math` element,
 `"textAlign": "center"` makes `x` its middle and `"right"` its right edge, which places it without
@@ -245,6 +246,14 @@ A `label` is typed in the middle of a shape and wraps to its width (`\n` breaks 
 the middle of an arrow.
 `fontSize` (default 20; 16 on arrows) and `fontFamily` apply to labels too. Fonts are `"hand"` (the
 default handwriting, which covers Chinese), `"normal"` and `"code"`.
+
+For an illustrated object with several parts that travel together, put self-contained SVG markup
+in one image. Animate its id with `update.along`. Use `src` for a PNG, JPEG, GIF, WebP or SVG file
+relative to the script. An inline book with its cover and spine can be written as:
+
+```json
+{"id":"book","type":"image","x":160,"y":260,"width":72,"height":96,"svg":"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 48'><rect x='1' y='1' width='34' height='46' rx='3' fill='#f0ab57'/><path d='M7 2v44' stroke='#69472d'/></svg>"}
+```
 
 ### Style
 
@@ -379,7 +388,8 @@ needs layout: a fraction, limits on a sum, a root over an expression, a matrix.
 
 - Leave about 40 units between separate elements; `check` only warns when they overlap, so look.
 - An element may sit fully inside another (parts inside a container). Two elements that half overlap
-  get a warning.
+  get a warning. For an intentional layer such as a shelf plank over its back panel, review the
+  image and keep the overlap if it draws the intended object.
 - A label needs room: about 12 units per Latin letter and 20 per Chinese character at the default
   size, plus 20 of padding. Ellipses and diamonds hold less than their width suggests.
 - A shape that contains other elements should not have a label, because the label sits in its middle.

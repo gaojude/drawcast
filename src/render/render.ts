@@ -8,7 +8,7 @@ import { axesImageKey, axesSvg } from "../shared/axes.ts";
 import type { PrepareRequest } from "../player/main.ts";
 import { segmentFrames } from "../shared/h264.ts";
 import { prepareOutputFiles, publishFile } from "../shared/files.ts";
-import { DEFAULT_CANVAS, type Formula, OUTPUT_SCALE, type Script, type StepAudio } from "../shared/types.ts";
+import { DEFAULT_CANVAS, type Formula, imageKey, OUTPUT_SCALE, type Script, type StepAudio } from "../shared/types.ts";
 import { type Listener, SAMPLE_RATE, cachedNarration, estimateNarration, narrate } from "../voice/narrate.ts";
 import { resolveVoice } from "../voice/voice.ts";
 import { type Audio, pcm16 } from "../voice/wav.ts";
@@ -81,6 +81,7 @@ export async function typesetFormulas(script: Script): Promise<Record<string, Fo
 }
 
 const IMAGE_MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp", ".svg": "image/svg+xml" };
+const svgDataUrl = (svg: string) => `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 
 /** DRAWCAST_ENCODER=ffmpeg turns the browser's encoder down, to compare the two ways or to get past one that misbehaves. */
 const browserMayEncode = () => process.env.DRAWCAST_ENCODER !== "ffmpeg";
@@ -110,7 +111,8 @@ export async function playerRequest(loaded: Loaded, width: number | undefined, c
   const images: Record<string, string> = {};
   for (const step of script.steps) for (const action of step.do ?? []) {
     for (const el of [action.add ?? []].flat()) {
-      if (el.type === "axes") images[axesImageKey(el.id)] = `data:image/svg+xml;base64,${Buffer.from(axesSvg(el)).toString("base64")}`;
+      if (el.type === "axes") images[axesImageKey(el.id)] = svgDataUrl(axesSvg(el));
+      if (el.type === "image" && el.svg !== undefined) images[imageKey(el)] = svgDataUrl(el.svg);
     }
   }
   for (const src of imageSources(script)) {
