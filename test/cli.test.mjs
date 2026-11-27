@@ -106,13 +106,26 @@ test("SIGTERM interrupts model setup and snapshots without publishing staged fil
   const stop = 'const stop = () => process.platform === "win32" ? process.emit("SIGTERM", "SIGTERM") : process.kill(process.pid, "SIGTERM");';
   const output = path.join(dir, "existing.png");
   writeFileSync(output, "previous snapshot");
+  // Keep a real transfer in flight while POSIX delivers SIGTERM on a later event-loop turn.
+  const download = `
+    import { createServer } from "node:http";
+    const server = createServer((_req, res) => {
+      res.write("partial model");
+      server.close();
+      setImmediate(stop);
+    });
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const fetchModel = globalThis.fetch;
+    globalThis.fetch = (_url, options) => fetchModel("http://127.0.0.1:" + server.address().port, options);
+  `;
   const commands = [
-    { args: ["setup"], hook: 'globalThis.fetch = (_url, {signal}) => new Promise((_, reject) => { signal.addEventListener("abort", () => reject(signal.reason)); setImmediate(stop); });' },
+    { args: ["setup"], hook: download },
     { args: ["snapshot", sample, "-o", output], hook: 'import {watch} from "node:fs"; const w = watch(process.env.DRAWCAST_HOME, {persistent: false}, (_event, file) => { if (file?.startsWith(".drawcast-")) { w.close(); stop(); } });' },
   ];
   for (const { args, hook } of commands) {
     const preload = "data:text/javascript," + encodeURIComponent(stop + hook);
-    const result = spawnSync(process.execPath, ["--import", preload, cli, ...args], { encoding: "utf8", timeout: 15000, env: { ...process.env, DRAWCAST_HOME: dir } });
+    const result = spawnSync(process.execPath, ["--import", preload, cli, ...args], { encoding: "utf8", timeout: 15000, killSignal: "SIGKILL", env: { ...process.env, DRAWCAST_HOME: dir } });
+    assert.ifError(result.error);
     assert.equal(result.status, 143, result.stderr);
     assert.match(result.stderr, /Interrupted by SIGTERM/);
   }

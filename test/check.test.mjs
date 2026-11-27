@@ -18,7 +18,7 @@ test("the examples have no errors or warnings", async () => {
 
 test("the script in the guide is valid", async () => {
   const guide = readFileSync(path.join(import.meta.dirname, "../docs/format.md"), "utf8");
-  const scripts = [...guide.matchAll(/```json\n(\{\n  "drawcast"[\s\S]*?)```/g)].map((m) => JSON.parse(m[1]));
+  const scripts = [...guide.matchAll(/```json\r?\n(\{\r?\n  "drawcast"[\s\S]*?)```/g)].map((m) => JSON.parse(m[1]));
   assert.equal(scripts.length, 2);
   for (const s of scripts) assert.deepEqual(await check(s, examples), { errors: [], warnings: [] });
 });
