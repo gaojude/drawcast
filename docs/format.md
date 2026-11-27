@@ -439,8 +439,8 @@ A video holds attention when something on screen answers every sentence. Cheap w
   the most expressive, but each character spoken is billed to the person's own MiniMax account, so use
   one only when asked to. A spoken sentence is cached, so a render again pays only for new sentences.
   It needs an API key, which never goes in the script or the conversation: if `drawcast voices`
-  reports no key, ask the person to run `drawcast key minimax` in their own terminal and paste the key
-  there, then render. `@speech-2.8-turbo` after the voice id picks the cheaper model.
+  reports no key, ask the person to run `drawcast key minimax` (or `npx -y drawcast@latest key minimax`
+  when drawcast is not installed globally) in their own terminal and paste the key there, then render. `@speech-2.8-turbo` after the voice id picks the cheaper model.
 
 ## A longer example
 
