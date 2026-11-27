@@ -79,15 +79,15 @@ Microsoft's online voice. Name a built-in voice (`--voice lin`) to keep it all o
 ## Use
 
 ```
-drawcast guide [topic]         quick start, one topic, or the full reference
+drawcast guide [topic ...]     quick start, selected topics, or the full reference
 drawcast check <script>        errors and layout warnings, without rendering
 drawcast snapshot <script>     stills as PNG: --sheet (every step on one picture), --step 2,5, --at 12.5
 drawcast render <script>       the MP4 (-o out.mp4, --voice lin, --speed 1.1, --no-captions)
 drawcast voices                the voices
 ```
 
-`drawcast guide` prints a short authoring workflow. Use `guide plots` for function curves,
-`guide math` for LaTeX or `guide full` for the [full reference](docs/format.md).
+`drawcast guide` prints a short authoring workflow. Use `guide plots math` for function curves
+and LaTeX together, or `guide full` for the [full reference](docs/format.md).
 A script is a list of steps, each with narration (`say`) and actions (`do`). An action adds,
 updates or removes an Excalidraw element, moves an element along a path, sends a dot along an arrow,
 pulses something, moves the camera, or points at something, and its `at` names the phrase of the

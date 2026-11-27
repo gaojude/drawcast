@@ -4,6 +4,8 @@ import { test } from "node:test";
 import { check } from "../src/format/check.ts";
 import { expand } from "../src/format/expand.ts";
 import { parseFunction, plotPoints } from "../src/shared/expr.ts";
+import { axesImageKey } from "../src/shared/axes.ts";
+import { playerRequest } from "../src/render/render.ts";
 import { partialPolyline, polylineLength, reversePath, subPath } from "../src/player/motion.ts";
 
 const examples = path.join(import.meta.dirname, "../examples");
@@ -54,6 +56,25 @@ test("a line with fn becomes the points of the plot", () => {
   assert.ok(c.points.length > 50);
   assert.equal(c.fn, undefined);
   assert.equal(c.roughness, 0);
+});
+
+test("axes put tick marks and escaped titles at plot coordinates in an embedded image", async () => {
+  const spec = { id: "scale", type: "axes", x: 137, y: 184, width: 600, height: 334, domain: [-3, 3], range: [0, 1], xTicks: [-1, 0, 1], yTicks: [0, 0.5, 1], xLabel: "x < 1 & y", yLabel: "output", color: "blue" };
+  const steps = [{ say: "The scale.", do: [{ add: spec }] }];
+  assert.deepEqual(await report(...steps), { errors: [], warnings: [] });
+  const script = expand({ drawcast: 1, steps });
+  const { images } = await playerRequest({ script, baseDir: examples }, 640, true);
+  const svg = Buffer.from(images[axesImageKey("scale")].split(",")[1], "base64").toString();
+  assert.match(svg, /M200 334v5M300 334v5M400 334v5/);
+  assert.match(svg, /M0 334h-5M0 167h-5M0 0h-5/);
+  assert.match(svg, />x &lt; 1 &amp; y<\/text>/);
+  assert.match(svg, /stroke="#1971c2"/);
+  for (const [change, issue] of [[{ domain: [3, -3] }, /increasing/], [{ xTicks: [4] }, /xTicks/], [{ yTicks: [1, 1] }, /yTicks/], [{ xLabel: {} }, /single line/]]) {
+    assert.match((await report({ do: [{ add: { ...spec, ...change } }] })).errors.join("\n"), issue);
+  }
+  const warnings = await report({ say: "Labels.", do: [{ add: { ...spec, y: 240, xTicks: [0.111, 0.112] } }] });
+  assert.match(warnings.warnings.join("\n"), /x tick labels overlap/);
+  assert.match(warnings.warnings.join("\n"), /under the captions/);
 });
 
 test("a plot parameter updates references at the new value and keeps the same axes", async () => {

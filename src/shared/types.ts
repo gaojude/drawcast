@@ -2,7 +2,7 @@
 
 export type Point = [number, number];
 
-export type ElementType = "rectangle" | "ellipse" | "diamond" | "text" | "math" | "arrow" | "line" | "freedraw" | "image";
+export type ElementType = "rectangle" | "ellipse" | "diamond" | "text" | "math" | "arrow" | "line" | "freedraw" | "image" | "axes";
 
 export type FontName = "hand" | "normal" | "code";
 
@@ -82,6 +82,11 @@ export interface ElementSpec extends Style {
   domain?: [number, number];
   /** line with `fn`: the y values the box spans, [bottom, top]. Default: as far as the curve goes. */
   range?: [number, number];
+  /** axes: positions in data units and titles for the two linear scales. */
+  xTicks?: number[];
+  yTicks?: number[];
+  xLabel?: string;
+  yLabel?: string;
   /** How this element appears, when it is not the action's `enter`. */
   enter?: Enter;
   /** shapes and images: put the middle on a point of a plot, `["loss", -2.4]`, in place of x and y. */

@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { build } from "esbuild";
 import { findBrowser, launchBrowser } from "../src/render/browser.ts";
 import { expand } from "../src/format/expand.ts";
+import { axesImageKey, axesLayout } from "../src/shared/axes.ts";
 
 test("the browser timeline", async (t) => {
   if (!await findBrowser(false, () => {})) return t.skip("requires an installed Chrome, Chromium or Edge");
@@ -26,6 +27,22 @@ test("the browser timeline", async (t) => {
   const box = (id, x, extra = {}) => ({ type: "rectangle", id, x, y: 0, width: 100, height: 100, ...extra });
   const arrow = (from, to) => ({ type: "arrow", id: "edge", from, to });
   const at = (frame, id) => frame.elements.find((el) => el.id === id);
+
+  await t.test("axes keep their chart and label margins together when moving, fitting and removing", async () => {
+    const axes = { id: "scale", type: "axes", x: 30, y: 40, width: 400, height: 200, domain: [-2, 2], range: [0, 1], xTicks: [0, 1], yTicks: [0.5], xLabel: "input" };
+    const layout = axesLayout(axes);
+    const { frames: [shown, moved, gone] } = await run([{ do: [
+      { enter: "none", add: axes },
+      { at: 1, duration: 0, update: { id: "scale", dx: 50, opacity: 60 } },
+      { at: 1, duration: 0, camera: { fit: ["scale"], padding: 0 } },
+      { at: 2, duration: 0, remove: "scale" },
+    ] }], [0.5, 1.5, 2.5], [[axesImageKey("scale"), { fileId: "axes-vector" }]]);
+    const el = at(shown, "scale");
+    assert.deepEqual([el.type, el.fileId, el.x, el.y], ["image", "axes-vector", axes.x + layout.left, axes.y + layout.top]);
+    assert.deepEqual([at(moved, "scale").x, at(moved, "scale").opacity], [el.x + 50, 60]);
+    assert.ok(moved.view.w >= layout.width && moved.view.h >= layout.height);
+    assert.equal(at(gone, "scale"), undefined);
+  });
 
   await t.test("phase changes move a crest continuously and keep the sum in sync", async () => {
     const plot = (id, fn) => ({ type: "line", id, fn, p: 0, domain: [0, Math.PI * 2], range: [-2, 2], x: 0, y: 0, width: 192, height: 200 });

@@ -16,8 +16,9 @@ node dist/cli.js render examples/dns.drawcast.json
 and ffmpeg.
 
 `docs/guide.md` is the quick start printed by `drawcast guide`. `docs/format.md` supplies
-`guide full` and the named topics, which are extracted by heading. Keep the workflow and
-reference in the CLI so installed skills can pick up changes.
+`guide full` and the named topics. Give each topic a level-two heading and use level-three
+headings for its subsections. `drawcast guide plots math` prints those topics in order.
+Keep the workflow and reference in the CLI so installed skills can pick up changes.
 
 ## How a script becomes a video
 

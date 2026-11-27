@@ -1,0 +1,409 @@
+{
+  "drawcast": 1,
+  "title": "Fourteen pieces for two axes",
+  "cover": 2,
+  "steps": [
+    {
+      "say": "For a lesson on sigmoid gain, the author built the graph paper by hand. Two arrows, four ticks, and eight labels took fourteen elements before the curve could speak for itself.",
+      "do": [
+        {
+          "at": 0,
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "head",
+            "type": "text",
+            "x": 66,
+            "y": 46,
+            "text": "What it took to label one plot",
+            "fontSize": 44,
+            "strokeColor": "#20303b",
+            "fontFamily": "normal"
+          }
+        },
+        {
+          "at": "Two arrows",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "n1",
+            "type": "text",
+            "x": 70,
+            "y": 200,
+            "text": "2 arrows",
+            "fontSize": 58,
+            "strokeColor": "#20303b",
+            "fontFamily": "normal"
+          }
+        },
+        {
+          "at": "four ticks",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "n2",
+            "type": "text",
+            "x": 470,
+            "y": 200,
+            "text": "4 ticks",
+            "fontSize": 58,
+            "strokeColor": "#20303b",
+            "fontFamily": "normal"
+          }
+        },
+        {
+          "at": "eight labels",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "n3",
+            "type": "text",
+            "x": 820,
+            "y": 200,
+            "text": "8 labels",
+            "fontSize": 58,
+            "strokeColor": "#20303b",
+            "fontFamily": "normal"
+          }
+        },
+        {
+          "at": "fourteen",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "count",
+            "type": "text",
+            "x": 72,
+            "y": 400,
+            "text": "14 elements for the axes alone",
+            "fontSize": 42,
+            "strokeColor": "#00796b",
+            "fontFamily": "normal"
+          }
+        }
+      ]
+    },
+    {
+      "say": "Now one axes element draws the scale. The ticks take input and output values directly. Increasing gain steepens the sigmoid while its midpoint stays at one half.",
+      "do": [
+        {
+          "at": 0,
+          "duration": 0.15,
+          "remove": [
+            "n1",
+            "n2",
+            "n3",
+            "count"
+          ]
+        },
+        {
+          "at": 0,
+          "duration": 0.35,
+          "update": {
+            "id": "head",
+            "text": "One coordinate system for the axes and curve"
+          }
+        },
+        {
+          "at": "axes element",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "chart",
+            "type": "axes",
+            "x": 160,
+            "y": 205,
+            "width": 580,
+            "height": 280,
+            "domain": [
+              -3,
+              3
+            ],
+            "range": [
+              0,
+              1
+            ],
+            "xLabel": "input x",
+            "yLabel": "output",
+            "xTicks": [
+              -2,
+              -1,
+              0,
+              1,
+              2
+            ],
+            "yTicks": [
+              0,
+              0.5,
+              1
+            ]
+          }
+        },
+        {
+          "at": "scale",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "sig",
+            "type": "line",
+            "x": 160,
+            "y": 205,
+            "width": 580,
+            "height": 280,
+            "domain": [
+              -3,
+              3
+            ],
+            "range": [
+              0,
+              1
+            ],
+            "fn": "sigmoid(p*x)",
+            "p": 1,
+            "strokeColor": "#00796b",
+            "strokeWidth": 4
+          }
+        },
+        {
+          "at": "ticks",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "xt",
+            "type": "text",
+            "x": 820,
+            "y": 205,
+            "text": "xTicks",
+            "fontSize": 29,
+            "strokeColor": "#566c79",
+            "fontFamily": "code"
+          }
+        },
+        {
+          "at": "ticks",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "xv",
+            "type": "text",
+            "x": 820,
+            "y": 253,
+            "text": "[−2, −1, 0, 1, 2]",
+            "fontSize": 27,
+            "strokeColor": "#20303b",
+            "fontFamily": "code"
+          }
+        },
+        {
+          "at": "output values",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "yt",
+            "type": "text",
+            "x": 820,
+            "y": 327,
+            "text": "yTicks",
+            "fontSize": 29,
+            "strokeColor": "#566c79",
+            "fontFamily": "code"
+          }
+        },
+        {
+          "at": "output values",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "yv",
+            "type": "text",
+            "x": 820,
+            "y": 372,
+            "text": "[0, 0.5, 1]",
+            "fontSize": 27,
+            "strokeColor": "#20303b",
+            "fontFamily": "code"
+          }
+        },
+        {
+          "at": "Increasing gain",
+          "duration": 2.1,
+          "update": {
+            "id": "sig",
+            "p": 4
+          }
+        },
+        {
+          "at": "midpoint",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "mid",
+            "type": "ellipse",
+            "on": [
+              "sig",
+              0
+            ],
+            "width": 13,
+            "height": 13,
+            "backgroundColor": "#c2410c",
+            "strokeColor": "#c2410c",
+            "roughness": 0
+          }
+        }
+      ]
+    },
+    {
+      "say": "The author also opened six guide topics separately. Elements repeated the sections on plots and math. Ask for the same topics together now, and each section prints once. The original lookup returned fifty four hundred tokens.",
+      "do": [
+        {
+          "at": 0,
+          "duration": 0.15,
+          "remove": [
+            "chart",
+            "sig",
+            "mid",
+            "xt",
+            "xv",
+            "yt",
+            "yv"
+          ]
+        },
+        {
+          "at": 0,
+          "duration": 0.35,
+          "update": {
+            "id": "head",
+            "text": "Reading the topics for this lesson"
+          }
+        },
+        {
+          "at": "six guide topics",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "six",
+            "type": "text",
+            "x": 70,
+            "y": 157,
+            "text": "6 CLI invocations",
+            "fontSize": 36,
+            "strokeColor": "#566c79",
+            "fontFamily": "normal"
+          }
+        },
+        {
+          "at": "same topics",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "one",
+            "type": "text",
+            "x": 660,
+            "y": 157,
+            "text": "1 combined lookup",
+            "fontSize": 36,
+            "strokeColor": "#00796b",
+            "fontFamily": "normal"
+          }
+        },
+        {
+          "at": "together",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "cmd",
+            "type": "text",
+            "x": 70,
+            "y": 271,
+            "text": "drawcast guide plots math elements layout narration actions",
+            "fontSize": 28,
+            "strokeColor": "#20303b",
+            "fontFamily": "code"
+          }
+        },
+        {
+          "at": "fifty four hundred",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "old",
+            "type": "text",
+            "x": 70,
+            "y": 413,
+            "text": "5,400 tokens before deduplication",
+            "fontSize": 32,
+            "strokeColor": "#566c79",
+            "fontFamily": "normal"
+          }
+        }
+      ]
+    },
+    {
+      "say": "The preview estimated fifty five seconds. Speech brought the finished lesson down to forty six. Inspect reads the encoded video directly. A timestamp can take you to the moving curve, with the same captions and timing as the delivered file.",
+      "do": [
+        {
+          "at": 0,
+          "duration": 0.15,
+          "remove": [
+            "six",
+            "one",
+            "cmd",
+            "old"
+          ]
+        },
+        {
+          "at": 0,
+          "duration": 0.35,
+          "update": {
+            "id": "head",
+            "text": "Checking the finished lesson"
+          }
+        },
+        {
+          "at": "preview estimated",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "tim",
+            "type": "text",
+            "x": 70,
+            "y": 133,
+            "text": "54.9 s estimated   →   46.03 s encoded",
+            "fontSize": 30,
+            "strokeColor": "#566c79",
+            "fontFamily": "normal"
+          }
+        },
+        {
+          "at": "Inspect",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "ic",
+            "type": "text",
+            "x": 70,
+            "y": 208,
+            "text": "drawcast inspect sigmoid.mp4 --at 22",
+            "fontSize": 28,
+            "strokeColor": "#00796b",
+            "fontFamily": "code"
+          }
+        },
+        {
+          "at": "encoded video",
+          "enter": "fade",
+          "duration": 0.25,
+          "add": {
+            "id": "actual",
+            "type": "image",
+            "x": 280,
+            "y": 279,
+            "width": 600,
+            "height": 337.5,
+            "src": "gain-at-22.png"
+          }
+        }
+      ]
+    }
+  ]
+}

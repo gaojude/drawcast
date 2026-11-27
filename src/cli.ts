@@ -4,6 +4,7 @@ import { parseArgs } from "node:util";
 import { cacheDir, packageRoot } from "./paths.ts";
 import { findBrowser } from "./render/browser.ts";
 import { findFfmpeg } from "./render/encode.ts";
+import { inspectVideo } from "./render/inspect.ts";
 import { ScriptError, loadScript, parseSteps, renderSnapshot, renderVideo } from "./render/render.ts";
 import { ensureModels, modelsDir, modelsInstalled } from "./voice/models.ts";
 import { EDGE_PREFIX, EDGE_VOICES, edgeTtsStatus } from "./voice/edge.ts";
@@ -12,10 +13,11 @@ import { SPEAKERS, builtInVoices } from "./voice/voice.ts";
 const HELP = `drawcast: turn a narrated Excalidraw script into a video
 
 Usage
-  drawcast guide [topic]              quick start, a topic, or the full script reference
+  drawcast guide [topic ...]          quick start, selected topics, or the full script reference
   drawcast check <script>             find problems in a script without rendering it
   drawcast snapshot <script>          save the canvas as a PNG, to look at the layout
   drawcast render <script>            speak the narration and render the MP4
+  drawcast inspect <video.mp4>        sample the encoded video to <video>.inspect.png
   drawcast voices                     list the voices
   drawcast setup                      download what rendering needs, and report what is installed
 
@@ -34,6 +36,7 @@ Options
                           2,5,9 or 3-6 or all, a file each
   --sheet                 snapshot: the steps (default all) on one picture, in a grid
   --at <seconds>          snapshot: the video at that moment, with pointer and captions
+                          inspect: save the frame at that time to <video>.inspect.at<seconds>.png
   -h, --help, -v, --version
 
 Files are kept in ${cacheDir()} (set DRAWCAST_HOME to move them).`;
@@ -79,11 +82,11 @@ async function main(signal: AbortSignal): Promise<number> {
   if (values.help || !command) return console.log(HELP), command || values.help ? 0 : 1;
 
   const takesScript = ["check", "snapshot", "render"].includes(command);
-  const maxArgs = takesScript || command === "guide" ? 2 : 1;
-  if (positionals.length > maxArgs) throw new Error(`Unexpected argument for ${command}: ${positionals[maxArgs]}.`);
+  const maxArgs = takesScript || command === "inspect" ? 2 : 1;
+  if (command !== "guide" && positionals.length > maxArgs) throw new Error(`Unexpected argument for ${command}: ${positionals[maxArgs]}.`);
   const allowed = command === "render" || command === "snapshot"
     ? ["output", "width", "voice", "speed", "no-captions", "tts-command", ...(command === "snapshot" ? ["sheet", "at", "step"] : ["fps"])]
-    : [];
+    : command === "inspect" ? ["output", "at"] : [];
   for (const [option, value] of Object.entries(values)) {
     if (!allowed.includes(option)) throw new Error(`--${option} does not apply to ${command}.`);
     if (typeof value === "string" && !value.trim()) throw new Error(`--${option} needs a nonempty value.`);
@@ -91,17 +94,19 @@ async function main(signal: AbortSignal): Promise<number> {
 
   switch (command) {
     case "guide": {
-      const topics = ["plots", "math", "elements", "actions", "layout", "narration"];
-      if (file && file !== "full" && !topics.includes(file)) throw new Error(`Unknown guide topic "${file}". Choose ${topics.join(", ")} or full.`);
-      let guide = readFileSync(path.join(packageRoot, "docs", file ? "format.md" : "guide.md"), "utf8");
-      if (file && file !== "full") {
-        const lines = guide.split(/\r?\n/);
-        const start = lines.findIndex((line) => line.replace(/^#+ /, "").toLowerCase() === file);
-        if (start < 0) throw new Error(`Guide section "${file}" is missing.`);
-        const level = lines[start].indexOf(" ");
-        const nextHeading = new RegExp(`^#{1,${level}} `);
-        const end = lines.findIndex((line, i) => i > start && nextHeading.test(line));
-        guide = lines.slice(start, end < 0 ? undefined : end).join("\n").trimEnd() + "\n";
+      const topics = ["plots", "math", "elements", "actions", "layout", "narration", "full"];
+      const requested = new Set(positionals.slice(1));
+      for (const topic of requested) {
+        if (!topics.includes(topic)) throw new Error(`Unknown guide topic "${topic}". Choose from ${topics.join(", ")}.`);
+      }
+      let guide = readFileSync(path.join(packageRoot, "docs", requested.size ? "format.md" : "guide.md"), "utf8");
+      if (requested.size && !requested.has("full")) {
+        const sections = guide.replace(/\r\n/g, "\n").split(/(?=^## )/m);
+        guide = [...requested].map((topic) => {
+          const section = sections.find((s) => s.slice(0, s.indexOf("\n")).toLowerCase() === `## ${topic}`);
+          if (!section) throw new Error(`Guide section "${topic}" is missing.`);
+          return section.trimEnd();
+        }).join("\n\n") + "\n";
       }
       process.stdout.write(`drawcast ${version}\n\n${guide}`);
       return 0;
@@ -128,6 +133,17 @@ async function main(signal: AbortSignal): Promise<number> {
       // optional: without it a script left without a voice is spoken by the built-in one
       console.log(`edge-tts      ${edgeTtsStatus().description} (needed for online voices)`);
       return browser && ffmpeg ? 0 : 1;
+    }
+
+    case "inspect": {
+      if (!file) throw new Error("Which MP4? Usage: drawcast inspect <video.mp4> [--at <seconds>] [-o <file>]");
+      if (!existsSync(file)) throw new Error(`${file} does not exist.`);
+      const at = number(values.at, "at");
+      const stem = path.join(path.dirname(file), path.parse(file).name);
+      const output = values.output ?? `${stem}.inspect${at === undefined ? "" : `.at${at}`}.png`;
+      const times = await inspectVideo(file, output, at, signal);
+      console.log(`${output} (encoded frames at ${times.map((s) => Number(s.toFixed(3))).join(", ")} s)`);
+      return 0;
     }
 
     case "check":

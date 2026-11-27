@@ -214,13 +214,42 @@ the middle of an arrow.
 `fontSize` (default 20; 16 on arrows) and `fontFamily` apply to labels too. Fonts are `"hand"` (the
 default handwriting, which covers Chinese), `"normal"` and `"code"`.
 
-### Plots
+### Style
+
+| Property | Values | Default |
+| --- | --- | --- |
+| `color` | a colour name: sets `strokeColor`, and on a shape `backgroundColor` too, from the palette below | |
+| `strokeColor` | hex colour | `"#1e1e1e"` |
+| `backgroundColor` | hex colour or `"transparent"` | `"transparent"` |
+| `fillStyle` | `"solid"`, `"hachure"`, `"cross-hatch"`, `"zigzag"` | `"solid"` |
+| `strokeWidth` | 1 thin, 2 normal, 4 bold | 2 |
+| `strokeStyle` | `"solid"`, `"dashed"`, `"dotted"` | `"solid"` |
+| `roughness` | 0 clean, 1 hand-drawn, 2 sketchy | 1 |
+| `opacity` | 0 to 100 | 100 |
+| `angle` | radians, clockwise | 0 |
+
+Excalidraw's palette, which looks right together, by name for `color`: `red`, `orange`, `yellow`,
+`green`, `teal`, `blue`, `violet`, `pink`, `gray`, `black`. `"color": "blue"` is stroke `#1971c2` and
+fill `#a5d8ff`; give `strokeColor` or `backgroundColor` as well to override either. A label is drawn in
+its shape's stroke colour.
+
+## Plots
 
 A `line` with `fn` draws a function of x across the box `x`, `y`, `width`, `height`. `domain` is the
 x values the box spans, left to right; `range` the y values, bottom to top (default: as far as the
 curve goes; whatever leaves it is not drawn). Write `fn` as on paper: `x^2 / 4`, `2 sin(x) + 1`,
-`exp(-x^2)`, `sigmoid(3x)`, with `sin cos tan exp ln log sqrt abs sigmoid relu`, `pi` and `e`. Draw
-the axes yourself, as arrows.
+`exp(-x^2)`, `sigmoid(3x)`, with `sin cos tan exp ln log sqrt abs sigmoid relu`, `pi` and `e`.
+
+For labeled axes, add an `axes` element before the curve. Give both the same `x`, `y`, `width`,
+`height`, `domain` and `range`. Ticks are numbers in data units. The horizontal axis runs along
+the bottom and the vertical axis along the left. Leave space outside the plot for their labels.
+
+```json
+{ "add": { "id": "scale", "type": "axes", "x": 137, "y": 184, "width": 600, "height": 334, "domain": [-3, 3], "range": [0, 1], "xTicks": [-1, 0, 1], "yTicks": [0, 0.5, 1], "xLabel": "input x", "yLabel": "output" } }
+```
+
+Tick lists and titles are optional. Set `fontSize` (default 18), `color` or `strokeColor`, and
+`strokeWidth` on the axes when adding them. Move the complete set with `dx` and `dy`.
 
 A point of the curve is named by the plot and its x: `["loss", -2.4]`. It goes wherever a point
 `[x, y]` does: an arrow's `from`, `to` and `via`, a line's `points`, `point`, and `along`. Two points of
@@ -246,7 +275,7 @@ Plot coordinates used by later actions resolve at the preceding update's target 
 { "add": { "id": "slope", "type": "arrow", "from": ["loss", -2.9], "to": ["loss", -1.9], "color": "violet" } }
 ```
 
-### Math
+## Math
 
 A `math` element is a formula written in LaTeX, typeset the way a textbook prints it:
 
@@ -273,25 +302,6 @@ Text and labels are not LaTeX: `"label": "$\\alpha$"` is drawn as typed, and `ch
 Type the symbol itself instead, which works in any text, label and font: `α β θ λ π σ Δ Σ Ω`,
 `→ ← ↔ ⇒`, `≤ ≥ ≠ ≈ ± × ÷ √ ∞ ∈ ∑ ∫ ∂ ∇`, `x² xₙ ½`. Use a `math` element when the notation
 needs layout: a fraction, limits on a sum, a root over an expression, a matrix.
-
-### Style
-
-| Property | Values | Default |
-| --- | --- | --- |
-| `color` | a colour name: sets `strokeColor`, and on a shape `backgroundColor` too, from the palette below | |
-| `strokeColor` | hex colour | `"#1e1e1e"` |
-| `backgroundColor` | hex colour or `"transparent"` | `"transparent"` |
-| `fillStyle` | `"solid"`, `"hachure"`, `"cross-hatch"`, `"zigzag"` | `"solid"` |
-| `strokeWidth` | 1 thin, 2 normal, 4 bold | 2 |
-| `strokeStyle` | `"solid"`, `"dashed"`, `"dotted"` | `"solid"` |
-| `roughness` | 0 clean, 1 hand-drawn, 2 sketchy | 1 |
-| `opacity` | 0 to 100 | 100 |
-| `angle` | radians, clockwise | 0 |
-
-Excalidraw's palette, which looks right together, by name for `color`: `red`, `orange`, `yellow`,
-`green`, `teal`, `blue`, `violet`, `pink`, `gray`, `black`. `"color": "blue"` is stroke `#1971c2` and
-fill `#a5d8ff`; give `strokeColor` or `backgroundColor` as well to override either. A label is drawn in
-its shape's stroke colour.
 
 ## Layout
 

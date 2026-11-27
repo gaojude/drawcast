@@ -23,8 +23,17 @@ test("every advertised topic opens the corresponding section", () => {
   for (const topic of topics.filter((name) => name !== "full")) {
     assert.match(guideFor(topic), new RegExp(`^#{2,3} ${topic}$`, "im"));
   }
-  assert.doesNotMatch(guideFor("plots"), /^### Math$/m);
   assert.throws(() => guideFor("unknown"), /Unknown guide topic/);
+});
+
+test("one guide call prints the requested topics once and in order", () => {
+  const combined = guideFor("math", "elements", "plots", "elements");
+  assert.deepEqual([...combined.matchAll(/^## (.+)$/gm)].map((m) => m[1]), ["Math", "Elements", "Plots"]);
+  assert.match(combined, /^### Style$/m);
+  assert.match(combined, /\bfillStyle\b/);
+  assert.doesNotMatch(guideFor("elements"), /^## (Math|Plots)$/m);
+  assert.equal(guideFor("plots", "full", "elements"), guideFor("full"));
+  assert.throws(() => guideFor("plots", "full", "unknown"), /Unknown guide topic "unknown"/);
 });
 
 test("the skill only points at the guide of the latest release", () => {
