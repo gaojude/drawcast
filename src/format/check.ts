@@ -10,11 +10,12 @@ import { statSync } from "node:fs";
 import path from "node:path";
 import { findPhrase, tokens, widthEm } from "../shared/text.ts";
 import { Plots, isPlotRef, type PlotRef } from "../shared/expr.ts";
-import { type AxisRef, axesLayout, axesPoint, isAxisRef } from "../shared/axes.ts";
+import { axesLayout, axesPoint, isAxisRef } from "../shared/axes.ts";
 import { partialPolyline, rotatePath, type Pt } from "../player/motion.ts";
 import { arrowCourse, arrowLabelCenter, type ArrowEnd } from "../shared/arrows.ts";
-import { type Slice, separateSlices, sliceBounds } from "../shared/slice.ts";
-import { DEFAULT_CANVAS, type ElementSpec, type Formula, PALETTE, type Point, type Script, type ShapeCenter, type TextAlign, alignOffset, isShapeCenter } from "../shared/types.ts";
+import { type Slice, followingSlice, separateSlices, sliceBounds } from "../shared/slice.ts";
+import type { ResolvedGeometry } from "./expand.ts";
+import { DEFAULT_CANVAS, type ElementSpec, type Formula, PALETTE, type Point, type Script, type TextAlign, alignOffset, isShapeCenter } from "../shared/types.ts";
 
 export interface Report {
   errors: string[];
@@ -133,7 +134,7 @@ const STYLE = ["strokeColor", "backgroundColor", "fillStyle", "strokeWidth", "st
 const ELEMENT_KEYS: Record<string, string[]> = {
   rectangle: ["x", "y", "width", "height", "rounded", "label", "fontSize", "fontFamily", "on"],
   ellipse: ["x", "y", "width", "height", "label", "fontSize", "fontFamily", "on"],
-  slice: ["center", "radius", "start", "share", "label", "fontSize", "fontFamily"],
+  slice: ["center", "radius", "start", "after", "share", "label", "fontSize", "fontFamily"],
   diamond: ["x", "y", "width", "height", "rounded", "label", "fontSize", "fontFamily", "on"],
   text: ["x", "y", "text", "fontSize", "fontFamily", "textAlign"],
   math: ["x", "y", "tex", "fontSize", "textAlign"],
@@ -189,7 +190,7 @@ const LATEX = new RegExp(`\\\\(?:${TEX_COMMANDS})(?![a-zA-Z])|[\\^_]\\{|\\$(?![\
 /** A tab, line break or other control character: what JSON makes of `\t`, `\n`, `\f`, `\b` and `\r`. */
 const CONTROL = /[\u0000-\u001f]/;
 
-export async function check(input: unknown, baseDir: string, resolvedPoints?: WeakMap<AxisRef | ShapeCenter, Point>): Promise<Report> {
+export async function check(input: unknown, baseDir: string, geometry?: ResolvedGeometry): Promise<Report> {
   // MathJax is large and most scripts have no formulas, so it is loaded only for those that do
   const typeset: ((tex: string) => Formula) | null = JSON.stringify(input ?? null).includes('"type":"math"') ? (await import("../math/typeset.ts")).typeset : null;
   const errors: string[] = [];
@@ -271,7 +272,7 @@ export async function check(input: unknown, baseDir: string, resolvedPoints?: We
       if (!target?.box || !SHAPES.includes(target.type)) return fail(where, `${name} ${quote(v)} needs a rectangle, ellipse or diamond already on the canvas.`), null;
       const { x, y, w, h } = target.box;
       const center: Point = [x + w / 2, y + h / 2];
-      resolvedPoints?.set(v, center);
+      geometry?.set(v, center);
       return center;
     }
     if (!isAxisRef(v)) return null;
@@ -282,7 +283,7 @@ export async function check(input: unknown, baseDir: string, resolvedPoints?: We
       return fail(where, `${name} ${quote(v)} is outside the axes domain ${quote(spec.domain)} or range ${quote(spec.range)}.`), null;
     }
     const value = axesPoint(spec, offset, el.box, el.angle ?? 0, x, y);
-    resolvedPoints?.set(v, value);
+    geometry?.set(v, value);
     return value;
   };
   const used = new Set<string>();
@@ -395,6 +396,19 @@ export async function check(input: unknown, baseDir: string, resolvedPoints?: We
         }
       }
     } else if (type === "slice") {
+      if (el.after !== undefined) {
+        if (el.center !== undefined || el.radius !== undefined || el.start !== undefined) {
+          return fail(where, '"after" supplies the center, radius and start. Leave those properties out.');
+        }
+        if (typeof el.after !== "string" || !el.after) return fail(where, '"after" needs the id of a slice already on the canvas.');
+        if (!checkRef(where, "after", el.after)) return;
+        const previous = live.get(el.after)!;
+        const slice = previous.box && sliceAt(previous.box, previous);
+        if (!slice) return fail(where, `"after" needs a slice. ${quote(el.after)} is a ${previous.type}.`);
+        const placement = followingSlice(slice);
+        geometry?.set(value, placement);
+        el = { ...el, ...placement };
+      }
       if (!isPoint(el.center)) return fail(where, 'A slice needs "center": [x, y] in canvas coordinates.');
       if (!isNumber(el.radius) || el.radius <= 0 || !Number.isFinite(2 * el.radius)) return fail(where, 'A slice needs a positive finite radius.');
       if (!isNumber(el.share) || el.share <= 0 || el.share > 100) return fail(where, '"share" must be greater than 0 and at most 100 percent.');

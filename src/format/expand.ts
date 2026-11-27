@@ -9,9 +9,13 @@
  */
 import { type PlotRef, Plots, isPlotRef } from "../shared/expr.ts";
 import { type AxisRef, isAxisRef } from "../shared/axes.ts";
+import type { followingSlice } from "../shared/slice.ts";
 import { type Action, type ElementSpec, PALETTE, type Point, type Script, type ShapeCenter, type Style, type UpdateSpec, isShapeCenter } from "../shared/types.ts";
 
 const FILLED = new Set(["rectangle", "ellipse", "diamond", "slice"]);
+
+/** Geometry captured at the action that reads a reference, keyed by its source JSON object or array. */
+export type ResolvedGeometry = WeakMap<object, Point | ReturnType<typeof followingSlice>>;
 
 function colored<T extends Style>(spec: T, fillable: boolean): T {
   if (!spec.color) return spec;
@@ -20,13 +24,13 @@ function colored<T extends Style>(spec: T, fillable: boolean): T {
   return { ...rest, strokeColor: spec.strokeColor ?? stroke, ...(fillable ? { backgroundColor: spec.backgroundColor ?? fill } : {}) } as T;
 }
 
-export function expand(script: Script, resolvedPoints?: WeakMap<AxisRef | ShapeCenter, Point>): Script {
+export function expand(script: Script, geometry?: ResolvedGeometry): Script {
   const fillable = new Set<string>();
   const plots = new Plots();
   // Positions captured by the checker include moves and resizes preceding this action.
   const resolved = (p: AxisRef | ShapeCenter): Point => {
-    const value = resolvedPoints?.get(p);
-    if (!value) throw new Error(`Unresolved point ${JSON.stringify(p)}.`);
+    const value = geometry?.get(p);
+    if (!Array.isArray(value)) throw new Error(`Unresolved point ${JSON.stringify(p)}.`);
     return value;
   };
   const point = (p: Point | PlotRef | AxisRef | ShapeCenter): Point => isAxisRef(p) || isShapeCenter(p) ? resolved(p) : isPlotRef(p) ? plots.point(p)! : p;
@@ -39,6 +43,12 @@ export function expand(script: Script, resolvedPoints?: WeakMap<AxisRef | ShapeC
   const ref = <T>(r: T): T => (isPlotRef(r) || isAxisRef(r) || isShapeCenter(r) ? (point(r) as T) : r);
 
   const element = (spec: ElementSpec): ElementSpec => {
+    if (spec.after !== undefined) {
+      const placement = geometry?.get(spec);
+      if (!placement || Array.isArray(placement)) throw new Error(`Unresolved slice after ${JSON.stringify(spec.after)}.`);
+      const { after, ...rest } = spec;
+      spec = { ...rest, ...placement };
+    }
     let out = colored(spec, FILLED.has(spec.type) || (spec.type === "line" && !!spec.closed));
     if (out.type === "line" && out.fn) {
       const segments = plots.add(out);

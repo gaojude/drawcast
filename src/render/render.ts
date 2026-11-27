@@ -3,12 +3,12 @@ import { mkdtemp, open, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { check, type Report } from "../format/check.ts";
-import { expand } from "../format/expand.ts";
-import { type AxisRef, axesImageKey, axesSvg } from "../shared/axes.ts";
+import { expand, type ResolvedGeometry } from "../format/expand.ts";
+import { axesImageKey, axesSvg } from "../shared/axes.ts";
 import type { PrepareRequest } from "../player/main.ts";
 import { segmentFrames } from "../shared/h264.ts";
 import { prepareOutputFiles, publishFile } from "../shared/files.ts";
-import { DEFAULT_CANVAS, type Formula, OUTPUT_SCALE, type Point, type Script, type ShapeCenter, type StepAudio } from "../shared/types.ts";
+import { DEFAULT_CANVAS, type Formula, OUTPUT_SCALE, type Script, type StepAudio } from "../shared/types.ts";
 import { type Listener, SAMPLE_RATE, cachedNarration, estimateNarration, narrate } from "../voice/narrate.ts";
 import { resolveVoice } from "../voice/voice.ts";
 import { type Audio, pcm16 } from "../voice/wav.ts";
@@ -46,11 +46,11 @@ export async function loadScript(file: string, signal?: AbortSignal): Promise<Lo
     const hint = /escape/i.test(message) ? `. In JSON a backslash is written twice: "\\\\alpha", not "\\alpha".` : "";
     throw new Error(`Could not read ${file}: ${message}${hint}`);
   }
-  const resolvedPoints = new WeakMap<AxisRef | ShapeCenter, Point>();
-  const report = await check(parsed, baseDir, resolvedPoints);
+  const geometry: ResolvedGeometry = new WeakMap();
+  const report = await check(parsed, baseDir, geometry);
   signal?.throwIfAborted();
   if (report.errors.length) throw new ScriptError(report);
-  return { script: expand(parsed as Script, resolvedPoints), sourceFile: path.resolve(file), baseDir, report };
+  return { script: expand(parsed as Script, geometry), sourceFile: path.resolve(file), baseDir, report };
 }
 
 /** Every formula the script draws, typeset and keyed by its LaTeX. */
