@@ -2,6 +2,10 @@
 
 Five fresh authors used the local CLI and the skill shipped with it. Each ran a different prompt, made a narrated MP4 and inspected it. The first trial started at `48814b6` on main. Each later trial started from the preceding PR. The fifth produced zero actionable findings for its prompt.
 
+The retrospective follows the first wave artifact from its timed trace to the merged fix, then shows how later prompts exercised each change. [Watch the narrated MP4](improvement-loop/how-we-improved-drawcast.mp4) · [Editable Drawcast script](improvement-loop/how-we-improved-drawcast.drawcast.json)
+
+The wave close-up comes from frame 564 (18.800 s) of a 1080p30 replay of the first sample. The GitHub image shows the merged wave PR. [Wave PR #10](https://github.com/gaojude/drawcast/pull/10) · [Sigmoid #11](https://github.com/gaojude/drawcast/pull/11) · [Thermostat #12](https://github.com/gaojude/drawcast/pull/12) · [Capacitor #13](https://github.com/gaojude/drawcast/pull/13) · [Lost acknowledgment #14](https://github.com/gaojude/drawcast/pull/14)
+
 | Trial | Author wall time | Render wall time | Outcome | Evidence |
 | --- | ---: | ---: | --- | --- |
 | [1 · Wave interference](run-01/trace.md) | 184.253 s | 12.444 s | Animated plot parameters, a shorter guide and less scene serialization | [Video](run-01/walkthrough.mp4) · [Trace](run-01/tools.jsonl) |
