@@ -29,7 +29,8 @@ shows the caption area. Use `--step 4,7` to look more closely at selected steps.
 
 After rendering, `drawcast inspect lesson.mp4 --motion` saves a sheet with the first and last
 frames and up to four moments of sustained change above the caption strip. It prints their times
-in reading order. Use `--at <seconds>` for a full-size frame at a specific instant.
+in reading order. Use `--at 2.5` for a full-size frame or `--at 2,2.5,3` to compare up to twelve
+times in one sheet. Tiles show distinct frames in chronological order.
 
 Node.js 22.12 or newer is required. The first use of a built-in voice downloads a speech model
 of about 365 MB. `drawcast setup` can download it ahead of time.
@@ -279,6 +280,13 @@ A point of the curve is named by the plot and its x: `["loss", -2.4]`. It goes w
 one plot in a row are the stretch of curve between them, so `"along": [["loss", -2.4], ["loss", 0]]`
 rolls something down the curve. `"on": ["loss", -2.4]` in place of `x` and `y` puts a shape's middle
 on the curve.
+
+For a straight chord between two points on the same plot, use an arrow with its head removed.
+For example, the following draws a level line between equal heights on a symmetric track.
+
+```json
+{ "add": { "id": "level", "type": "arrow", "from": ["track", -2.4], "to": ["track", 2.4], "endArrowhead": null, "strokeStyle": "dashed" } }
+```
 
 For a curve that changes shape, use a number named `p` in the expression. Set its initial
 `p` and a fixed `range` on the plot. Animate `p` on the existing id, or target a list of

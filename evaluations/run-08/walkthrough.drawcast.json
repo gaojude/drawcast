@@ -1,0 +1,203 @@
+{
+  "drawcast": 1,
+  "voice": "maple",
+  "steps": [
+    {
+      "say": "A physics author wanted to compare the bead's speed on a curved track. The dashed line joins its two turning points. Their heights match.",
+      "do": [
+        {
+          "enter": "none",
+          "add": [
+            {
+              "id": "title",
+              "type": "text",
+              "x": 124,
+              "y": 48,
+              "text": "Measuring the speed of a bead",
+              "fontFamily": "normal",
+              "fontSize": 44,
+              "strokeColor": "#243b4f"
+            },
+            {
+              "id": "track",
+              "type": "line",
+              "fn": "x^2",
+              "domain": [
+                -3,
+                3
+              ],
+              "range": [
+                0,
+                9
+              ],
+              "x": 205,
+              "y": 180,
+              "width": 870,
+              "height": 330,
+              "strokeWidth": 4,
+              "roughness": 0,
+              "strokeColor": "#414e65"
+            },
+            {
+              "id": "chord",
+              "type": "arrow",
+              "from": [
+                "track",
+                -2.4
+              ],
+              "to": [
+                "track",
+                2.4
+              ],
+              "endArrowhead": null,
+              "strokeStyle": "dashed",
+              "roughness": 0,
+              "strokeColor": "#367487"
+            },
+            {
+              "id": "bead",
+              "type": "ellipse",
+              "on": [
+                "track",
+                -2.4
+              ],
+              "width": 38,
+              "height": 38,
+              "color": "orange"
+            },
+            {
+              "id": "note",
+              "type": "text",
+              "x": 128,
+              "y": 550,
+              "text": "A straight chord joins two plot coordinates.",
+              "fontFamily": "normal",
+              "fontSize": 30,
+              "strokeColor": "#243b4f"
+            }
+          ]
+        },
+        {
+          "at": "two turning points",
+          "pulse": "chord"
+        }
+      ]
+    },
+    {
+      "say": "The guide now shows how to draw the chord from the endpoints alone. The same two plot points can guide a bead along the curve.",
+      "do": [
+        {
+          "at": "endpoints",
+          "update": {
+            "id": "note",
+            "text": "Straight chord: two endpoints, arrowhead removed"
+          }
+        },
+        {
+          "at": "guide a bead",
+          "duration": 2.4,
+          "update": {
+            "id": "bead",
+            "along": [
+              [
+                "track",
+                -2.4
+              ],
+              [
+                "track",
+                2.4
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "say": "To compare speed, the author decoded ten frames separately, half a second apart. Watch the middle row. The orange bead covers much more distance near the bottom.",
+      "do": [
+        {
+          "at": 0,
+          "remove": [
+            "bead",
+            "chord",
+            "track"
+          ]
+        },
+        {
+          "at": 0,
+          "add": {
+            "id": "sheet",
+            "type": "image",
+            "src": "bead-times.png",
+            "x": 160,
+            "y": 105,
+            "width": 581,
+            "height": 439
+          },
+          "enter": "fade"
+        },
+        {
+          "at": 0,
+          "update": {
+            "id": "title",
+            "text": "Compare the same half-second intervals"
+          }
+        },
+        {
+          "at": 0,
+          "update": {
+            "id": "note",
+            "text": "10 individual inspections    5.344 s"
+          }
+        },
+        {
+          "at": "middle row",
+          "point": [
+            450,
+            282
+          ]
+        },
+        {
+          "at": "much more",
+          "add": {
+            "id": "distance",
+            "type": "text",
+            "x": 775,
+            "y": 245,
+            "text": "0.5 s per interval",
+            "fontFamily": "normal",
+            "fontSize": 31,
+            "strokeColor": "#243b4f"
+          },
+          "enter": "fade"
+        }
+      ]
+    },
+    {
+      "say": "The inspector now takes a list of exact times. One command decodes all ten into a sheet in just over half a second. Both measurements used the original video.",
+      "do": [
+        {
+          "at": "list",
+          "update": {
+            "id": "title",
+            "text": "Inspect several exact times together"
+          }
+        },
+        {
+          "at": "One command",
+          "update": {
+            "id": "note",
+            "text": "10 individual inspections    5.344 s       One sheet    0.567 s"
+          }
+        },
+        {
+          "at": "original",
+          "update": {
+            "id": "distance",
+            "text": "Same encoded MP4"
+          }
+        }
+      ]
+    }
+  ]
+}

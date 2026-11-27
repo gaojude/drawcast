@@ -38,6 +38,14 @@ test("inspect samples the encoded video in display order and extracts the frame 
     assert.equal(readFileSync(png).readUInt32BE(16), 32);
   }
   const custom = path.join(dir, "custom.png");
+  const batch = run(input, "--at", "0.7,0.21,0.22");
+  assert.equal(batch.status, 0, batch.stderr);
+  assert.match(batch.stdout, /lesson 1\.inspect\.times\.png .*0\.2, 0\.7 s/);
+  const batchFile = path.join(dir, "lesson 1.inspect.times.png");
+  assert.equal(readFileSync(batchFile).readUInt32BE(16), 1036);
+  for (const [column, frame] of [2, 7].entries()) {
+    assert.ok(Math.abs(pixels(batchFile, `crop=2:2:${260 + 516 * column}:196`)[0] - expected[frame * 12]) <= 1);
+  }
   const previous = "previous output";
   writeFileSync(custom, previous);
   for (const [args, message] of [
@@ -45,6 +53,9 @@ test("inspect samples the encoded video in display order and extracts the frame 
     [[input, "--at=-1"], /nonnegative/],
     [[input, "--at", "abc"], /--at must be a number/],
     [[input, "--at", "0.3", "--motion"], /Choose --motion/],
+    [[input, "--at", "0.1,1.1"], /video duration/],
+    [[input, "--at", "0.1,,0.3"], /--at must be a number/],
+    [[input, "--at", Array(13).fill("0").join(",")], /twelve times/],
     [[input, "--sheet"], /--sheet does not apply/],
     [[custom], /Could not inspect/],
   ]) {
