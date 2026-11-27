@@ -34,6 +34,7 @@ Options
                           use cached timing from that command.
   --step <n>              snapshot: the canvas as step n is done (every action finished). Several:
                           2,5,9 or 3-6 or all, a file each
+                          inspect: encoded frames for those steps in a Drawcast MP4, up to 12 per sheet
   --sheet                 snapshot: the steps (default all) on one picture, in a grid
   --motion                inspect: sample movement between the opening and ending frames
   --at <seconds>          snapshot: the video at that moment, with pointer and captions
@@ -88,7 +89,7 @@ async function main(signal: AbortSignal): Promise<number> {
   if (command !== "guide" && positionals.length > maxArgs) throw new Error(`Unexpected argument for ${command}: ${positionals[maxArgs]}.`);
   const allowed = command === "render" || command === "snapshot"
     ? ["output", "width", "voice", "speed", "no-captions", "tts-command", ...(command === "snapshot" ? ["sheet", "at", "step"] : ["fps"])]
-    : command === "inspect" ? ["output", "at", "motion", "width"] : [];
+    : command === "inspect" ? ["output", "at", "motion", "step", "width"] : [];
   for (const [option, value] of Object.entries(values)) {
     if (!allowed.includes(option)) throw new Error(`--${option} does not apply to ${command}.`);
     if (typeof value === "string" && !value.trim()) throw new Error(`--${option} needs a nonempty value.`);
@@ -138,16 +139,21 @@ async function main(signal: AbortSignal): Promise<number> {
     }
 
     case "inspect": {
-      if (!file) throw new Error("Which MP4? Usage: drawcast inspect <video.mp4> [--at <seconds>] [-o <file>]");
+      if (!file) throw new Error("Which MP4? Usage: drawcast inspect <video.mp4> [--step <n> | --at <seconds> | --motion] [-o <file>]");
       if (!existsSync(file)) throw new Error(`${file} does not exist.`);
       const requested = values.at?.trim().split(/\s*,\s*|\s+/).map(s => number(s, "at")!);
       const at = requested?.length === 1 ? requested[0] : requested;
       const stem = path.join(path.dirname(file), path.parse(file).name);
-      const kind = values.motion ? ".motion" : Array.isArray(at) ? ".times" : at === undefined ? "" : `.at${at}`;
+      const stepKind = /^\d+$/.test(values.step?.trim() ?? "") ? `.step${Number(values.step)}` : ".steps";
+      const kind = values.step !== undefined ? stepKind : values.motion ? ".motion" : Array.isArray(at) ? ".times" : at === undefined ? "" : `.at${at}`;
       const output = values.output ?? `${stem}.inspect${kind}.png`;
-      const { times, duration, frames, dimensions, audioCodec } = await inspectVideo(file, output, at, signal, values.motion, number(values.width, "width"));
+      const { files, duration, frames, dimensions, audioCodec } = await inspectVideo(file, output, { at, signal, motion: values.motion, width: number(values.width, "width"), step: values.step });
       console.log([`${Number(duration.toFixed(3))} s`, dimensions, `${frames} frames`, `${Number((frames / duration).toFixed(3))} fps average`, audioCodec ? `${audioCodec} audio` : "no audio track"].filter(Boolean).join(", "));
-      console.log(`${output} (encoded frames at ${times.map((s) => Number(s.toFixed(3))).join(", ")} s)`);
+      for (const { file, times, steps } of files) {
+        const seconds = times.map(s => Number(s.toFixed(3)));
+        const shows = steps ? steps.map((ns, i) => `step${ns.length === 1 ? "" : "s"} ${ns.join(", ")} at ${seconds[i]} s`).join("; ") : `encoded frames at ${seconds.join(", ")} s`;
+        console.log(`${file} (${shows})`);
+      }
       return 0;
     }
 

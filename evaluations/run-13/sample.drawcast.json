@@ -1,0 +1,50 @@
+{
+  "drawcast": 1,
+  "title": "100 new library books",
+  "voice": "maple",
+  "canvas": { "width": 1280, "height": 720, "background": "#fffefb" },
+  "steps": [
+    {
+      "say": "The library has a hundred new books. Each book fills one percent of this circle.",
+      "do": [
+        { "at": 0, "enter": "none", "add": { "id": "title", "type": "text", "x": 80, "y": 36, "text": "100 new library books", "fontSize": 48, "strokeColor": "#172d32" } },
+        { "at": "hundred", "duration": 0.62, "add": { "id": "whole", "type": "ellipse", "x": 114, "y": 144, "width": 432, "height": 432, "strokeColor": "#a2afaa", "backgroundColor": "#f2f4ef", "roughness": 0 } },
+        { "at": "Each book", "duration": 0.5, "add": { "id": "unit", "type": "text", "x": 634, "y": 277, "text": "1 book = 1% of the circle", "fontSize": 32, "strokeColor": "#475d61" } }
+      ]
+    },
+    {
+      "say": "Fiction takes forty of the hundred books.",
+      "do": [
+        { "at": "Fiction", "duration": 0.65, "add": { "id": "fiction", "type": "slice", "center": [330, 360], "radius": 216, "share": 40, "label": "Fiction\n40%", "fontSize": 27, "strokeColor": "#183e62", "backgroundColor": "#a8cfeb", "roughness": 0 } }
+      ]
+    },
+    {
+      "say": "History fills the next thirty-five places.",
+      "do": [
+        { "at": "History", "duration": 0.65, "add": { "id": "history", "type": "slice", "after": "fiction", "share": 35, "label": "History\n35%", "fontSize": 27, "strokeColor": "#105445", "backgroundColor": "#a0dbc6", "roughness": 0 } }
+      ]
+    },
+    {
+      "say": "Science adds the last twenty-five books.",
+      "do": [
+        { "at": "Science", "duration": 0.65, "add": { "id": "science", "type": "slice", "after": "history", "share": 25, "label": "Science\n25%", "fontSize": 27, "strokeColor": "#6b410d", "backgroundColor": "#f7cd86", "roughness": 0 } }
+      ]
+    },
+    {
+      "say": "Put history and science together. Thirty-five plus twenty-five gives us sixty books.",
+      "do": [
+        { "at": "Put", "duration": 0.15, "remove": "unit" },
+        { "at": "history and science", "duration": 0.5, "add": { "id": "group", "type": "text", "x": 634, "y": 209, "text": "History + science", "fontSize": 33, "strokeColor": "#172d32" } },
+        { "at": "Thirty-five", "duration": 0.63, "add": { "id": "sum", "type": "text", "x": 634, "y": 263, "text": "35 + 25 = 60 books", "fontSize": 41, "strokeColor": "#185947" } }
+      ]
+    },
+    {
+      "say": "Compare those sixty with the forty fiction books. That's twenty more books for history and science together.",
+      "do": [
+        { "at": "forty fiction", "duration": 0.6, "add": { "id": "difference", "type": "text", "x": 634, "y": 368, "text": "60 − 40 = 20", "fontSize": 37, "strokeColor": "#172d32" } },
+        { "at": "twenty more", "duration": 0.65, "add": { "id": "conclusion", "type": "text", "x": 634, "y": 425, "text": "20 more than fiction", "fontSize": 43, "strokeColor": "#185947" } }
+      ],
+      "pause": 1.2
+    }
+  ]
+}

@@ -27,7 +27,14 @@ Follow `drawcast guide` for the authoring workflow. Use the same CLI invocation 
 `check` gives the same diagnostics without opening a browser. The shaded strip on the sheet
 shows the caption area. Use `--step 4,7` to look more closely at selected steps.
 
-After rendering, `drawcast inspect lesson.mp4 --motion` saves a sheet with the first and last
+After rendering, `drawcast inspect lesson.mp4 --step all` samples the encoded frame at each
+step's finish using the actual narration schedule stored in the MP4. Select a step, list or range
+with `--step 3`, `--step 2,5` or `--step 2-5`. When steps overlap, inspection prefers the
+last available frame before the next step starts. Closely spaced steps can share a frame.
+Inspection prints the step and timestamp for each tile and splits long selections across sheets.
+Older Drawcast videos and other MP4s can be inspected by timestamp or motion.
+
+`drawcast inspect lesson.mp4 --motion` saves a sheet with the first and last
 frames and up to four moments of sustained change above the caption strip. It prints their times
 in reading order. Use `--at 2.5` for a full-size frame or `--at 2,2.5,3` to compare up to twelve
 times in one sheet. Tiles show distinct frames in chronological order.
@@ -256,11 +263,13 @@ its shape's stroke colour.
 
 Place the first slice with a `center` and `radius`. Give each following slice `after` with
 the previous slice's id. It uses that circle and begins where its neighbor ends.
-Each `share` is a percentage of the whole. This complete example reveals two labeled slices:
+Each `share` is a percentage of the whole. To show the unallocated part during the reveal,
+start with a neutral 100% slice and build the colored slices on top:
 
 ```json
-{"drawcast":1,"voice":"maple","steps":[{"say":"Sales make up three quarters. Support accounts for one quarter.","do":[
-  {"at":"Sales","add":{"id":"sales","type":"slice","center":[540,320],"radius":205,"share":75,"color":"blue","label":"Sales\n75%"}},
+{"drawcast":1,"voice":"maple","steps":[{"say":"The circle shows the whole team. Sales make up three quarters. Support accounts for one quarter.","do":[
+  {"at":"circle","enter":"none","add":{"id":"whole","type":"slice","center":[540,320],"radius":205,"share":100,"color":"gray"}},
+  {"at":"Sales","add":{"id":"sales","type":"slice","after":"whole","share":75,"color":"blue","label":"Sales\n75%"}},
   {"at":"Support","add":{"id":"support","type":"slice","after":"sales","share":25,"color":"teal","label":"Support\n25%"}}
 ]}]}
 ```

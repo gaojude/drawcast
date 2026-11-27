@@ -1,0 +1,239 @@
+{
+  "drawcast": 1,
+  "title": "Review the frames the reader sees",
+  "voice": "maple",
+  "steps": [
+    {
+      "say": "The library author drew a pale circle behind the books. The guide now shows how to use a full disk and give every colored slice the same center automatically.",
+      "do": [
+        {
+          "enter": "none",
+          "add": [
+            {
+              "id": "title",
+              "type": "text",
+              "x": 68,
+              "y": 46,
+              "text": "Review the frames the reader sees",
+              "fontSize": 48,
+              "fontFamily": "normal",
+              "strokeColor": "#1e3442"
+            },
+            {
+              "id": "sub",
+              "type": "text",
+              "x": 520,
+              "y": 186,
+              "text": "Start with the whole collection",
+              "fontSize": 32,
+              "fontFamily": "normal",
+              "strokeColor": "#1e3442"
+            },
+            {
+              "id": "data",
+              "type": "text",
+              "x": 520,
+              "y": 271,
+              "text": "share  100",
+              "fontSize": 43,
+              "fontFamily": "normal",
+              "strokeColor": "#145b6c"
+            },
+            {
+              "id": "foot",
+              "type": "text",
+              "x": 520,
+              "y": 423,
+              "text": "One center and one radius.",
+              "fontSize": 25,
+              "fontFamily": "normal",
+              "strokeColor": "#1e3442"
+            }
+          ]
+        },
+        {
+          "at": "pale circle",
+          "enter": "fade",
+          "add": {
+            "id": "whole",
+            "type": "slice",
+            "share": 100,
+            "center": [
+              272,
+              355
+            ],
+            "radius": 160,
+            "strokeColor": "#859796",
+            "backgroundColor": "#eff2ed"
+          }
+        }
+      ]
+    },
+    {
+      "say": "Fiction takes forty, history thirty five, and science twenty five. Each starts at its neighbor. The picture keeps the total visible as the narration adds each share.",
+      "do": [
+        {
+          "at": "Fiction",
+          "duration": 0,
+          "update": [
+            {
+              "id": "sub",
+              "text": "Three additions to the same circle"
+            },
+            {
+              "id": "data",
+              "text": "40  +  35  +  25  =  100"
+            },
+            {
+              "id": "foot",
+              "text": "after  \"whole\"  →  \"fiction\"  →  \"history\""
+            }
+          ]
+        },
+        {
+          "at": "Fiction",
+          "duration": 0.6,
+          "add": {
+            "id": "fiction",
+            "type": "slice",
+            "share": 40,
+            "after": "whole",
+            "label": "Fiction\n40%",
+            "fontSize": 23,
+            "fontFamily": "normal",
+            "strokeColor": "#224766",
+            "backgroundColor": "#a8cfeb"
+          }
+        },
+        {
+          "at": "history",
+          "duration": 0.6,
+          "add": {
+            "id": "history",
+            "type": "slice",
+            "share": 35,
+            "after": "fiction",
+            "label": "History\n35%",
+            "fontSize": 23,
+            "fontFamily": "normal",
+            "strokeColor": "#205745",
+            "backgroundColor": "#a0dbc6"
+          }
+        },
+        {
+          "at": "science",
+          "duration": 0.6,
+          "add": {
+            "id": "science",
+            "type": "slice",
+            "share": 25,
+            "after": "history",
+            "label": "Science\n25%",
+            "fontSize": 23,
+            "fontFamily": "normal",
+            "strokeColor": "#724111",
+            "backgroundColor": "#f7cd86"
+          }
+        }
+      ]
+    },
+    {
+      "say": "The preview estimated almost twenty nine seconds. The actual video ended after twenty six and two thirds. The author picked eight timestamps to check the result.",
+      "do": [
+        {
+          "at": "preview",
+          "duration": 0,
+          "update": [
+            {
+              "id": "sub",
+              "text": "Estimated preview"
+            },
+            {
+              "id": "data",
+              "text": "28.9 seconds"
+            },
+            {
+              "id": "foot",
+              "text": "The preview used estimated speech timing."
+            }
+          ]
+        },
+        {
+          "at": "actual video",
+          "duration": 0,
+          "update": [
+            {
+              "id": "sub",
+              "text": "Encoded playback"
+            },
+            {
+              "id": "data",
+              "text": "26.667 seconds"
+            },
+            {
+              "id": "foot",
+              "text": "800 frames  ·  30 fps  ·  AAC"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "say": "A new render now stores its step positions in the movie. Here are steps two, four, and six from the same script, decoded directly from the file.",
+      "do": [
+        {
+          "at": "new render",
+          "duration": 0,
+          "remove": [
+            "whole",
+            "fiction",
+            "history",
+            "science",
+            "sub",
+            "data",
+            "foot"
+          ]
+        },
+        {
+          "at": "new render",
+          "add": {
+            "id": "cmd",
+            "type": "text",
+            "x": 68,
+            "y": 153,
+            "text": "drawcast inspect sample.mp4 --step 2,4,6",
+            "fontSize": 35,
+            "fontFamily": "normal",
+            "strokeColor": "#145b6c"
+          }
+        },
+        {
+          "at": "steps two",
+          "enter": "fade",
+          "add": {
+            "id": "sheet",
+            "type": "image",
+            "src": "encoded-steps.png",
+            "x": 65,
+            "y": 249,
+            "width": 1150
+          }
+        },
+        {
+          "at": "decoded",
+          "add": {
+            "id": "source",
+            "type": "text",
+            "x": 68,
+            "y": 515,
+            "text": "Fiction appears                          All shares remain                        The difference is 20 books",
+            "fontSize": 25,
+            "fontFamily": "normal",
+            "strokeColor": "#1e3442"
+          }
+        }
+      ],
+      "pause": 1
+    }
+  ]
+}

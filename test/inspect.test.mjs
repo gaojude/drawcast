@@ -6,9 +6,67 @@ import path from "node:path";
 import { test } from "node:test";
 import { findFfmpeg } from "../src/render/encode.ts";
 import { inspectVideo } from "../src/render/inspect.ts";
+import { appendStepIndex, readStepIndex, stepFrameIndex } from "../src/render/step-index.ts";
 
 const cli = path.resolve(import.meta.dirname, "../src/cli.ts");
 const run = (...args) => spawnSync(process.execPath, [cli, "inspect", ...args], { encoding: "utf8" });
+
+test("step frame indices follow the rendered clock across cuts, overlaps, and sub-frame steps", () => {
+  const starts = [0, 0.51, 0.51, 0.69, 0.8, 0.9];
+  const done = [0, 0.65, 0.65, 0.8, 1, 2];
+  // 1 skips the cover, 2/3 share the first frame after their start. 4/5 must
+  // stay before their following cut, and 6 can only show the last frame.
+  assert.deepEqual(stepFrameIndex(starts, done, 10, 11, true).stepFrames, [1, 6, 6, 7, 8, 10]);
+  assert.deepEqual(stepFrameIndex(starts, done, 10, 11, false).stepFrames, [0, 6, 6, 7, 8, 10]);
+  assert.deepEqual(stepFrameIndex([0], [0], 1, 1, true).stepFrames, [0]);
+  assert.deepEqual(stepFrameIndex([0], [0.26], 10, 10, false).stepFrames, [3]);
+  assert.deepEqual(stepFrameIndex([0], [17 / 29.97], 29.97, 20, false).stepFrames, [17]);
+});
+
+test("inspect --step extracts indexed B-frames and pages long selections in display order", async (t) => {
+  const ffmpeg = findFfmpeg();
+  if (!ffmpeg) return t.skip("requires ffmpeg");
+  const dir = mkdtempSync(path.join(os.tmpdir(), "drawcast-steps-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const input = path.join(dir, "indexed.mp4");
+  execFileSync(ffmpeg, ["-v", "error", "-f", "lavfi", "-i", "nullsrc=s=32x24:r=10:d=2,geq=lum=24+10*N:cb=128:cr=128", "-c:v", "libx264", "-bf", "2", "-video_track_timescale", "90000", input]);
+  const original = readFileSync(input);
+  assert.match(run(input, "--step", "1").stderr, /no usable Drawcast step index.*--at.*--motion/);
+  const index = { frames: 20, stepFrames: [1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 19] };
+  await appendStepIndex(input, index);
+  assert.deepEqual(await readStepIndex(input), index);
+  const single = run(input, "--step", "14");
+  assert.equal(single.status, 0, single.stderr);
+  assert.match(single.stdout, /inspect\.step14\.png \(step 14 at 1\.9 s\)/);
+  assert.equal(run(input, "--at", "1.9").status, 0);
+  assert.deepEqual(readFileSync(path.join(dir, "indexed.inspect.step14.png")), readFileSync(path.join(dir, "indexed.inspect.at1.9.png")));
+  const subset = run(input, "--step", "4,1-3", "--width", "32");
+  assert.equal(subset.status, 0, subset.stderr);
+  assert.match(subset.stdout, /step 1 at 0\.1 s; steps 2, 3 at 0\.2 s; step 4 at 0\.3 s/);
+  const all = run(input, "--step", "all", "--width", "32");
+  assert.equal(all.status, 0, all.stderr);
+  assert.match(all.stdout, /steps-1\.png.*step 13 at 1\.2 s/);
+  assert.match(all.stdout, /steps-2\.png \(step 14 at 1\.9 s\)/);
+  const last = execFileSync(ffmpeg, ["-v", "error", "-i", path.join(dir, "indexed.inspect.steps-2.png"), "-vf", "crop=32:24:4:4", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]);
+  const actual = execFileSync(ffmpeg, ["-v", "error", "-i", path.join(dir, "indexed.inspect.step14.png"), "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]);
+  assert.deepEqual(last, actual);
+  for (const args of [["--step", "15"], ["--step", "1", "--motion"], ["--at", "0", "--step", "1"]]) assert.match(run(input, ...args).stderr, /--step/);
+  const complete = readFileSync(input);
+  const damaged = (change) => { const copy = Buffer.from(complete); change(copy); return copy; };
+  for (const bad of [
+    complete.subarray(0, complete.length - 1),
+    damaged(b => b.writeUInt32BE(2, original.length + 24)),
+    damaged(b => b.writeDoubleBE(Infinity, original.length + 28)),
+    damaged(b => b.writeDoubleBE(20, complete.length - 8)),
+    damaged(b => b.writeDoubleBE(0, complete.length - 8)),
+  ]) {
+    writeFileSync(input, bad);
+    await assert.rejects(readStepIndex(input), /no usable Drawcast step index/);
+  }
+  writeFileSync(input, damaged(b => b.writeDoubleBE(21, original.length + 28)));
+  assert.match(run(input, "--step", "1").stderr, /encoded frame count differ/);
+  assert.equal(run(input, "--at", "0").status, 0);
+});
 
 test("inspect samples the encoded video in display order and extracts the frame visible at --at", async (t) => {
   const ffmpeg = findFfmpeg();
@@ -78,7 +136,7 @@ test("inspect samples the encoded video in display order and extracts the frame 
   const controller = new AbortController();
   const watcher = watch(dir, (_event, name) => { if (name?.startsWith(".drawcast-")) controller.abort(); });
   try {
-    await assert.rejects(inspectVideo(input, custom, undefined, controller.signal), { name: "AbortError" });
+    await assert.rejects(inspectVideo(input, custom, { signal: controller.signal }), { name: "AbortError" });
   } finally {
     watcher.close();
   }
