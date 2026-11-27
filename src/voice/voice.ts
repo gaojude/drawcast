@@ -3,8 +3,9 @@
  *
  * By default a script is spoken by one of Microsoft's online voices (`edge:...`), and by the built-in
  * engine when that cannot be had. The built-in engine is Kokoro (run by sherpa-onnx, on the CPU), a small
- * model with a fixed set of speakers for Chinese and English. `--tts-command` swaps the engine for any
- * program that turns text into a WAV file.
+ * model with a fixed set of speakers for Chinese and English. A script can also name one of MiniMax's
+ * paid voices (`minimax:...`). `--tts-command` swaps the engine for any program that turns text into a
+ * WAV file.
  */
 import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
@@ -17,6 +18,7 @@ import { cacheDir } from "../paths.ts";
 import { isCjk } from "../shared/text.ts";
 import { writeFileAtomic } from "../shared/files.ts";
 import { EDGE_PREFIX, EDGE_VOICES, openEdgeVoice } from "./edge.ts";
+import { MINIMAX_PREFIX, openMinimaxVoice, parseMinimaxVoice } from "./minimax.ts";
 import { type ModelFiles, ensureModels } from "./models.ts";
 import { normalize } from "./normalize.ts";
 import { type Dictionaries, parseDictionary, toTokens } from "./tokenize.ts";
@@ -264,6 +266,18 @@ export interface VoiceOptions {
 // each sentence is a request of its own to the service, and nearly all of its second is spent waiting
 const edgeVoice = (name: string): Voice => ({ name: EDGE_PREFIX + name, key: sha("edge", name), open: (signal) => openEdgeVoice(name, signal), parallel: 6 });
 
+/** A paid voice: never a fallback, and its key is looked for only when it is about to speak. */
+function minimaxVoice(spec: string, log: (line: string) => void): Voice {
+  const parsed = parseMinimaxVoice(spec);
+  return {
+    name: MINIMAX_PREFIX + spec,
+    key: sha("minimax", parsed.model, parsed.voiceId, "pcm-32000"),
+    open: (signal) => openMinimaxVoice(parsed, log, signal),
+    // MiniMax limits requests per minute; past a few at once a render only meets the limit sooner
+    parallel: 3,
+  };
+}
+
 /**
  * Left unset, a script gets the first online voice of its language, and the first built-in one if the
  * online voice cannot speak. A voice the script names is used as it is, with nothing to fall back on.
@@ -275,6 +289,7 @@ export async function resolveVoice(o: VoiceOptions): Promise<Voice> {
     if (!name) throw new Error(`"${EDGE_PREFIX}" needs the name of a voice after it, such as "${EDGE_PREFIX}en-US-EmmaMultilingualNeural".`);
     return edgeVoice(name);
   }
+  if (o.spec?.startsWith(MINIMAX_PREFIX)) return minimaxVoice(o.spec.slice(MINIMAX_PREFIX.length).trim(), o.log);
   const language = isCjk(o.narration) ? "zh" : "en";
   if (!o.spec) {
     const builtIn = Object.keys(BUILT_IN).find((v) => BUILT_IN[v].language === language)!;
@@ -288,5 +303,5 @@ export async function resolveVoice(o: VoiceOptions): Promise<Voice> {
     return kokoro(name, voice.speaker, voice.mix, o.log);
   }
   if (SPEAKERS.includes(name)) return kokoro(name, name, undefined, o.log);
-  throw new Error(`There is no voice called "${name}". Built-in voices: ${Object.keys(BUILT_IN).join(", ")}. Online voices start with "${EDGE_PREFIX}".`);
+  throw new Error(`There is no voice called "${name}". Built-in voices: ${Object.keys(BUILT_IN).join(", ")}. Online voices start with "${EDGE_PREFIX}", and MiniMax's paid ones with "${MINIMAX_PREFIX}".`);
 }

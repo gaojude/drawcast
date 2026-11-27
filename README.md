@@ -74,7 +74,8 @@ Rendering uses three things, and `drawcast setup` reports on each:
 
 Drawing and encoding happen locally. Speech does too, except for one thing: when
 [`edge-tts`](#online-voices) is installed and a script does not name a voice, the narration goes to
-Microsoft's online voice. Name a built-in voice (`--voice lin`) to keep it all on your machine.
+Microsoft's online voice, and a script that names a [MiniMax voice](#minimax-voices) sends it to
+MiniMax. Name a built-in voice (`--voice lin`) to keep it all on your machine.
 
 ## Use
 
@@ -84,6 +85,7 @@ drawcast check <script>        errors and layout warnings, without rendering
 drawcast snapshot <script>     stills as PNG: --sheet (every step on one picture), --step 2,5, --at 12.5
 drawcast render <script>       the MP4 (-o out.mp4, --voice lin, --speed 1.1, --no-captions)
 drawcast voices                the voices
+drawcast key minimax           save the API key for MiniMax's paid voices
 ```
 
 `drawcast guide` prints a short authoring workflow. Use `guide plots math` for function curves
@@ -190,6 +192,35 @@ few, and `edge-tts --list-voices` has them all. They work differently from the b
 - Microsoft runs this service for its browser and does not offer it as an API, so it can change or
   stop without notice, and it comes with no licence to use the voices elsewhere. For something you
   depend on, use the built-in voice or `--tts-command` with a service you have an agreement with.
+
+### MiniMax voices
+
+[MiniMax](https://platform.minimax.io)'s speech models are more expressive still, and they are paid:
+each character spoken is billed to your own MiniMax account. A script uses one only when it names one,
+and never as a fallback:
+
+```json
+{ "drawcast": 1, "voice": "minimax:male-qn-qingse", "steps": [] }
+```
+
+Any voice id from MiniMax's list works after `minimax:`, including a voice you cloned there. The
+model is `speech-2.8-hd`; `minimax:male-qn-qingse@speech-2.8-turbo` picks the cheaper one. A sentence
+spoken once is cached, so rendering again, or after editing one sentence, pays only for what is new.
+
+The API key never goes in a script. Save it once, in your own terminal:
+
+```sh
+drawcast key minimax          # paste the key; it is not shown
+```
+
+It is saved where drawcast keeps its settings (the command says where), readable only by you,
+and every later render uses it, including one an agent runs in a session that was already open.
+`MINIMAX_API_KEY`, when set, is used instead, and `drawcast key minimax --remove` deletes the saved
+key. So an agent never needs to see the key: when a render reports that none is set, it asks you to
+run the command above.
+
+A key belongs to MiniMax's international platform or to its platform for mainland China. drawcast
+tries `api.minimax.io` and then `api.minimaxi.com`; set `MINIMAX_API_HOST` to go straight to one.
 
 ### Another engine
 
