@@ -1,0 +1,51 @@
+{
+  "drawcast": 1,
+  "title": "100 new library books",
+  "voice": "maple",
+  "canvas": { "width": 1280, "height": 720, "background": "#fffefa" },
+  "steps": [
+    {
+      "say": "A hundred new books just arrived at the library.",
+      "do": [
+        { "enter": "none", "add": [
+          { "id": "title", "type": "text", "x": 90, "y": 56, "text": "100 new library books", "fontSize": 44, "strokeColor": "#20313e" },
+          { "id": "whole", "type": "slice", "center": [345, 361], "radius": 209, "share": 100, "backgroundColor": "#e9e7df", "strokeColor": "#aaa799" }
+        ] }
+      ]
+    },
+    {
+      "say": "Fiction fills forty of those spots.",
+      "do": [
+        { "at": "Fiction", "duration": 0.65, "add": { "id": "fiction", "type": "slice", "after": "whole", "share": 40, "label": "Fiction\n40%", "fontSize": 27, "backgroundColor": "#b6dcf4", "strokeColor": "#214c6c" } }
+      ]
+    },
+    {
+      "say": "History takes another thirty-five.",
+      "do": [
+        { "at": "History", "duration": 0.65, "add": { "id": "history", "type": "slice", "after": "fiction", "share": 35, "label": "History\n35%", "fontSize": 27, "backgroundColor": "#f6d39d", "strokeColor": "#6a481f" } }
+      ]
+    },
+    {
+      "say": "Science fills the last twenty-five.",
+      "do": [
+        { "at": "Science", "duration": 0.65, "add": { "id": "science", "type": "slice", "after": "history", "share": 25, "label": "Science\n25%", "fontSize": 27, "backgroundColor": "#b6dfcc", "strokeColor": "#245b46" } }
+      ]
+    },
+    {
+      "say": "Together, history and science add up to sixty books.",
+      "do": [
+        { "at": "Together", "add": { "id": "sum-heading", "type": "text", "x": 656, "y": 176, "text": "History + science", "fontSize": 30, "strokeColor": "#20313e" } },
+        { "at": "add up", "add": { "id": "sum", "type": "text", "x": 656, "y": 226, "text": "35 + 25 = 60 books", "fontSize": 41, "strokeColor": "#245b46" } }
+      ]
+    },
+    {
+      "say": "Compare that with forty fiction books. That's twenty more books for history and science.",
+      "do": [
+        { "at": "Compare", "add": { "id": "vs", "type": "text", "x": 656, "y": 325, "text": "Compared with fiction", "fontSize": 30, "strokeColor": "#20313e" } },
+        { "at": "forty", "add": { "id": "difference", "type": "text", "x": 656, "y": 375, "text": "60 − 40 =", "fontSize": 41, "strokeColor": "#20313e" } },
+        { "at": "twenty", "add": { "id": "answer", "type": "text", "x": 656, "y": 443, "text": "20 more books", "fontSize": 52, "strokeColor": "#245b46" } }
+      ],
+      "pause": 1.4
+    }
+  ]
+}
