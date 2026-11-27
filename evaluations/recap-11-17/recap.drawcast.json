@@ -1,0 +1,173 @@
+{
+  "drawcast": 1,
+  "title": "How author trials changed Drawcast",
+  "voice": "maple",
+  "speed": 1.02,
+  "cover": 1,
+  "canvas": {"width":1280,"height":720,"background":"#FDFCF7"},
+  "steps": [
+    {
+      "say": "A wave, a budget, and a library book each exposed a different problem with Drawcast. Eight pull requests tell the story.",
+      "do": [
+        {"at":0,"enter":"none","duration":0,"add":{"id":"coverKey","type":"text","x":64,"y":48,"text":"PULL REQUESTS  #16  AND  #22–28","fontSize":25,"fontFamily":"code","strokeColor":"#076D65"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"coverTitle","type":"text","x":62,"y":110,"text":"How author trials changed Drawcast","fontSize":60,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"coverRule","type":"line","points":[[64,212],[1214,212]],"strokeColor":"#B7C9C5","strokeWidth":2,"roughness":0}},
+        {"at":"A wave","enter":"draw","duration":0.6,"add":{"id":"coverWave","type":"line","x":85,"y":292,"width":294,"height":190,"domain":[0,12.56637],"range":[-1.35,1.35],"fn":"sin(x)","p":0,"strokeColor":"#076D65","strokeWidth":4,"roughness":0}},
+        {"at":"A wave","enter":"draw","duration":0.6,"add":{"id":"waveName","type":"text","x":232,"y":505,"text":"A sound wave","fontSize":31,"fontFamily":"normal","strokeColor":"#1D3539","textAlign":"center"}},
+        {"at":"a budget","enter":"draw","duration":0.6,"add":{"id":"coverSliceA","type":"slice","share":50,"roughness":0,"strokeWidth":2,"backgroundColor":"#A8D4E6","strokeColor":"#225269","fontSize":27,"fontFamily":"normal","center":[634,384],"radius":91}},
+        {"at":"a budget","enter":"draw","duration":0.6,"add":{"id":"coverSliceB","type":"slice","share":30,"roughness":0,"strokeWidth":2,"backgroundColor":"#F5CC86","strokeColor":"#714C1C","fontSize":27,"fontFamily":"normal","center":[634,384],"radius":91,"start":50}},
+        {"at":"a budget","enter":"draw","duration":0.6,"add":{"id":"coverSliceC","type":"slice","share":20,"roughness":0,"strokeWidth":2,"backgroundColor":"#D0E6E0","strokeColor":"#275D53","fontSize":27,"fontFamily":"normal","center":[634,384],"radius":91,"start":80}},
+        {"at":"a budget","enter":"draw","duration":0.6,"add":{"id":"pieName","type":"text","x":634,"y":505,"text":"A household budget","fontSize":31,"fontFamily":"normal","strokeColor":"#1D3539","textAlign":"center"}},
+        {"at":"a library book","enter":"fade","duration":0.42,"add":{"id":"coverBook","type":"image","x":962,"y":288,"width":147,"height":193,"svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"76\" height=\"100\" viewBox=\"0 0 76 100\">\n  <path d=\"M8 3H69Q73 3 73 7V95Q73 98 68 98H9Q3 98 3 93V9Q3 4 8 3Z\" fill=\"#f4a23c\" stroke=\"#733d20\" stroke-width=\"3\"/>\n  <path d=\"M14 5V96M16 86H70\" fill=\"none\" stroke=\"#955128\" stroke-width=\"2\"/>\n  <path d=\"M5 88H70V94H8Q5 94 5 91Z\" fill=\"#fff3d3\"/>\n  <path d=\"M58 4H65V25L61 22L58 25Z\" fill=\"#ad4936\"/>\n  <circle cx=\"41\" cy=\"49\" r=\"16\" fill=\"#fff0c8\"/>\n  <path d=\"M27 54Q32 49 36 51Q42 51 44 42Q50 43 48 49Q52 49 55 47Q53 57 45 59H31\" fill=\"#875630\"/>\n</svg>"}},
+        {"at":"a library book","enter":"fade","duration":0.42,"add":{"id":"bookName","type":"text","x":1035,"y":505,"text":"A library return","fontSize":31,"fontFamily":"normal","strokeColor":"#1D3539","textAlign":"center"}}
+      ],
+      "pause": 0.35
+    },
+    {
+      "say": "Pull request sixteen published a film about five timed trials. One wave looked fine in preview, but two curves briefly appeared during playback. An earlier fix let one curve move smoothly as the waves canceled.",
+      "do": [
+        {"at":0,"duration":0,"remove":["coverKey","coverTitle","coverRule","coverWave","waveName","coverSliceA","coverSliceB","coverSliceC","pieName","coverBook","bookName"]},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"key1","type":"text","x":64,"y":40,"text":"PR #16   /   FIVE TIMED TRIALS","fontSize":24,"fontFamily":"code","strokeColor":"#076D65"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"head1","type":"text","x":62,"y":84,"text":"The wave that doubled in playback","fontSize":55,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"rule1","type":"line","points":[[64,169],[1214,169]],"strokeColor":"#B7C9C5","strokeWidth":2,"roughness":0}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"leftWaveTitle","type":"text","x":74,"y":218,"text":"Original playback","fontSize":34,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"rightWaveTitle","type":"text","x":682,"y":218,"text":"With the fix from PR #10","fontSize":34,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"beforeAxis","type":"line","points":[[74,373],[580,373]],"strokeColor":"#B7C9C5","strokeWidth":2,"roughness":0}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"afterAxis","type":"line","points":[[683,373],[1190,373]],"strokeColor":"#B7C9C5","strokeWidth":2,"roughness":0}},
+        {"at":"One wave","enter":"draw","duration":0.7,"add":{"id":"badWave1","type":"line","x":78,"y":286,"width":500,"height":173,"domain":[0,12.56637],"range":[-1.35,1.35],"fn":"sin(x)","p":0,"strokeColor":"#92422D","strokeWidth":4,"roughness":0}},
+        {"at":"two curves","enter":"draw","duration":0.6,"add":{"id":"badWave2","type":"line","x":78,"y":286,"width":500,"height":173,"domain":[0,12.56637],"range":[-1.35,1.35],"fn":"sin(x+0.54)","p":0,"strokeColor":"#DB9C83","strokeWidth":4,"roughness":0}},
+        {"at":"An earlier fix","enter":"draw","duration":0.6,"add":{"id":"steadyWave","type":"line","x":683,"y":286,"width":500,"height":173,"domain":[0,12.56637],"range":[-1.35,1.35],"fn":"(sin(x)+sin(x+p))/2","p":0,"strokeColor":"#076D65","strokeWidth":4,"roughness":0}},
+        {"at":"move smoothly","duration":1.9,"update":{"id":"steadyWave","p":3.141592653589793}},
+        {"at":"waves canceled","enter":"fade","duration":0.3,"add":{"id":"beforeWaveNote","type":"text","x":75,"y":510,"text":"Two strokes during a crossfade","fontSize":27,"fontFamily":"normal","strokeColor":"#92422D"}},
+        {"at":"waves canceled","enter":"fade","duration":0.3,"add":{"id":"afterWaveNote","type":"text","x":682,"y":510,"text":"The sum settles to zero","fontSize":27,"fontFamily":"normal","strokeColor":"#076D65"}}
+      ],
+      "pause": 0.35
+    },
+    {
+      "say": "Next came a household budget. It took a hundred and twenty-six coordinate pairs to draw three wedges. Pull request twenty-two lets authors set a percentage and reveal each slice on cue.",
+      "do": [
+        {"at":0,"duration":0,"remove":["key1","head1","rule1","leftWaveTitle","rightWaveTitle","beforeAxis","afterAxis","badWave1","badWave2","steadyWave","beforeWaveNote","afterWaveNote"]},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"key2","type":"text","x":64,"y":40,"text":"PR #22   /   HOUSEHOLD BUDGET","fontSize":24,"fontFamily":"code","strokeColor":"#076D65"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"head2","type":"text","x":62,"y":84,"text":"Draw a wedge from its share","fontSize":55,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"rule2","type":"line","points":[[64,169],[1214,169]],"strokeColor":"#B7C9C5","strokeWidth":2,"roughness":0}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"old22","type":"text","x":632,"y":215,"text":"First budget script","fontSize":28,"fontFamily":"normal","strokeColor":"#526B6C"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"pairs22","type":"text","x":630,"y":263,"text":"126 coordinate pairs","fontSize":46,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"new22","type":"text","x":632,"y":400,"text":"With native slices","fontSize":28,"fontFamily":"normal","strokeColor":"#526B6C"}},
+        {"at":"set a percentage","enter":"draw","duration":0.65,"add":{"id":"s22h","type":"slice","share":50,"roughness":0,"strokeWidth":2,"backgroundColor":"#A8D4E6","strokeColor":"#225269","fontSize":27,"fontFamily":"normal","center":[322,370],"radius":161,"label":"Housing\n50%"}},
+        {"at":"set a percentage","enter":"fade","duration":0.3,"add":{"id":"share22","type":"text","x":630,"y":452,"text":"share  50 / 30 / 20","fontSize":34,"fontFamily":"code","strokeColor":"#076D65"}},
+        {"at":"reveal","enter":"draw","duration":0.65,"add":{"id":"s22f","type":"slice","share":30,"roughness":0,"strokeWidth":2,"backgroundColor":"#F5CC86","strokeColor":"#714C1C","fontSize":27,"fontFamily":"normal","after":"s22h","label":"Food\n30%"}},
+        {"at":"each slice","enter":"draw","duration":0.65,"add":{"id":"s22s","type":"slice","share":20,"roughness":0,"strokeWidth":2,"backgroundColor":"#D0E6E0","strokeColor":"#275D53","fontSize":24,"fontFamily":"normal","after":"s22f","label":"Savings\n20%"}}
+      ],
+      "pause": 0.35
+    },
+    {
+      "say": "The budget replay still repeated the circle's center and radius. In twenty-three, food starts where housing ends. Savings follows food. The author sets the circle just once.",
+      "do": [
+        {"at":0,"duration":0,"remove":["key2","head2","rule2","old22","pairs22","new22","s22h","share22","s22f","s22s"]},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"key3","type":"text","x":64,"y":40,"text":"PR #23   /   BUDGET REPLAY","fontSize":24,"fontFamily":"code","strokeColor":"#076D65"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"head3","type":"text","x":62,"y":84,"text":"Start each slice where the last one ends","fontSize":55,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"rule3","type":"line","points":[[64,169],[1214,169]],"strokeColor":"#B7C9C5","strokeWidth":2,"roughness":0}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"s23h","type":"slice","share":50,"roughness":0,"strokeWidth":2,"backgroundColor":"#A8D4E6","strokeColor":"#225269","fontSize":27,"fontFamily":"normal","center":[322,370],"radius":161,"label":"Housing\n50%"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"geom23","type":"text","x":630,"y":214,"text":"Housing sets the center and radius.","fontSize":30,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":"food starts","enter":"draw","duration":0.75,"add":{"id":"s23f","type":"slice","share":30,"roughness":0,"strokeWidth":2,"backgroundColor":"#F5CC86","strokeColor":"#714C1C","fontSize":27,"fontFamily":"normal","after":"s23h","label":"Food\n30%"}},
+        {"at":"food starts","enter":"fade","duration":0.3,"add":{"id":"afterFood","type":"text","x":629,"y":316,"text":"after  \"housing\"","fontSize":33,"fontFamily":"code","strokeColor":"#076D65"}},
+        {"at":"food starts","enter":"fade","duration":0.3,"add":{"id":"foodRow","type":"text","x":630,"y":365,"text":"Food takes the next 30%.","fontSize":26,"fontFamily":"normal","strokeColor":"#526B6C"}},
+        {"at":"Savings follows","enter":"draw","duration":0.75,"add":{"id":"s23s","type":"slice","share":20,"roughness":0,"strokeWidth":2,"backgroundColor":"#D0E6E0","strokeColor":"#275D53","fontSize":24,"fontFamily":"normal","after":"s23f","label":"Savings\n20%"}},
+        {"at":"Savings follows","enter":"fade","duration":0.3,"add":{"id":"afterSav","type":"text","x":629,"y":440,"text":"after  \"food\"","fontSize":33,"fontFamily":"code","strokeColor":"#076D65"}},
+        {"at":"Savings follows","enter":"fade","duration":0.3,"add":{"id":"savingsRow","type":"text","x":630,"y":489,"text":"Savings fills the final 20%.","fontSize":26,"fontFamily":"normal","strokeColor":"#526B6C"}}
+      ],
+      "pause": 0.35
+    },
+    {
+      "say": "The library trial counted a hundred books. Twenty-four shows how a pale disk keeps the whole collection visible as fiction fills its share. Authors can also review the finished movie by step number, without guessing the time.",
+      "do": [
+        {"at":0,"duration":0,"remove":["key3","head3","rule3","s23h","geom23","s23f","afterFood","foodRow","s23s","afterSav","savingsRow"]},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"key4","type":"text","x":64,"y":40,"text":"PR #24   /   LIBRARY ACQUISITIONS","fontSize":24,"fontFamily":"code","strokeColor":"#076D65"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"head4","type":"text","x":62,"y":84,"text":"Find the right frame by step number","fontSize":55,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"rule4","type":"line","points":[[64,169],[1214,169]],"strokeColor":"#B7C9C5","strokeWidth":2,"roughness":0}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"n24","type":"text","x":76,"y":204,"text":"100 new books","fontSize":34,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":"pale disk","enter":"fade","duration":0.35,"add":{"id":"disk24","type":"slice","share":100,"roughness":0,"strokeWidth":2,"backgroundColor":"#E7E8DF","strokeColor":"#929B8F","fontSize":27,"fontFamily":"normal","center":[294,408],"radius":119}},
+        {"at":"fiction","enter":"draw","duration":0.95,"add":{"id":"fic24","type":"slice","share":40,"roughness":0,"strokeWidth":2,"backgroundColor":"#A8D4E6","strokeColor":"#225269","fontSize":27,"fontFamily":"normal","after":"disk24","label":"Fiction\n40%"}},
+        {"at":"fiction","enter":"fade","duration":0.3,"add":{"id":"note24","type":"text","x":538,"y":337,"text":"The rest of the collection\nstays in view.","fontSize":39,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":"Authors can also","duration":0,"remove":["n24","disk24","fic24","note24"]},
+        {"at":"Authors can also","enter":"fade","duration":0.3,"add":{"id":"cmd24","type":"text","x":70,"y":211,"text":"inspect --step 2,4,6","fontSize":32,"fontFamily":"code","strokeColor":"#076D65"}},
+        {"at":"finished movie","enter":"fade","duration":0.3,"add":{"id":"actual24","type":"image","x":65,"y":281,"width":1150,"height":220,"src":"../run-13/encoded-steps.png"}},
+        {"at":"step number","enter":"fade","duration":0.3,"add":{"id":"step2","type":"text","x":248,"y":527,"text":"Step 2  ·  Fiction","fontSize":25,"fontFamily":"normal","strokeColor":"#1D3539","textAlign":"center"}},
+        {"at":"step number","enter":"fade","duration":0.3,"add":{"id":"step4","type":"text","x":635,"y":527,"text":"Step 4  ·  All shares","fontSize":25,"fontFamily":"normal","strokeColor":"#1D3539","textAlign":"center"}},
+        {"at":"step number","enter":"fade","duration":0.3,"add":{"id":"step6","type":"text","x":1024,"y":527,"text":"Step 6  ·  The comparison","fontSize":25,"fontFamily":"normal","strokeColor":"#1D3539","textAlign":"center"}}
+      ],
+      "pause": 0.35
+    },
+    {
+      "say": "The final comparison had two colors, and the words collided. Twenty-five shows how to align the answer at a shared edge. The last step now shows the final held frame, and the render report times speech and video separately.",
+      "do": [
+        {"at":0,"duration":0,"remove":["key4","head4","rule4","cmd24","actual24","step2","step4","step6"]},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"key5","type":"text","x":64,"y":40,"text":"PR #25   /   LIBRARY REPLAY","fontSize":24,"fontFamily":"code","strokeColor":"#076D65"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"head5","type":"text","x":62,"y":84,"text":"Make the final comparison readable","fontSize":55,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"rule5","type":"line","points":[[64,169],[1214,169]],"strokeColor":"#B7C9C5","strokeWidth":2,"roughness":0}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"desc25","type":"text","x":87,"y":227,"text":"History + science","fontSize":27,"fontFamily":"normal","strokeColor":"#526B6C"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"sum25","type":"text","x":85,"y":281,"text":"35 + 25 = 60 books","fontSize":44,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"eq25","type":"text","x":571,"y":385,"text":"60 − 40 =","fontSize":60,"fontFamily":"normal","strokeColor":"#1D3539","textAlign":"right"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"ans25","type":"text","x":553,"y":385,"text":"20 more books","fontSize":60,"fontFamily":"normal","strokeColor":"#076D65"}},
+        {"at":"align the answer","duration":0.85,"update":{"id":"ans25","x":586}},
+        {"at":"last step","enter":"fade","duration":0.3,"add":{"id":"frame25","type":"text","x":90,"y":530,"text":"Last step  ·  final held frame","fontSize":28,"fontFamily":"normal","strokeColor":"#076D65"}},
+        {"at":"render report","enter":"fade","duration":0.3,"add":{"id":"timer25","type":"text","x":682,"y":530,"text":"Render timing  ·  speech and video","fontSize":28,"fontFamily":"normal","strokeColor":"#526B6C"}}
+      ],
+      "pause": 0.35
+    },
+    {
+      "say": "A finished pie can hide a bad reveal. One author picked nine timestamps to check the wedges in motion. Twenty-six points authors to motion review, which finds frames during each sweep automatically.",
+      "do": [
+        {"at":0,"duration":0,"remove":["key5","head5","rule5","desc25","sum25","eq25","ans25","frame25","timer25"]},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"key6","type":"text","x":64,"y":40,"text":"PR #26   /   CHECKING THE REVEALS","fontSize":24,"fontFamily":"code","strokeColor":"#076D65"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"head6","type":"text","x":62,"y":84,"text":"Catch a wedge halfway through its sweep","fontSize":55,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"rule6","type":"line","points":[[64,169],[1214,169]],"strokeColor":"#B7C9C5","strokeWidth":2,"roughness":0}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"old26","type":"text","x":66,"y":203,"text":"Nine timestamps chosen by hand","fontSize":29,"fontFamily":"normal","strokeColor":"#526B6C"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"sample26","type":"slice","center":[299,422],"radius":123,"share":100,"roughness":0,"strokeWidth":2,"backgroundColor":"#E7E8DF","strokeColor":"#929B8F"}},
+        {"at":"nine timestamps","enter":"fade","duration":0.26,"add":{"id":"question26","type":"text","x":528,"y":366,"text":"When does the wedge appear?","fontSize":35,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":"wedges in motion","duration":1.2,"add":{"id":"sweep26","type":"slice","after":"sample26","share":40,"roughness":0,"strokeWidth":2,"backgroundColor":"#A8D4E6","strokeColor":"#225269","label":"Fiction\n40%","fontSize":26,"fontFamily":"normal"}},
+        {"at":"motion review","duration":0,"remove":["sample26","question26","sweep26","old26"]},
+        {"at":"motion review","enter":"fade","duration":0.25,"add":{"id":"auto26","type":"text","x":69,"y":181,"text":"inspect --motion","fontSize":27,"fontFamily":"code","strokeColor":"#076D65"}},
+        {"at":"finds frames","enter":"fade","duration":0.3,"add":{"id":"motion26","type":"image","x":135,"y":228,"width":1010,"height":384,"src":"../run-15/motion-review.png"}}
+      ],
+      "pause": 0.35
+    },
+    {
+      "say": "Then a returned book had to travel from a bin to a shelf. Motion review caught the flight but missed the stop. Twenty-seven keeps the illustrated book in the script and includes the frame where it lands on the cart, then the shelf.",
+      "do": [
+        {"at":0,"duration":0,"remove":["key6","head6","rule6","motion26","auto26"]},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"key7","type":"text","x":64,"y":40,"text":"PR #27   /   THE RETURNED BOOK","fontSize":24,"fontFamily":"code","strokeColor":"#076D65"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"head7","type":"text","x":62,"y":84,"text":"See where the book lands","fontSize":55,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"rule7","type":"line","points":[[64,169],[1214,169]],"strokeColor":"#B7C9C5","strokeWidth":2,"roughness":0}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"bin27","type":"image","x":108,"y":330,"width":205,"height":155,"svg":"<svg xmlns='http://www.w3.org/2000/svg' width='236' height='185' viewBox='0 0 236 185'><g stroke='#334e54' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'>\n<path d='M19 75 L35 42 H208 L220 75 L206 159 H30 Z' fill='#c1dad9'/>\n<path d='M27 75 L42 52 H201 L211 75 Z' fill='#49686a'/>\n<path d='M18 76 L216 76 L204 159 L32 159 Z' fill='#bedad8'/>\n<path d='M37 157 H201 M49 87 L55 145' fill='none' stroke='#88adab'/>\n<rect x='98' y='101' width='44' height='17' rx='4' fill='#f6f8f3'/>\n<path d='M109 109 H131' stroke-width='2'/>\n</g></svg>"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"cart27","type":"image","x":530,"y":325,"width":215,"height":160,"svg":"<svg xmlns='http://www.w3.org/2000/svg' width='246' height='180' viewBox='0 0 246 180'><g stroke='#334e54' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'>\n<path d='M12 76 H211 V53 Q211 44 220 44 H233' fill='none' stroke-width='7'/>\n<path d='M24 77 L34 140 H200 L205 77' fill='none' stroke-width='6'/>\n<rect x='14' y='68' width='201' height='11' rx='3' fill='#bbd7d6'/>\n<rect x='31' y='131' width='171' height='11' rx='3' fill='#bbd7d6'/>\n<path d='M48 143 V151 M186 143 V151' stroke-width='5'/>\n<circle cx='48' cy='156' r='8' fill='#617b7c'/><circle cx='186' cy='156' r='8' fill='#617b7c'/>\n<path d='M48 156h.1 M186 156h.1' stroke='#fff' stroke-width='4'/>\n</g></svg>"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"shelf27","type":"image","x":943,"y":261,"width":231,"height":222,"svg":"<svg xmlns='http://www.w3.org/2000/svg' width='270' height='254' viewBox='0 0 270 254'><g stroke='#334e54' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'>\n<rect x='8' y='16' width='249' height='210' rx='2' fill='#edf0e6' stroke='#adb9ad'/>\n<path d='M8 16 H256 V26 H8 Z M7 18 H18 V236 H7 Z M246 18 H257 V236 H246 Z' fill='#b7cdbe'/>\n<path d='M18 140 H246 V149 H18 Z M18 214 H246 V223 H18 Z' fill='#b7cdbe'/>\n<g fill='#b9cecb'><rect x='27' y='64' width='16' height='75' rx='2'/><rect x='45' y='57' width='19' height='82' rx='2'/><path d='M68 69 L84 66 L100 136 L84 140 Z'/></g>\n<g fill='#d3d7ba'><rect x='208' y='84' width='14' height='55' rx='1'/><rect x='224' y='67' width='15' height='72' rx='2'/></g>\n<path d='M28 80 H42 M46 122 H62 M209 98 H221 M225 81 H238' fill='none' stroke-width='2'/>\n<path d='M163 197 H227 V204 H163 Z M153 205 H231 V213 H153 Z' fill='#c1d1cc'/>\n</g></svg>"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"binLab","type":"text","x":211,"y":505,"text":"Return bin","fontSize":29,"fontFamily":"normal","strokeColor":"#1D3539","textAlign":"center"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"cartLab","type":"text","x":632,"y":505,"text":"Sorting cart","fontSize":29,"fontFamily":"normal","strokeColor":"#1D3539","textAlign":"center"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"shelfLab","type":"text","x":1054,"y":505,"text":"Library shelf","fontSize":29,"fontFamily":"normal","strokeColor":"#1D3539","textAlign":"center"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"b27","type":"image","x":182,"y":313,"width":53,"height":70,"svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"76\" height=\"100\" viewBox=\"0 0 76 100\">\n  <path d=\"M8 3H69Q73 3 73 7V95Q73 98 68 98H9Q3 98 3 93V9Q3 4 8 3Z\" fill=\"#f4a23c\" stroke=\"#733d20\" stroke-width=\"3\"/>\n  <path d=\"M14 5V96M16 86H70\" fill=\"none\" stroke=\"#955128\" stroke-width=\"2\"/>\n  <path d=\"M5 88H70V94H8Q5 94 5 91Z\" fill=\"#fff3d3\"/>\n  <path d=\"M58 4H65V25L61 22L58 25Z\" fill=\"#ad4936\"/>\n  <circle cx=\"41\" cy=\"49\" r=\"16\" fill=\"#fff0c8\"/>\n  <path d=\"M27 54Q32 49 36 51Q42 51 44 42Q50 43 48 49Q52 49 55 47Q53 57 45 59H31\" fill=\"#875630\"/>\n</svg>"}},
+        {"at":"caught the flight","duration":1.7,"update":{"id":"b27","along":[[208.5,348],[299,266],[451,252],[553,278],[625,352]]}},
+        {"at":"book in the script","enter":"fade","duration":0.3,"add":{"id":"bookArt","type":"text","x":69,"y":195,"text":"One inline illustration","fontSize":27,"fontFamily":"normal","strokeColor":"#526B6C"}},
+        {"at":"lands on the cart","duration":0.64,"point":[624,371]},
+        {"at":"then the shelf","duration":1.3,"update":{"id":"b27","along":[[625,352],[731,269],[867,255],[996,282],[1086,351]]}}
+      ],
+      "pause": 0.35
+    },
+    {
+      "say": "In the next render, the cart vanished and the shelf was clipped. The drawings specified their proportions but left out pixel dimensions. Twenty-eight fixes that sizing. With the same artwork, the book, cart and shelf all appear.",
+      "do": [
+        {"at":0,"duration":0,"remove":["key7","head7","rule7","bin27","cart27","shelf27","binLab","cartLab","shelfLab","b27","bookArt"]},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"key8","type":"text","x":64,"y":40,"text":"PR #28   /   THE MISSING CART","fontSize":24,"fontFamily":"code","strokeColor":"#076D65"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"head8","type":"text","x":62,"y":84,"text":"Bring the sorting cart back into frame","fontSize":55,"fontFamily":"normal","strokeColor":"#1D3539"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"rule8","type":"line","points":[[64,169],[1214,169]],"strokeColor":"#B7C9C5","strokeWidth":2,"roughness":0}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"bef28","type":"text","x":66,"y":215,"text":"First export","fontSize":32,"fontFamily":"normal","strokeColor":"#92422D"}},
+        {"at":0,"enter":"none","duration":0,"add":{"id":"before28","type":"image","x":63,"y":273,"width":558,"height":314,"src":"../run-17/before.png"}},
+        {"at":"cart vanished","duration":0.7,"point":[341,438]},
+        {"at":"fixes that sizing","enter":"fade","duration":0.4,"add":{"id":"af28","type":"text","x":650,"y":215,"text":"Same artwork after the fix","fontSize":32,"fontFamily":"normal","strokeColor":"#076D65"}},
+        {"at":"fixes that sizing","enter":"fade","duration":0.4,"add":{"id":"after28","type":"image","x":650,"y":273,"width":558,"height":314,"src":"../run-17/after.png"}},
+        {"at":"cart and shelf","duration":0.7,"point":[929,438]}
+      ],
+      "pause": 1.2
+    }
+  ]
+}

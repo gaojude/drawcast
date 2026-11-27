@@ -26,6 +26,8 @@ The traces record timestamped tool inputs and outcomes. Long command outputs are
 
 ## Household budget and library trials
 
+The narrated recap covers the earlier five-trial retrospective in PR #16 and the seven changes in PRs #22 through #28. [Watch the recap](recap-11-17/recap.mp4) · [Editable Drawcast script](recap-11-17/recap.drawcast.json)
+
 Seven fresh authors worked from `ccd6625` on main and then from each preceding PR. Each trace links to the source, author film and narrated walkthrough. The series ended at the maintainer's request after the run 17 SVG repair.
 
 | Trial | Author wall time | Render process time | Outcome |
