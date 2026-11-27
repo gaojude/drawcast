@@ -352,7 +352,7 @@ test("a video settles a step at a time, as its narration is heard", async () => 
   assert.equal(player.sent.length, 2);
   assert.deepEqual(player.sent[1].map((a) => a?.duration ?? null), [null, 1]);
   assert.deepEqual([telling.frames, telling.samples, telling.duration], [70, 7 * SAMPLE_RATE, 7]);
-  assert.deepEqual(await telling.whole, { duration: 7, frames: 70 });
+  assert.deepEqual(await telling.whole, { duration: 7, frames: 70, index: { frames: 70, stepFrames: [29, 44, 69] } });
   assert.deepEqual(lines, ["Video: 7.0 s, 70 frames"]);
   // the last step starts at 4.5 s
   const end = telling.sound(4 * SAMPLE_RATE, 7 * SAMPLE_RATE);
@@ -387,7 +387,7 @@ test("when the narration starts over in another voice, nothing is settled any mo
   listener.spoken(1, null, null);
   listener.spoken(2, audioOf(1), tone(1, 0.125));
   await more;
-  assert.deepEqual(await telling.whole, { duration: 9, frames: 90 });
+  assert.deepEqual(await telling.whole, { duration: 9, frames: 90, index: { frames: 90, stepFrames: [49, 64, 89] } });
 });
 
 test("the cover is known as soon as the step it shows is spoken", async () => {

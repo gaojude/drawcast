@@ -3,8 +3,8 @@
 Use the same CLI invocation that printed this guide for the commands below.
 
 1. Write a `lesson.drawcast.json`. Give each spoken idea a visible change.
-2. Run `drawcast snapshot lesson.drawcast.json --sheet`. Read the diagnostics and look at the step layouts. Revise if needed.
-3. Run `drawcast render lesson.drawcast.json` and return the MP4. Review movement with `drawcast inspect lesson.mp4 --motion`, or compare exact times on one sheet with `--at 2,2.5,3`. Omit both for evenly spaced frames.
+2. Run `drawcast render lesson.drawcast.json`. It checks the script, speaks the narration and writes the MP4. To try a layout before rendering, use `drawcast snapshot lesson.drawcast.json --sheet`.
+3. Review the encoded steps with `drawcast inspect lesson.mp4 --step all` and return the MP4. For movement use `--motion`, or compare exact times with `--at 2,2.5,3`.
 
 Video defaults to 1080p at 30 fps. Set `--width` and `--fps` on render. On an inspection sheet, `--width` sets each tile's width. Inspect prints encoded dimensions, duration, frame count, average fps and audio codec. Speech is cached. For offline English use `"voice":"maple"`.
 

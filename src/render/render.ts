@@ -14,6 +14,9 @@ import { resolveVoice } from "../voice/voice.ts";
 import { type Audio, pcm16 } from "../voice/wav.ts";
 import { type Output, requireFfmpeg, startEncoder, startMuxer } from "./encode.ts";
 import { type Player, openPlayer } from "./player.ts";
+import { appendStepIndex, stepFrameIndex, type StepIndex } from "./step-index.ts";
+import { parseSteps, SHEET_COLUMNS, SHEET_STEPS, SHEET_TILE, sheetPage } from "../shared/steps.ts";
+export { parseSteps } from "../shared/steps.ts";
 
 type Log = (line: string) => void;
 
@@ -167,7 +170,7 @@ export interface Telling {
   /** The sound from sample `from` up to sample `to`, which has to be settled. */
   sound(from: number, to: number): Float32Array;
   /** Resolves when all of it is settled, with the length of the video. */
-  whole: Promise<{ duration: number; frames: number }>;
+  whole: Promise<{ duration: number; frames: number; index: StepIndex }>;
   narration: Promise<unknown>;
 }
 
@@ -251,8 +254,9 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (listene
       cover = o.cover && schedule.stepDone[o.cover - 1] !== undefined ? o.cover : null;
       if (duration !== null) o.log(`Video: ${duration.toFixed(1)} s, ${frames} frames`);
       settled.fire();
+      if (duration !== null && told === script.steps.length) return { duration, frames, index: stepFrameIndex(stepStarts, schedule.stepDone, o.fps, frames, cover !== null) };
     }
-    return { duration: duration!, frames };
+    throw new Error("The player did not finish scheduling the script.");
   })();
   whole.catch((e) => {
     failure = e instanceof Error ? e : new Error(String(e));
@@ -536,8 +540,9 @@ export async function renderVideo(loaded: Loaded, o: RenderOptions): Promise<{ d
       }
       await recordWithFfmpeg(player, { ...job, audio: audioFile, pcmRate: SAMPLE_RATE, frames, cover: telling.cover });
     }
-    const { duration } = await telling.whole;
+    const { duration, index } = await telling.whole;
     signal.throwIfAborted();
+    await appendStepIndex(job.output, index, signal);
     await publishFile(job.output, o.output, signal);
     return { duration };
   } catch (error) {
@@ -584,11 +589,6 @@ export interface SnapshotOptions {
   log: Log;
 }
 
-/** Steps on one contact sheet: three across and four down still reads at the size an agent is shown a picture. */
-const SHEET_COLUMNS = 3;
-const SHEET_STEPS = 12;
-const SHEET_TILE = 512;
-
 /**
  * Stills of a script. Nothing is spoken: a sentence an earlier render spoke takes as long as it did then,
  * and any other is estimated from its syllables. Returns each file written, with what it shows.
@@ -606,8 +606,8 @@ export async function renderSnapshot(loaded: Loaded, o: SnapshotOptions): Promis
   const pages = Array.from({ length: Math.ceil(steps.length / pageSize) }, (_, i) => steps.slice(i * pageSize, (i + 1) * pageSize));
   const outputs = pages.map((part, i) => {
     if (pages.length === 1) return o.output;
-    const suffix = o.sheet ? `-${i + 1}` : `-step${part[0]}`;
-    return o.output.replace(/(\.png)?$/i, `${suffix}.png`);
+    if (o.sheet) return sheetPage(o.output, i);
+    return o.output.replace(/(\.png)?$/i, `-step${part[0]}.png`);
   });
   await prepareOutputs(loaded, outputs);
   const captions = o.captions ?? script.captions ?? true;
@@ -659,20 +659,4 @@ export async function renderSnapshot(loaded: Loaded, o: SnapshotOptions): Promis
   } finally {
     try { await player?.close(); } finally { await rm(work, { recursive: true, force: true }); }
   }
-}
-
-/** Parses `--step`: a number, a list such as `2,5,9`, a range such as `3-6`, or `all`. */
-export function parseSteps(value: string, count: number): number[] {
-  if (value.trim() === "all") return Array.from({ length: count }, (_, i) => i + 1);
-  // PowerShell hands `--step 4,7` over as "4 7", so spaces separate as well as commas
-  const parts = value.trim().split(/\s*,\s*|\s+/);
-  const steps = new Set<number>();
-  for (const part of parts) {
-    const match = /^(\d+)(?:-(\d+))?$/.exec(part);
-    const first = Number(match?.[1]);
-    const last = Number(match?.[2] ?? first);
-    if (!match || first < 1 || last < first || last > count) throw new Error(`--step must select steps 1 to ${count}, for example 2,5 or 3-6, or "all" (got "${value}").`);
-    for (let s = first; s <= last; s++) steps.add(s);
-  }
-  return [...steps];
 }

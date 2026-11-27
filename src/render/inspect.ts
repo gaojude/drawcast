@@ -1,20 +1,24 @@
 import { execFile } from "node:child_process";
 import { createReadStream } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import { promisify } from "node:util";
 import { prepareOutputFiles, publishFile } from "../shared/files.ts";
+import { parseSteps, SHEET_COLUMNS, SHEET_STEPS, SHEET_TILE, sheetPage } from "../shared/steps.ts";
 import { requireFfmpeg } from "./encode.ts";
+import { readStepIndex } from "./step-index.ts";
 
 const exec = promisify(execFile);
 
 /** Packet timestamps give the video track's exact clock, including its final frame interval. */
-async function readTimeline(file: string, signal?: AbortSignal) {
+async function readTimeline(file: string, keepStarts: boolean, signal?: AbortSignal) {
   const stream = createReadStream(file, { signal });
   const lines = createInterface({ input: stream, crlfDelay: Infinity });
   const starts: number[] = [];
   let ticksPerSecond = 0;
+  let frames = 0;
+  let first = Infinity;
   let end = -Infinity;
   let dimensions: string | undefined;
   let audioCodec: string | undefined;
@@ -29,7 +33,9 @@ async function readTimeline(file: string, signal?: AbortSignal) {
         audioCodec = line.slice(line.indexOf(":") + 1).trim();
       } else if (line.startsWith("0,")) {
         const [, , pts, duration] = line.split(",", 4).map(Number);
-        starts.push(pts);
+        if (keepStarts) starts.push(pts);
+        frames++;
+        first = Math.min(first, pts);
         end = Math.max(end, pts + duration);
       }
     }
@@ -37,10 +43,10 @@ async function readTimeline(file: string, signal?: AbortSignal) {
     lines.close();
     stream.destroy();
   }
-  if (!starts.length || !(ticksPerSecond > 0) || !Number.isFinite(end)) throw new Error("The MP4 has no timed video frames.");
+  if (!frames || !(ticksPerSecond > 0) || !Number.isFinite(end)) throw new Error("The MP4 has no timed video frames.");
   // H.264 with B-frames stores packets in decode order. The select filter sees display order.
   starts.sort((a, b) => a - b);
-  return { starts, ticksPerSecond, duration: (end - starts[0]) / ticksPerSecond, dimensions, audioCodec };
+  return { starts, frames, ticksPerSecond, duration: (end - first) / ticksPerSecond, dimensions, audioCodec };
 }
 
 /** Keep the opening and ending, then find up to four separated moments of sustained visual change. */
@@ -76,14 +82,33 @@ async function motionFrames(file: string, times: number[], signal?: AbortSignal)
   return [0, ...peaks.sort((a, b) => a - b), times.length - 1];
 }
 
-export async function inspectVideo(input: string, output: string, at?: number | number[], signal?: AbortSignal, motion = false, width?: number) {
+interface InspectOptions {
+  at?: number | number[];
+  signal?: AbortSignal;
+  motion?: boolean;
+  width?: number;
+  step?: string;
+}
+
+export async function inspectVideo(input: string, output: string, { at, signal, motion, width, step }: InspectOptions = {}) {
   signal?.throwIfAborted();
   if (width !== undefined && (!Number.isSafeInteger(width) || width < 1)) throw new Error("--width must be a positive integer in pixels.");
-  if (at !== undefined && motion) throw new Error("Choose --motion for automatic selection or --at for specific times.");
+  if (Number(at !== undefined) + Number(!!motion) + Number(step !== undefined) > 1) throw new Error("Choose --motion, --at, or --step on its own.");
   const requested = at === undefined ? undefined : [at].flat();
   if (requested?.some(s => !Number.isFinite(s) || s < 0)) throw new Error("--at must be a nonnegative number of seconds.");
   if (requested && (!requested.length || requested.length > 12)) throw new Error("--at accepts one to twelve times.");
-  await prepareOutputFiles([input], [output], "input MP4");
+  const index = step === undefined ? undefined : await readStepIndex(input, signal);
+  const stepsByFrame = new Map<number, number[]>();
+  if (index) {
+    for (const n of parseSteps(step!, index.stepFrames.length).sort((a, b) => a - b)) {
+      const frame = index.stepFrames[n - 1];
+      if (!stepsByFrame.has(frame)) stepsByFrame.set(frame, []);
+      stepsByFrame.get(frame)!.push(n);
+    }
+  }
+  const pages = Math.max(1, Math.ceil(stepsByFrame.size / SHEET_STEPS));
+  const outputs = Array.from({ length: pages }, (_, i) => pages === 1 ? output : sheetPage(output, i));
+  await prepareOutputFiles([input], outputs, "input MP4");
   const ffmpeg = requireFfmpeg();
   const work = await mkdtemp(path.join(path.dirname(path.resolve(output)), ".drawcast-"));
   const source = ["-nostdin", "-hide_banner", "-v", "error", "-xerror", "-f", "mov", "-i", path.resolve(input), "-map", "0:V:0"];
@@ -91,11 +116,12 @@ export async function inspectVideo(input: string, output: string, at?: number | 
   try {
     const metadata = path.join(work, "packets.txt");
     await exec(ffmpeg, [...source, "-map", "0:a:0?", "-c", "copy", "-f", "framecrc", metadata], options);
-    const { starts, ticksPerSecond, duration, dimensions, audioCodec } = await readTimeline(metadata, signal);
+    const { starts, frames, ticksPerSecond, duration, dimensions, audioCodec } = await readTimeline(metadata, !index, signal);
+    if (index && index.frames !== frames) throw new Error("The Drawcast step index and the encoded frame count differ. Use --at or --motion, or render the script again.");
     if (requested?.some(s => s >= duration)) throw new Error(`--at must be less than the video duration (${Number(duration.toFixed(6))} s).`);
     const seconds = (i: number) => (starts[i] - starts[0]) / ticksPerSecond;
     const count = Math.min(6, starts.length);
-    let indices = requested
+    let indices = index ? [...stepsByFrame.keys()] : requested
       ? [...new Set(requested.map(s => starts.findLastIndex((_, i) => seconds(i) <= s)))].sort((a, b) => a - b)
       : Array.from({ length: count }, (_, i) => Math.round(i * (starts.length - 1) / Math.max(1, count - 1)));
     if (motion && starts.length > count) {
@@ -106,15 +132,30 @@ export async function inspectVideo(input: string, output: string, at?: number | 
     }
 
     const selected = indices.map((i) => `eq(n\\,${i})`).join("+");
-    const columns = Math.min(indices.length, 3);
+    const perPage = Math.min(indices.length, SHEET_STEPS);
+    const columns = Math.min(perPage, SHEET_COLUMNS);
     const filters = [`select=${selected}`];
-    const sheet = requested?.length !== 1;
-    if (sheet || width !== undefined) filters.push(`scale=${width ?? 512}:-1`);
-    if (sheet) filters.push(`tile=${columns}x${Math.ceil(indices.length / columns)}:nb_frames=${indices.length}:padding=4:margin=4:color=white`);
-    const staged = path.join(work, "preview.png");
-    await exec(ffmpeg, [...source, "-vf", filters.join(","), "-frames:v", "1", "-abort_on", "empty_output", "-update", "1", staged], options);
-    await publishFile(staged, output, signal);
-    return { times: indices.map(seconds), duration, frames: starts.length, dimensions, audioCodec };
+    if (index) {
+      // Record PTS from decoded frames, before the sheet filter changes their timestamps.
+      filters.push("metadata=mode=add:key=drawcast:value=1", "metadata=print:key=drawcast:file=times.txt");
+    }
+    const sheet = index ? indices.length > 1 : requested?.length !== 1;
+    if (sheet || width !== undefined) filters.push(`scale=${width ?? SHEET_TILE}:-1`);
+    if (sheet) filters.push(`tile=${columns}x${Math.ceil(perPage / columns)}:nb_frames=${perPage}:padding=4:margin=4:color=white`);
+    // A filter file keeps large step selections out of the platform's command-line limit.
+    await writeFile(path.join(work, "filter.txt"), filters.join(","), { signal });
+    await exec(ffmpeg, [...source, "-filter_script:v", "filter.txt", "-vsync", "0", "-frames:v", String(pages), "-abort_on", "empty_output", "preview-%d.png"], { ...options, cwd: work });
+    const times = index
+      ? [...(await readFile(path.join(work, "times.txt"), { encoding: "utf8", signal })).matchAll(/^frame:\s*\d+\s+pts:\s*(-?\d+)/gm)].map(m => Number(m[1]) / ticksPerSecond)
+      : indices.map(seconds);
+    if (times.length !== indices.length) throw new Error("The selected step frames could not all be decoded. Use --at or --motion, or render the script again.");
+    const files = outputs.map((file, i) => {
+      const begin = i * perPage;
+      return { file, times: times.slice(begin, begin + perPage), steps: index ? indices.slice(begin, begin + perPage).map(n => stepsByFrame.get(n)!) : undefined };
+    });
+    signal?.throwIfAborted();
+    for (const [i, file] of outputs.entries()) await publishFile(path.join(work, `preview-${i + 1}.png`), file);
+    return { files, duration, frames, dimensions, audioCodec };
   } catch (error) {
     signal?.throwIfAborted();
     const diagnostic = (error as { stderr?: string }).stderr?.trim();
