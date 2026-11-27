@@ -310,6 +310,17 @@ test("voice fallback discards already queued audio and video before writing a la
   assert.equal(telling.round, 1);
   const hashes = execFileSync(ffmpeg, ["-v", "error", "-i", output, "-map", "0:v:0", "-f", "framemd5", "-"], { encoding: "utf8" });
   assert.equal(hashes.trim().split(/\r?\n/).filter((line) => !line.startsWith("#")).length, telling.frames);
+  const packetInfo = execFileSync(ffmpeg, ["-v", "error", "-i", output, "-map", "0:v:0", "-c:v", "copy", "-f", "framemd5", "-"], { encoding: "utf8" });
+  const [, numerator, denominator] = /^#tb 0: (\d+)\/(\d+)/m.exec(packetInfo);
+  const tick = Number(numerator) / Number(denominator);
+  const packets = packetInfo.trim().split(/\r?\n/).filter((line) => !line.startsWith("#"));
+  assert.equal(packets.length, telling.frames);
+  for (const [i, packet] of packets.entries()) {
+    const [, dts, pts, duration] = packet.split(",").map(Number);
+    assert.equal(dts, pts);
+    assert.equal(pts * tick, i / 4);
+    assert.equal(duration * tick, 1 / 4);
+  }
   const sound = execFileSync(ffmpeg, ["-v", "error", "-i", output, "-map", "0:a:0", "-f", "s16le", "-"]);
   assert.ok(sound.length >= telling.samples * 2);
   assert.ok(sound.every((b) => b === 0), "the abandoned voice must not be audible");

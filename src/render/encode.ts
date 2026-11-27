@@ -126,8 +126,12 @@ export function startMuxer(o: Output & { color: ColorSpace | null; sampleRate: n
   const tags = colorTags(o.color);
   // Even an in-order stream can advertise a decoding delay. Starting DTS below zero
   // makes MP4 players skip the cover and opening frames. The page verifies frame order.
-  const timestamp = `N/(${o.fps}*TB)`;
-  const filters = [`setts=pts=${timestamp}:dts=${timestamp}`];
+  // Older and newer FFmpeg muxers can supply different input time bases to the filter.
+  // Set packet timestamps, durations and the MP4 track to the same 90 kHz clock.
+  const clock = 90000;
+  const timestamp = `round(N*${clock}/${o.fps})`;
+  const duration = `round((N+1)*${clock}/${o.fps})-${timestamp}`;
+  const filters = [`setts=time_base=1/${clock}:ts=${timestamp}:duration=${duration}`];
   if (tags) filters.push(`h264_metadata=${tags}`);
   return run(
     [
@@ -135,7 +139,7 @@ export function startMuxer(o: Output & { color: ColorSpace | null; sampleRate: n
       // ffmpeg reads while working out what the stream is, and leave the rest a tick apart.
       "-f", "h264", "-r", String(o.fps), "-i", "pipe:0",
       "-f", "s16le", "-ar", String(o.sampleRate), "-ac", "1", "-i", "pipe:3",
-      "-c:v", "copy", "-bsf:v", filters.join(","),
+      "-c:v", "copy", "-bsf:v", filters.join(","), "-video_track_timescale", String(clock),
       ...TAIL, o.output,
     ],
     { soundPipe: true, patient: false },
