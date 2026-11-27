@@ -1,7 +1,6 @@
 {
   "drawcast": 1,
   "title": "drawcast promo",
-  "voice": "edge:en-US-EmmaMultilingualNeural",
   "steps": [
     {
       "say": "One command made this video. Its input is a text file, written by a coding agent. Its output is what you are watching. No screen recording, no microphone, no video editor.",

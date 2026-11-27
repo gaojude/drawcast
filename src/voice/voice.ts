@@ -1,8 +1,7 @@
 /**
  * The voices. A voice says one sentence at a time and returns the audio.
  *
- * By default a script is spoken by one of Microsoft's online voices (`edge:...`), and by the built-in
- * engine when that cannot be had. The built-in engine is Kokoro (run by sherpa-onnx, on the CPU), a small
+ * The default engine is Kokoro, which runs on the CPU with sherpa-onnx. It is a small
  * model with a fixed set of speakers for Chinese and English. A script can also name one of MiniMax's
  * paid voices (`minimax:...`). `--tts-command` swaps the engine for any program that turns text into a
  * WAV file.
@@ -17,7 +16,6 @@ import path from "node:path";
 import { cacheDir } from "../paths.ts";
 import { isCjk } from "../shared/text.ts";
 import { writeFileAtomic } from "../shared/files.ts";
-import { EDGE_PREFIX, EDGE_VOICES, openEdgeVoice } from "./edge.ts";
 import { MINIMAX_PREFIX, openMinimaxVoice, parseMinimaxVoice } from "./minimax.ts";
 import { type ModelFiles, ensureModels } from "./models.ts";
 import { normalize } from "./normalize.ts";
@@ -33,7 +31,7 @@ export interface Voice {
   open(signal?: AbortSignal): Promise<(sentence: string) => Promise<Audio>>;
   /** How many sentences it can be asked for at once. Left out, one. */
   parallel?: number;
-  /** The voice that says the whole script instead if this one cannot (no edge-tts, no connection). */
+  /** The voice that says the whole script instead if this one cannot. */
   fallback?: Voice;
 }
 
@@ -54,7 +52,6 @@ interface BuiltIn {
  * about three in four, and the Chinese stayed as clear.
  */
 const BUILT_IN: Record<string, BuiltIn> = {
-  // the first voice of each language is the one a script gets when its online voice cannot be had
   lin: { speaker: "zf_071", mix: ["af_maple", 0.35], language: "zh", description: "Mandarin, female" },
   chen: { speaker: "zm_061", mix: ["af_sol", 0.35], language: "zh", description: "Mandarin, male" },
   maple: { speaker: "af_maple", language: "en", description: "American English, female" },
@@ -263,9 +260,6 @@ export interface VoiceOptions {
   log: (line: string) => void;
 }
 
-// each sentence is a request of its own to the service, and nearly all of its second is spent waiting
-const edgeVoice = (name: string): Voice => ({ name: EDGE_PREFIX + name, key: sha("edge", name), open: (signal) => openEdgeVoice(name, signal), parallel: 6 });
-
 /** A paid voice: never a fallback, and its key is looked for only when it is about to speak. */
 function minimaxVoice(spec: string, log: (line: string) => void): Voice {
   const parsed = parseMinimaxVoice(spec);
@@ -278,30 +272,16 @@ function minimaxVoice(spec: string, log: (line: string) => void): Voice {
   };
 }
 
-/**
- * Left unset, a script gets the first online voice of its language, and the first built-in one if the
- * online voice cannot speak. A voice the script names is used as it is, with nothing to fall back on.
- */
 export async function resolveVoice(o: VoiceOptions): Promise<Voice> {
   if (o.ttsCommand) return commandVoice(o.ttsCommand);
-  if (o.spec?.startsWith(EDGE_PREFIX)) {
-    const name = o.spec.slice(EDGE_PREFIX.length).trim();
-    if (!name) throw new Error(`"${EDGE_PREFIX}" needs the name of a voice after it, such as "${EDGE_PREFIX}en-US-EmmaMultilingualNeural".`);
-    return edgeVoice(name);
-  }
+  if (o.spec?.startsWith("edge:")) throw new Error("Edge TTS was removed. Omit the voice or choose maple for English or lin for Mandarin.");
   if (o.spec?.startsWith(MINIMAX_PREFIX)) return minimaxVoice(o.spec.slice(MINIMAX_PREFIX.length).trim(), o.log);
-  const language = isCjk(o.narration) ? "zh" : "en";
-  if (!o.spec) {
-    const builtIn = Object.keys(BUILT_IN).find((v) => BUILT_IN[v].language === language)!;
-    const online = EDGE_VOICES.find((v) => v.language === language)!;
-    return { ...edgeVoice(online.name), fallback: await resolveVoice({ ...o, spec: builtIn }) };
-  }
-  const name = o.spec;
+  const name = o.spec || (isCjk(o.narration) ? "lin" : "maple");
   // a built-in voice, or one of the model's speakers by its own name
   if (Object.hasOwn(BUILT_IN, name)) {
     const voice = BUILT_IN[name];
     return kokoro(name, voice.speaker, voice.mix, o.log);
   }
   if (SPEAKERS.includes(name)) return kokoro(name, name, undefined, o.log);
-  throw new Error(`There is no voice called "${name}". Built-in voices: ${Object.keys(BUILT_IN).join(", ")}. Online voices start with "${EDGE_PREFIX}", and MiniMax's paid ones with "${MINIMAX_PREFIX}".`);
+  throw new Error(`There is no voice called "${name}". Built-in voices: ${Object.keys(BUILT_IN).join(", ")}. MiniMax voices start with "${MINIMAX_PREFIX}".`);
 }

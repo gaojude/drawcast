@@ -7,7 +7,6 @@ import { findFfmpeg } from "./render/encode.ts";
 import { inspectVideo } from "./render/inspect.ts";
 import { ScriptError, loadScript, parseSteps, renderSnapshot, renderVideo } from "./render/render.ts";
 import { ensureModels, modelsDir, modelsInstalled } from "./voice/models.ts";
-import { EDGE_PREFIX, EDGE_VOICES, edgeTtsStatus } from "./voice/edge.ts";
 import { MINIMAX_MODEL, MINIMAX_PREFIX, MINIMAX_VOICES, minimaxKeyStatus, removeMinimaxKey, saveMinimaxKey } from "./voice/minimax.ts";
 import { SPEAKERS, builtInVoices } from "./voice/voice.ts";
 
@@ -161,14 +160,11 @@ async function main(signal: AbortSignal): Promise<number> {
     }
 
     case "voices": {
-      const width = Math.max(...EDGE_VOICES.map((v) => EDGE_PREFIX.length + v.name.length));
-      for (const [name, v] of Object.entries(builtInVoices())) console.log(`${name.padEnd(width)}  ${v.language}  ${v.description}`);
+      for (const [name, v] of Object.entries(builtInVoices())) console.log(`${name.padEnd(6)}  ${v.language}  ${v.description}`);
       console.log(`\nThese run on this machine. The model has ${SPEAKERS.length} speakers and these are names for four of them;\nany other works by its own name, such as zf_001 or zm_100:\n  https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh/tree/main/voices`);
-      console.log(`\nOnline voices send the narration to Microsoft and need the edge-tts program.\nedge-tts: ${edgeTtsStatus().description}\nLeft unset, a script gets the first online voice of its language, or the first built-in one if that\ncannot be had:`);
-      for (const v of EDGE_VOICES) console.log(`${(EDGE_PREFIX + v.name).padEnd(width)}  ${v.language}  ${v.description}`);
-      console.log(`"edge-tts --list-voices" lists the rest; put "${EDGE_PREFIX}" in front of a name.`);
+      console.log("Default narration uses maple for English and lin for Mandarin.");
       console.log(`\nMiniMax's voices are paid by the character, with your own API key, and are used only when a script\nor --voice names one. minimax: ${minimaxKeyStatus()}.`);
-      for (const v of MINIMAX_VOICES) console.log(`${(MINIMAX_PREFIX + v.name).padEnd(width)}  ${v.language}  ${v.description}`);
+      for (const v of MINIMAX_VOICES) console.log(`${(MINIMAX_PREFIX + v.name).padEnd(6)}  ${v.language}  ${v.description}`);
       console.log(`Any voice id from MiniMax's list, or one you cloned, works after "${MINIMAX_PREFIX}". The model is\n${MINIMAX_MODEL}; add "@speech-2.8-turbo" to a name for the cheaper one.`);
       return 0;
     }
@@ -198,8 +194,6 @@ async function main(signal: AbortSignal): Promise<number> {
       console.log(`browser       ${browser ?? "missing: install Chrome, Chromium or Edge"}`);
       const ffmpeg = findFfmpeg();
       console.log(`ffmpeg        ${ffmpeg ?? "missing: install ffmpeg, or reinstall drawcast with install scripts allowed"}`);
-      // optional: without it a script left without a voice is spoken by the built-in one
-      console.log(`edge-tts      ${edgeTtsStatus().description} (needed for online voices)`);
       console.log(`minimax       ${minimaxKeyStatus()} (needed for MiniMax's paid voices)`);
       return browser && ffmpeg ? 0 : 1;
     }
