@@ -76,6 +76,8 @@ export interface ElementSpec extends Style {
   src?: string;
   /** line: a function of x to plot, such as "x^2 / 4", drawn across the box x, y, width, height. */
   fn?: string;
+  /** Plot parameter in fn, animated by update.p on the same fixed axes. */
+  p?: number;
   /** line with `fn`: the x values the box spans, [from, to]. */
   domain?: [number, number];
   /** line with `fn`: the y values the box spans, [bottom, top]. Default: as far as the curve goes. */
@@ -98,6 +100,8 @@ export type Enter = "draw" | "fade" | "none";
 /** Properties an `update` may change. */
 export interface UpdateSpec extends Style {
   id: string | string[];
+  /** Target value of the parameter of a plotted function. */
+  p?: number;
   x?: number;
   y?: number;
   /** Move relative to where the element is now. */

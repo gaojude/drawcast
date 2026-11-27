@@ -43,7 +43,8 @@ export function expand(script: Script): Script {
         if (length) breaks.push(length);
         length += segment.length;
       }
-      out = { ...rest, points: segments.flat(), ...(breaks.length ? { breaks } : {}), roughness: rest.roughness ?? 0 };
+      // A parameterized plot keeps its formula so the player can sample intermediate values.
+      out = { ...(rest.p === undefined ? {} : { fn, domain, range, x, y, width, height }), ...rest, points: segments.flat(), ...(breaks.length ? { breaks } : {}), roughness: rest.roughness ?? 0 };
     } else if (out.points) out = { ...out, ...points(out.points) };
     if (out.type === "arrow") out = { ...out, from: ref(out.from), to: ref(out.to), ...(out.via ? { via: points(out.via).points } : {}) };
     const { on, ...placed } = out as ElementSpec & { on?: PlotRef };
@@ -73,7 +74,10 @@ export function expand(script: Script): Script {
         const { points: along, breaks } = points(update.along);
         update = { ...update, along, ...(breaks ? { breaks } : {}) };
       }
-      for (const id of ids) plots.move(id, update.dx ?? 0, update.dy ?? 0, update.angle);
+      for (const id of ids) {
+        if (update.p !== undefined) plots.setParameter(id, update.p);
+        plots.move(id, update.dx ?? 0, update.dy ?? 0, update.angle);
+      }
       return { ...a, update };
     }
     if (a.remove) for (const id of [a.remove].flat()) plots.remove(id);

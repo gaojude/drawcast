@@ -1,0 +1,89 @@
+{
+  "drawcast": 1,
+  "title": "Drawcast review: animating a shared plot parameter",
+  "cover": 2,
+  "steps": [
+    {
+      "say": "In the original wave lesson, sixteen phase changes took thirty five plot definitions and seventy six actions. Each time two plots faded out, their replacements faded in, briefly doubling the curves.",
+      "do": [
+        {"at":0,"duration":0.3,"enter":"fade","add":{"id":"heading","type":"text","x":60,"y":42,"text":"How a wave changed phase","fontSize":44,"strokeColor":"#182d3b","fontFamily":"normal"}},
+        {"at":"sixteen","duration":0.3,"enter":"fade","add":{"id":"count0","type":"text","x":64,"y":170,"text":"16","fontSize":88,"strokeColor":"#b34d1e","fontFamily":"normal"}},
+        {"at":"sixteen","duration":0.3,"enter":"fade","add":{"id":"label0","type":"text","x":64,"y":281,"text":"phase changes","fontSize":32,"strokeColor":"#182d3b","fontFamily":"normal"}},
+        {"at":"thirty five","duration":0.3,"enter":"fade","add":{"id":"count1","type":"text","x":485,"y":170,"text":"35","fontSize":88,"strokeColor":"#182d3b","fontFamily":"normal"}},
+        {"at":"thirty five","duration":0.3,"enter":"fade","add":{"id":"label1","type":"text","x":485,"y":281,"text":"plot definitions","fontSize":32,"strokeColor":"#182d3b","fontFamily":"normal"}},
+        {"at":"seventy six","duration":0.3,"enter":"fade","add":{"id":"count2","type":"text","x":891,"y":170,"text":"76","fontSize":88,"strokeColor":"#182d3b","fontFamily":"normal"}},
+        {"at":"seventy six","duration":0.3,"enter":"fade","add":{"id":"label2","type":"text","x":891,"y":281,"text":"script actions","fontSize":32,"strokeColor":"#182d3b","fontFamily":"normal"}},
+        {"at":"faded","duration":0.3,"enter":"fade","add":{"id":"oldExpl","type":"text","x":64,"y":428,"text":"Two plots faded out. Two replacements faded in.","fontSize":34,"strokeColor":"#526873","fontFamily":"normal"}},
+        {"at":"faded","duration":0.3,"enter":"fade","add":{"id":"oldNote","type":"text","x":64,"y":493,"text":"Overlap during one crossfade","fontSize":25,"strokeColor":"#526873","fontFamily":"normal"}},
+        {"at":"faded","duration":0.3,"enter":"fade","add":{"id":"trace0","type":"line","points":[[850,477],[858,466],[866,456],[874,447],[882,438],[890,431],[898,425],[906,421],[914,418],[922,418],[930,420],[938,423],[946,428],[954,435],[962,443],[970,452],[978,462],[986,473],[994,483],[1002,494],[1010,504],[1018,513],[1026,521],[1034,527],[1042,532],[1050,535],[1058,536],[1066,535],[1074,533],[1082,528],[1090,522],[1098,514],[1106,505],[1114,496],[1122,485],[1130,475],[1138,464],[1146,454],[1154,445],[1162,436],[1170,429]],"strokeColor":"#b34d1e","opacity":57,"strokeWidth":3,"roughness":0}},
+        {"at":"faded","duration":0.3,"enter":"fade","add":{"id":"trace1","type":"line","points":[[850,489],[858,478],[866,467],[874,457],[882,447],[890,439],[898,431],[906,425],[914,421],[922,419],[930,418],[938,419],[946,423],[954,428],[962,434],[970,442],[978,451],[986,461],[994,472],[1002,483],[1010,493],[1018,503],[1026,512],[1034,520],[1042,527],[1050,532],[1058,535],[1066,536],[1074,535],[1082,533],[1090,528],[1098,522],[1106,515],[1114,506],[1122,497],[1130,486],[1138,476],[1146,465],[1154,455],[1162,445],[1170,437]],"strokeColor":"#b34d1e","opacity":57,"strokeWidth":3,"roughness":0}}
+      ],
+      "pause": 0.2
+    },
+    {
+      "say": "Now define the first wave, the second wave, and their sum once. Give both changing plots a fixed vertical range and start their phase at zero.",
+      "do": [
+        {"at":0,"duration":0.18,"remove":["count0","label0","count1","label1","count2","label2","oldExpl","oldNote","trace0","trace1"]},
+        {"at":0,"duration":0.28,"update":{"id":"heading","text":"Three formulas on one scale"}},
+        {"at":"first wave","duration":0.3,"enter":"fade","add":{"id":"name0","type":"text","x":64,"y":158,"text":"Wave A","fontSize":31,"strokeColor":"#1767a4","fontFamily":"normal"}},
+        {"at":"first wave","duration":0.3,"enter":"fade","add":{"id":"formula0","type":"text","x":64,"y":201,"text":"sin(x)","fontSize":25,"strokeColor":"#526873","fontFamily":"code"}},
+        {"at":"first wave","duration":0.3,"enter":"fade","add":{"id":"axis0","type":"line","points":[[440,200],[1190,200]],"strokeColor":"#b5c1c5","strokeWidth":1,"roughness":0}},
+        {"at":"first wave","duration":0.7,"enter":"draw","add":{"id":"waveA","type":"line","fn":"sin(x)","domain":[0,12.566371],"range":[-2,2],"x":440,"y":125,"width":750,"height":150,"strokeColor":"#1767a4","strokeWidth":4,"roughness":0}},
+        {"at":"second wave","duration":0.3,"enter":"fade","add":{"id":"name1","type":"text","x":64,"y":283,"text":"Wave B","fontSize":31,"strokeColor":"#b34d1e","fontFamily":"normal"}},
+        {"at":"second wave","duration":0.3,"enter":"fade","add":{"id":"formula1","type":"text","x":64,"y":326,"text":"sin(x+p)","fontSize":25,"strokeColor":"#526873","fontFamily":"code"}},
+        {"at":"second wave","duration":0.3,"enter":"fade","add":{"id":"axis1","type":"line","points":[[440,325],[1190,325]],"strokeColor":"#b5c1c5","strokeWidth":1,"roughness":0}},
+        {"at":"second wave","duration":0.7,"enter":"draw","add":{"id":"waveB","type":"line","fn":"sin(x+p)","p":0,"domain":[0,12.566371],"range":[-2,2],"x":440,"y":250,"width":750,"height":150,"strokeColor":"#b34d1e","strokeWidth":4,"roughness":0}},
+        {"at":"sum","duration":0.3,"enter":"fade","add":{"id":"name2","type":"text","x":64,"y":433,"text":"Sum","fontSize":31,"strokeColor":"#18735b","fontFamily":"normal"}},
+        {"at":"sum","duration":0.3,"enter":"fade","add":{"id":"formula2","type":"text","x":64,"y":476,"text":"sin(x)+sin(x+p)","fontSize":25,"strokeColor":"#526873","fontFamily":"code"}},
+        {"at":"sum","duration":0.3,"enter":"fade","add":{"id":"axis2","type":"line","points":[[440,475],[1190,475]],"strokeColor":"#b5c1c5","strokeWidth":1,"roughness":0}},
+        {"at":"sum","duration":0.7,"enter":"draw","add":{"id":"sum","type":"line","fn":"sin(x)+sin(x+p)","p":0,"domain":[0,12.566371],"range":[-2,2],"x":440,"y":400,"width":750,"height":150,"strokeColor":"#18735b","strokeWidth":4,"roughness":0}},
+        {"at":"vertical range","duration":0.3,"enter":"fade","add":{"id":"range","type":"text","x":64,"y":564,"text":"Fixed range   [−2, 2]","fontSize":24,"strokeColor":"#526873","fontFamily":"code"}}
+      ],
+      "pause": 0.25
+    },
+    {
+      "say": "Watch the orange wave slide. One update advances both plots through half a cycle. A crest meets a trough, and the green sum settles at zero.",
+      "do": [
+        {"at":0,"duration":0.28,"update":{"id":"heading","text":"One phase update moves both plots"}},
+        {"at":"slide","duration":0.25,"update":{"id":"range","text":"update { id: [\"waveB\", \"sum\"], p: 3.141593 }"}},
+        {"at":"slide","duration":3.8,"update":{"id":["waveB","sum"],"p":3.141592653589793}},
+        {"at":"settles","duration":0.28,"update":{"id":"range","text":"p = π     ·     Sum = 0"}}
+      ],
+      "pause": 0.45
+    },
+    {
+      "say": "The original guide ran over six thousand tokens. The quick start is under seven hundred. Open the plot topic for the formula syntax. The snapshot command validates the script and produces the contact sheet in one pass.",
+      "do": [
+        {"at":0,"duration":0.18,"remove":["name0","formula0","axis0","waveA","name1","formula1","axis1","waveB","name2","formula2","axis2","sum","range"]},
+        {"at":0,"duration":0.28,"update":{"id":"heading","text":"From guide to checked preview"}},
+        {"at":"original guide","duration":0.3,"enter":"fade","add":{"id":"guideOld","type":"text","x":64,"y":167,"text":"6,125 tokens","fontSize":49,"strokeColor":"#526873","fontFamily":"normal"}},
+        {"at":"original guide","duration":0.3,"enter":"fade","add":{"id":"guideOldCap","type":"text","x":64,"y":236,"text":"Original guide","fontSize":24,"strokeColor":"#526873","fontFamily":"normal"}},
+        {"at":"quick start","duration":0.3,"enter":"fade","add":{"id":"guideNew","type":"text","x":535,"y":167,"text":"692 tokens","fontSize":49,"strokeColor":"#18735b","fontFamily":"normal"}},
+        {"at":"quick start","duration":0.3,"enter":"fade","add":{"id":"guideNewCap","type":"text","x":535,"y":236,"text":"Quick start","fontSize":24,"strokeColor":"#18735b","fontFamily":"normal"}},
+        {"at":"plot topic","duration":0.3,"enter":"fade","add":{"id":"guideCmd","type":"text","x":64,"y":329,"text":"drawcast guide plots","fontSize":34,"strokeColor":"#182d3b","fontFamily":"code"}},
+        {"at":"snapshot","duration":0.3,"enter":"fade","add":{"id":"snapshotCmd","type":"text","x":64,"y":421,"text":"drawcast snapshot lesson.drawcast.json --sheet","fontSize":31,"strokeColor":"#182d3b","fontFamily":"code"}},
+        {"at":"validates","duration":0.3,"enter":"fade","add":{"id":"snapReason","type":"text","x":64,"y":479,"text":"Validates the script and produces the contact sheet.","fontSize":25,"strokeColor":"#526873","fontFamily":"normal"}}
+      ],
+      "pause": 0.5
+    },
+    {
+      "say": "When geometry stays unchanged, the renderer skips serializing the whole scene again. Across five renders per version, the median fell from four point two four seconds to three point nine one. That's about eight percent less time for this clip.",
+      "do": [
+        {"at":0,"duration":0.18,"remove":["guideOld","guideOldCap","guideNew","guideNewCap","guideCmd","snapshotCmd","snapReason"]},
+        {"at":0,"duration":0.28,"update":{"id":"heading","text":"Rendering the same wave lesson"}},
+        {"at":"geometry","duration":0.28,"enter":"fade","add":{"id":"benchSub","type":"text","x":64,"y":111,"text":"Unchanged geometry skips full-scene serialization.","fontSize":32,"strokeColor":"#526873","fontFamily":"normal"}},
+        {"at":"five","duration":0.28,"enter":"fade","add":{"id":"setup","type":"text","x":64,"y":454,"text":"39.77 s lesson at 1080p30   ·   5 renders per version","fontSize":26,"strokeColor":"#526873","fontFamily":"normal"}},
+        {"at":"five","duration":0.28,"enter":"fade","add":{"id":"setup2","type":"text","x":64,"y":502,"text":"Cached speech   ·   Fixed sketch seed","fontSize":25,"strokeColor":"#526873","fontFamily":"normal"}},
+        {"at":"median","duration":0.28,"enter":"fade","add":{"id":"benchMetric","type":"text","x":64,"y":200,"text":"Median render time","fontSize":26,"strokeColor":"#182d3b","fontFamily":"normal"}},
+        {"at":"median","duration":0.28,"enter":"fade","add":{"id":"vOld","type":"text","x":64,"y":264,"text":"Previous","fontSize":28,"strokeColor":"#182d3b","fontFamily":"normal"}},
+        {"at":"median","duration":0.28,"enter":"fade","add":{"id":"barOld","type":"rectangle","x":245,"y":269,"width":741,"height":28,"rounded":false,"roughness":0,"strokeWidth":1,"strokeColor":"#687a85","backgroundColor":"#687a85","fillStyle":"solid"}},
+        {"at":"median","duration":0.28,"enter":"fade","add":{"id":"oldTime","type":"text","x":1005,"y":258,"text":"4.235 s","fontSize":32,"strokeColor":"#182d3b","fontFamily":"normal"}},
+        {"at":"median","duration":0.28,"enter":"fade","add":{"id":"vNew","type":"text","x":64,"y":328,"text":"Updated","fontSize":28,"strokeColor":"#182d3b","fontFamily":"normal"}},
+        {"at":"median","duration":0.28,"enter":"fade","add":{"id":"barNew","type":"rectangle","x":245,"y":333,"width":683,"height":28,"rounded":false,"roughness":0,"strokeWidth":1,"strokeColor":"#18735b","backgroundColor":"#18735b","fillStyle":"solid"}},
+        {"at":"median","duration":0.28,"enter":"fade","add":{"id":"newTime","type":"text","x":949,"y":322,"text":"3.905 s","fontSize":32,"strokeColor":"#18735b","fontFamily":"normal"}},
+        {"at":"eight percent","duration":0.28,"enter":"fade","add":{"id":"save","type":"text","x":64,"y":389,"text":"7.8% less render time","fontSize":29,"strokeColor":"#18735b","fontFamily":"normal"}}
+      ],
+      "pause": 0.7
+    }
+  ]
+}

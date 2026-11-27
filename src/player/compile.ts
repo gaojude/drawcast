@@ -54,7 +54,7 @@ interface PointerSeg {
   step: number;
   t0: number;
   t1: number;
-  at: (u: number, time: number, upTo: number) => Pt;
+  at: (u: number, time: number, upTo: number) => Pt | undefined;
   color?: string;
 }
 
@@ -161,6 +161,7 @@ class Builder {
   links = new Map<string, Link>();
   /** the formulas on the canvas, as they are now: an update can change the LaTeX and the colour */
   math = new Map<string, ElementSpec>();
+  plots = new Map<string, ReturnType<typeof E.parameterizedLine>>();
   views: ViewSeg[] = [];
   pulses: { step: number; t0: number; t1: number; ids: string[] }[] = [];
   pointers: PointerSeg[] = [];
@@ -236,7 +237,12 @@ class Builder {
 
   private end(ref: string | Point | undefined): E.End | null {
     if (Array.isArray(ref)) return asPt(ref);
-    return (ref !== undefined && this.cur.get(ref)) || null;
+    return (ref !== undefined && this.geometry(this.cur.get(ref))) || null;
+  }
+
+  private geometry(el?: El): El | undefined {
+    if (el?.plotParameter === undefined) return el;
+    return this.plots.get(el.id)!(el);
   }
 
   private build(spec: ElementSpec): El[] {
@@ -279,6 +285,7 @@ class Builder {
     }
     if (label) this.labels.set(el.id, label.id);
     if (spec.type === "math") this.math.set(el.id, spec);
+    if (spec.type === "line" && spec.p !== undefined) this.plots.set(el.id, E.parameterizedLine(spec, el));
     this.specs.set(el.id, spec);
 
     if (enter === "none" || (enter === "fade" && duration === 0)) {
@@ -412,6 +419,7 @@ class Builder {
       const start = this.overlapping(id, t0)?.fn?.(t0) ?? base;
       let target: El = { ...base };
       const spec = this.specs.get(id)!;
+      if (u.p !== undefined) target.plotParameter = u.p;
       if (u.color && (["rectangle", "diamond", "ellipse"].includes(spec.type) || (spec.type === "line" && spec.closed))) {
         target.backgroundColor = PALETTE[u.color][1];
       }
@@ -449,7 +457,7 @@ class Builder {
       // travelling: the element's middle follows the path, from where it is now, to the path's end
       let route: Pt[] | null = null;
       if (u.along !== undefined && !base.points) {
-        const source = typeof u.along === "string" ? this.cur.get(u.along) : null;
+        const source = typeof u.along === "string" ? this.geometry(this.cur.get(u.along)) : null;
         const breaks = u.breaks && new Set(u.breaks);
         const all = Array.isArray(u.along) ? u.along.map((p, i) => ({ ...asPt(p), move: breaks?.has(i) })) : source?.points ? E.scenePoints(source) : null;
         if (all && all.length > 1) {
@@ -483,6 +491,7 @@ class Builder {
           height,
           opacity: lerp(start.opacity, target.opacity, k),
           angle: lerp(start.angle, target.angle, k),
+          ...(u.p !== undefined ? { plotParameter: lerp(start.plotParameter ?? spec.p!, u.p, k) } : {}),
           strokeColor: lerpColor(start.strokeColor, target.strokeColor, k),
           backgroundColor: lerpColor(start.backgroundColor, target.backgroundColor, k),
           ...(base.type === "text" ? { fontSize: lerp(start.fontSize, target.fontSize, k) } : {}),
@@ -553,7 +562,11 @@ class Builder {
 
   /** Attach both ends to the shapes visible in this frame, including when separate actions move them at once. */
   private placed(elements: El[], t: number, upTo: number): Map<string, El> {
-    const present = new Map(elements.map((el) => [el.id, el]));
+    const present = new Map<string, El>();
+    for (const el of elements) {
+      const drawn = this.geometry(el);
+      if (drawn) present.set(el.id, drawn);
+    }
     for (const pulse of this.pulses) {
       if (pulse.step > upTo || t <= pulse.t0 || t >= pulse.t1) continue;
       const swell = Math.sin(Math.PI * progress(t, pulse.t0, pulse.t1)) ** 2;
@@ -632,7 +645,7 @@ class Builder {
   }
 
   private bounds(ids: string[]): Rect | null {
-    const boxes = ids.flatMap((id) => [id, this.labels.get(id) ?? ""]).map((id) => this.cur.get(id)).filter((el): el is El => !!el).map(E.bbox);
+    const boxes = ids.flatMap((id) => [id, this.labels.get(id) ?? ""]).map((id) => this.geometry(this.cur.get(id))).filter((el): el is El => !!el).map(E.bbox);
     if (!boxes.length) return null;
     const x = Math.min(...boxes.map((b) => b.x));
     const y = Math.min(...boxes.map((b) => b.y));
@@ -663,13 +676,15 @@ class Builder {
     const hex = color && color in PALETTE ? PALETTE[color as ColorName][0] : color;
     let end = t0;
     for (const id of list(along)) {
-      const el = this.cur.get(id);
+      const el = this.geometry(this.cur.get(id));
       if (!el?.points) continue;
       const t1 = t0 + (duration ?? clamp(polylineLength(E.absolutePoints(el)) / SEND_SPEED, ...SEND_TIME));
       // eased gently at both ends, so the dot sets off and arrives rather than blinking in and out
       const ease = (u: number) => 0.15 * minJerk(u) + 0.85 * u;
       this.pointers.push({ step: this.step, t0, t1, color: hex, at: (u, time, upTo) => {
-        const pts = E.scenePoints(this.pointerTarget(id, time, upTo) ?? el);
+        const target = this.pointerTarget(id, time, upTo);
+        if (!target && this.plots.has(id)) return undefined;
+        const pts = E.scenePoints(target ?? el);
         return partialPolyline(reverse ? reversePath(pts) : pts, ease(u)).at(-1)!;
       } });
       end = Math.max(end, t1);
@@ -695,6 +710,7 @@ class Builder {
       t1: t0 + duration,
       at: (u, time, upTo) => {
         const el = typeof target === "string" && this.pointerTarget(target, time, upTo);
+        if (!el && typeof target === "string" && this.plots.has(target)) return undefined;
         const box = el ? E.bbox(el) : b;
         const rx = clamp(box.w * 0.3, 14, 80);
         const ry = clamp(box.h * 0.3, 10, 44);
@@ -769,15 +785,20 @@ export function timeline(script: Script, images: Map<string, ImageInfo>, formula
   const pointersAt = (t: number, upTo: number): Pointer[] =>
     b.pointers
       .filter((p) => p.step <= upTo && t >= p.t0 && t <= p.t1 + POINTER_TRAIL)
-      .map((s) => {
+      .flatMap((s) => {
         const u = (time: number) => progress(time, s.t0, s.t1);
+        const position = s.at(u(t), Math.min(t, s.t1), upTo);
+        if (!position) return [];
         const trail: Pt[] = [];
         for (let k = 8; k >= 1; k--) {
           const earlier = t - (k / 8) * POINTER_TRAIL;
-          if (earlier >= s.t0) trail.push(s.at(u(earlier), Math.min(earlier, s.t1), upTo));
+          if (earlier >= s.t0) {
+            const previous = s.at(u(earlier), Math.min(earlier, s.t1), upTo);
+            if (previous) trail.push(previous);
+          }
         }
         const alpha = clamp(Math.min((t - s.t0) / 0.12, (s.t1 + POINTER_TRAIL - t) / POINTER_TRAIL), 0, 1);
-        return { ...s.at(u(t), Math.min(t, s.t1), upTo), trail, alpha, color: s.color };
+        return [{ ...position, trail, alpha, color: s.color }];
       });
 
   const frameAt = (t: number, upTo = Infinity): Frame => {

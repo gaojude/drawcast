@@ -22,30 +22,13 @@ element is drawn at the moment the narration reaches the words you tie it to.
 
 ## Making a video
 
-This guide is the whole of the instructions: the skill only says to read it, so that the steps and
-the format always come from the release that runs them. Do not write a script from memory or from an
-earlier run.
+Follow `drawcast guide` for the authoring workflow. Use the same CLI invocation throughout.
+`snapshot --sheet` reports errors and layout warnings and draws up to twelve steps per sheet.
+`check` gives the same diagnostics without opening a browser. The shaded strip on the sheet
+shows the caption area. Use `--step 4,7` to look more closely at selected steps.
 
-**Which command to run.** The first line `drawcast guide` prints is the version it belongs to. If
-`drawcast --version` prints that same version, run `drawcast` as written below. If it prints another
-one, or `drawcast` is not found, run `npx -y drawcast@latest` in place of `drawcast` every time, and
-tell the user that `npm install -g drawcast@latest` updates their own copy. It needs Node.js 22.12 or
-newer. The first render downloads a speech model of about 365 MB, which can take a few minutes;
-`drawcast setup` downloads everything ahead of time and reports what is missing.
-
-Work in this loop:
-
-1. Decide what the video shows before writing JSON: what goes on the canvas, in what order, and what
-   is said as each part appears. One idea per step. Plan for motion, not just boxes (see Making it vivid).
-2. Write the script, named `something.drawcast.json`.
-3. `drawcast check file` lists errors and layout warnings: overlaps, text that will not fit, arrows
-   that cross or run through something, things under the captions. Fix them all.
-4. `drawcast snapshot file --sheet` draws every step, each as it is done, on one picture (twelve
-   steps a sheet; it prints the file names). Look at it: you cannot judge a layout from coordinates
-   alone. The shaded strip at the bottom is where the captions go. Fix what overlaps, is cut off or is
-   hard to read, check again, and make a new sheet, or `--step 4,7` for a closer look at a few steps.
-5. `drawcast render file` speaks the narration and writes the MP4, and prints its path. Give that path
-   to the user.
+Node.js 22.12 or newer is required. The first use of a built-in voice downloads a speech model
+of about 365 MB. `drawcast setup` can download it ahead of time.
 
 A snapshot needs no narration, so it is quick. Its timing is estimated until a render has spoken the
 narration, and exact after that; it says which. `--at 12.5` shows the video at that moment, with the
@@ -244,6 +227,17 @@ A point of the curve is named by the plot and its x: `["loss", -2.4]`. It goes w
 one plot in a row are the stretch of curve between them, so `"along": [["loss", -2.4], ["loss", 0]]`
 rolls something down the curve. `"on": ["loss", -2.4]` in place of `x` and `y` puts a shape's middle
 on the curve.
+
+For a curve that changes shape, use a number named `p` in the expression. Set its initial
+`p` and a fixed `range` on the plot. Animate `p` on the existing id, or target a list of
+plots to vary them together. Drawcast evaluates the function at each intermediate value.
+For example, use `sin(x+p)` for one wave and `sin(x)+sin(x+p)` for its sum with a fixed wave.
+Plot coordinates used by later actions resolve at the preceding update's target value.
+
+```json
+{ "add": { "id": "wave", "type": "line", "fn": "sin(x+p)", "p": 0, "domain": [0, 6.283185], "range": [-1, 1], "x": 280, "y": 180, "width": 720, "height": 160 } }
+{ "at": "shift", "duration": 2, "update": { "id": "wave", "p": 3.141593 } }
+```
 
 ```json
 { "add": { "id": "loss", "type": "line", "fn": "x^2 / 4", "domain": [-3, 3], "range": [0, 2.5], "x": 340, "y": 200, "width": 600, "height": 300, "color": "blue", "strokeWidth": 3 } }

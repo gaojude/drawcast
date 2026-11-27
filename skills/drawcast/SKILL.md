@@ -5,10 +5,5 @@ description: Make a narrated whiteboard video (MP4) in which an Excalidraw diagr
 
 # drawcast
 
-The instructions live in the `drawcast` command, so they always match the latest release. This file
-only says where to find them.
-
-1. Run `npx -y drawcast@latest guide` and read all of what it prints. It needs Node.js 22.12 or newer.
-   Without a network connection, run `drawcast guide` instead.
-2. Follow it. It says which command to run and everything else about making the video. Do not work
-   from memory or from an earlier run.
+Run `npx -y drawcast@latest guide` (Node.js 22.12+). If the user supplied a specific CLI, run its
+`guide` instead. Offline, use the installed `drawcast guide`. Follow the quick start with that same CLI.
