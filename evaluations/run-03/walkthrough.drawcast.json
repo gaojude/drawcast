@@ -1,0 +1,61 @@
+{
+  "drawcast": 1,
+  "title": "Put thermostat readings on the chart",
+  "cover": 4,
+  "steps": [
+    {
+      "say": "When the door opened, the thermostat read twenty degrees at two minutes. The author used the chart's origin, width and height to calculate the screen position by hand. The result was eight hundred seven across and two hundred ninety six down.",
+      "do": [
+        {"at":0,"enter":"fade","duration":0.18,"add":{"id":"headline","type":"text","x":66,"y":43,"text":"A thermostat reading in pixels","fontSize":45,"fontFamily":"normal","strokeColor":"#183153"}},
+        {"at":"door opened","enter":"fade","duration":0.18,"add":{"id":"door","type":"text","x":75,"y":169,"text":"Door opens","fontSize":34,"fontFamily":"normal","strokeColor":"#087f5b"}},
+        {"at":"twenty degrees","enter":"fade","duration":0.18,"add":{"id":"reading","type":"text","x":75,"y":231,"text":"2 min   •   20 °C","fontSize":42,"fontFamily":"normal","strokeColor":"#183153"}},
+        {"at":"origin","enter":"fade","duration":0.18,"add":{"id":"xLine","type":"text","x":570,"y":159,"text":"x ≈ 714 + 466 × 2 / 10","fontSize":32,"fontFamily":"normal","strokeColor":"#495057"}},
+        {"at":"width","enter":"fade","duration":0.18,"add":{"id":"yLine","type":"text","x":570,"y":216,"text":"y = 192 + 312 × 1 / 3","fontSize":32,"fontFamily":"normal","strokeColor":"#495057"}},
+        {"at":"result","enter":"fade","duration":0.18,"add":{"id":"pixels","type":"text","x":570,"y":289,"text":"[807, 296]","fontSize":44,"fontFamily":"code","strokeColor":"#1971c2"}}
+      ]
+    },
+    {
+      "say": "The first preview also rejected roughness on the axes. Removing that field let the preview run. The guide now explains that axes already draw clean strokes.",
+      "do": [
+        {"at":"first preview","enter":"fade","duration":0.18,"add":{"id":"rejected","type":"text","x":75,"y":409,"text":"axes + \"roughness\": 0","fontSize":32,"fontFamily":"code","strokeColor":"#ad5008"}},
+        {"at":"Removing","duration":0.25,"update":{"id":"rejected","text":"axes","strokeColor":"#087f5b"}},
+        {"at":"guide","enter":"fade","duration":0.18,"add":{"id":"clean","type":"text","x":75,"y":476,"text":"Axes already draw clean strokes.","fontSize":30,"fontFamily":"normal","strokeColor":"#495057"}}
+      ]
+    },
+    {
+      "say": "The temperature trace can now use minutes and degrees directly. Cold air drops the temperature, then the heater brings it back up.",
+      "do": [
+        {"at":0,"duration":0.14,"remove":["door","reading","xLine","yLine","pixels","rejected","clean"]},
+        {"at":0,"duration":0.25,"update":{"id":"headline","text":"Room temperature after the door opens"}},
+        {"at":"minutes","enter":"fade","duration":0.18,"add":{"id":"scale","type":"axes","x":132,"y":207,"width":609,"height":267,"domain":[0,10],"range":[18,21],"xTicks":[0,2,4,6,8,10],"yTicks":[18,19,20,21],"xLabel":"Minutes","yLabel":"Room temperature (°C)","fontSize":20,"strokeColor":"#405466"}},
+        {"at":"Cold air","duration":1.1,"add":{"id":"fall","type":"line","points":[["scale",0,20],["scale",2,20],["scale",2.8,19.1],["scale",3.3,18.6],["scale",3.7,18.4]],"strokeWidth":4,"roughness":0,"strokeColor":"#1971c2"}},
+        {"at":"heater","duration":1.3,"add":{"id":"rise","type":"line","points":[["scale",3.7,18.4],["scale",4.4,18.65],["scale",5.5,19.2],["scale",6.5,19.65],["scale",7.25,19.85],["scale",8,20],["scale",10,20]],"strokeWidth":4,"roughness":0,"strokeColor":"#1971c2"}}
+      ]
+    },
+    {
+      "say": "At eight minutes the heater switches off at twenty degrees. The arrow and the pointer use the same measured point as the line.",
+      "do": [
+        {"at":"eight minutes","enter":"fade","duration":0.18,"add":{"id":"event","type":"text","x":822,"y":217,"text":"Heat switches off","fontSize":30,"fontFamily":"normal","strokeColor":"#087f5b"}},
+        {"at":"twenty degrees","enter":"fade","duration":0.18,"add":{"id":"reference","type":"text","x":822,"y":276,"text":"[\"scale\", 8, 20]","fontSize":32,"fontFamily":"code","strokeColor":"#183153"}},
+        {"at":"arrow","duration":0.55,"add":{"id":"marker","type":"arrow","from":["scale",7.4,20.65],"to":["scale",8,20],"strokeWidth":3,"roughness":0,"strokeColor":"#087f5b"}},
+        {"at":"pointer","duration":1.3,"point":["scale",8,20]},
+        {"at":"measured point","enter":"fade","duration":0.18,"add":{"id":"parts","type":"text","x":824,"y":335,"text":"axis   ·   minute   ·   °C","fontSize":23,"fontFamily":"normal","strokeColor":"#495057"}}
+      ]
+    },
+    {
+      "say": "Now redraw the chart in a different position, with a smaller width. The same readings trace the same dip. The arrow still meets the line at eight minutes and twenty degrees.",
+      "do": [
+        {"at":0,"duration":0.18,"remove":["scale","fall","rise","marker","event","reference","parts"]},
+        {"at":0,"duration":0.2,"update":{"id":"headline","text":"The same readings in a different layout"}},
+        {"at":"different position","enter":"fade","duration":0.3,"add":{"id":"narrow","type":"axes","x":678,"y":207,"width":440,"height":267,"domain":[0,10],"range":[18,21],"xTicks":[0,2,4,6,8,10],"yTicks":[18,19,20,21],"xLabel":"Minutes","yLabel":"Room temperature (°C)","fontSize":20,"strokeColor":"#405466"}},
+        {"at":"smaller width","enter":"fade","duration":0.2,"add":{"id":"layout","type":"text","x":75,"y":209,"text":"Chart width","fontSize":29,"fontFamily":"normal","strokeColor":"#495057"}},
+        {"at":"smaller width","enter":"fade","duration":0.2,"add":{"id":"width","type":"text","x":75,"y":256,"text":"609 → 440","fontSize":38,"fontFamily":"normal","strokeColor":"#183153"}},
+        {"at":"same readings","duration":1.2,"add":{"id":"newTrace","type":"line","points":[["narrow",0,20],["narrow",2,20],["narrow",2.8,19.1],["narrow",3.3,18.6],["narrow",3.7,18.4],["narrow",4.4,18.65],["narrow",5.5,19.2],["narrow",6.5,19.65],["narrow",7.25,19.85],["narrow",8,20],["narrow",10,20]],"strokeWidth":4,"roughness":0,"strokeColor":"#1971c2"}},
+        {"at":"arrow","duration":0.55,"add":{"id":"newMarker","type":"arrow","from":["narrow",7.4,20.65],"to":["narrow",8,20],"strokeWidth":3,"roughness":0,"strokeColor":"#087f5b"}},
+        {"at":"eight minutes","enter":"fade","duration":0.2,"add":{"id":"target","type":"text","x":75,"y":358,"text":"Heat off at 8 min, 20 °C","fontSize":32,"fontFamily":"normal","strokeColor":"#087f5b"}},
+        {"at":"twenty degrees","duration":1,"point":["narrow",8,20]}
+      ],
+      "pause": 0.3
+    }
+  ]
+}

@@ -8,6 +8,7 @@
  *   plot in a row are the stretch of curve between them. `on` puts a shape's middle on such a point.
  */
 import { type PlotRef, Plots, isPlotRef } from "../shared/expr.ts";
+import { type AxisRef, isAxisRef } from "../shared/axes.ts";
 import { type Action, type ElementSpec, PALETTE, type Point, type Script, type Style, type UpdateSpec } from "../shared/types.ts";
 
 const FILLED = new Set(["rectangle", "ellipse", "diamond"]);
@@ -19,19 +20,25 @@ function colored<T extends Style>(spec: T, fillable: boolean): T {
   return { ...rest, strokeColor: spec.strokeColor ?? stroke, ...(fillable ? { backgroundColor: spec.backgroundColor ?? fill } : {}) } as T;
 }
 
-export function expand(script: Script): Script {
+export function expand(script: Script, axisPoints?: WeakMap<AxisRef, Point>): Script {
   const fillable = new Set<string>();
   const plots = new Plots();
-  const point = (p: Point | PlotRef): Point => (isPlotRef(p) ? (plots.point(p) ?? [0, 0]) : p);
+  // The checker knows each axes image's final placement, even after travel along another element.
+  const axisPoint = (p: AxisRef): Point => {
+    const value = axisPoints?.get(p);
+    if (!value) throw new Error(`Unresolved axes reading ${JSON.stringify(p)}.`);
+    return value;
+  };
+  const point = (p: Point | PlotRef | AxisRef): Point => isAxisRef(p) ? axisPoint(p) : isPlotRef(p) ? plots.point(p)! : p;
   /** A list of points, where two points of one plot in a row become the curve between them. */
-  const points = (refs: (Point | PlotRef)[]) => {
-    const path = plots.path(refs);
+  const points = (refs: (Point | PlotRef | AxisRef)[]) => {
+    const path = plots.path(refs.map((p) => isAxisRef(p) ? axisPoint(p) : p));
     const breaks = path.flatMap((p, i) => p.move ? [i] : []);
     return { points: path.map(({ x, y }): Point => [x, y]), ...(breaks.length ? { breaks } : {}) };
   };
-  const ref = <T>(r: T): T => (isPlotRef(r) ? (point(r) as T) : r);
+  const ref = <T>(r: T): T => (isPlotRef(r) || isAxisRef(r) ? (point(r) as T) : r);
 
-  const element = (spec: ElementSpec & { on?: PlotRef }): ElementSpec => {
+  const element = (spec: ElementSpec): ElementSpec => {
     let out = colored(spec, FILLED.has(spec.type) || (spec.type === "line" && !!spec.closed));
     if (out.type === "line" && out.fn) {
       const segments = plots.add(out);
@@ -47,7 +54,7 @@ export function expand(script: Script): Script {
       out = { ...(rest.p === undefined ? {} : { fn, domain, range, x, y, width, height }), ...rest, points: segments.flat(), ...(breaks.length ? { breaks } : {}), roughness: rest.roughness ?? 0 };
     } else if (out.points) out = { ...out, ...points(out.points) };
     if (out.type === "arrow") out = { ...out, from: ref(out.from), to: ref(out.to), ...(out.via ? { via: points(out.via).points } : {}) };
-    const { on, ...placed } = out as ElementSpec & { on?: PlotRef };
+    const { on, ...placed } = out;
     if (on) {
       const [cx, cy] = point(on);
       return { ...placed, x: cx - (placed.width ?? 0) / 2, y: cy - (placed.height ?? 0) / 2 };

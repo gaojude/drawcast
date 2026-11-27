@@ -89,8 +89,8 @@ export interface ElementSpec extends Style {
   yLabel?: string;
   /** How this element appears, when it is not the action's `enter`. */
   enter?: Enter;
-  /** shapes and images: put the middle on a point of a plot, `["loss", -2.4]`, in place of x and y. */
-  on?: [string, number];
+  /** Place the middle on a function value [plot,x] or a data reading [axes,x,y]. */
+  on?: [string, number] | [string, number, number];
 }
 
 export type Arrowhead = "arrow" | "triangle" | "bar" | "dot";

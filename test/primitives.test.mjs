@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { check } from "../src/format/check.ts";
 import { expand } from "../src/format/expand.ts";
 import { parseFunction, plotPoints } from "../src/shared/expr.ts";
 import { axesImageKey } from "../src/shared/axes.ts";
-import { playerRequest } from "../src/render/render.ts";
+import { loadScript, playerRequest } from "../src/render/render.ts";
 import { partialPolyline, polylineLength, reversePath, subPath } from "../src/player/motion.ts";
 
 const examples = path.join(import.meta.dirname, "../examples");
@@ -89,6 +91,44 @@ test("a plot parameter updates references at the new value and keeps the same ax
   ]) assert.match((await report({ do: [{ add: { ...wave, ...changes } }] })).errors.join("\n"), message);
   assert.match((await report({ do: [{ add: box("b", 0) }, { update: { id: "b", p: 1 } }] })).errors.join("\n"), /starting "p"/);
   assert.match((await report({ do: [{ add: wave }, { update: { id: "wave", p: "pi" } }] })).errors.join("\n"), /must be a number/);
+});
+
+test("the script loader resolves axes readings in strokes, markers, leaders, pointers and travel", async (t) => {
+  const dir = await mkdtemp(path.join(tmpdir(), "drawcast-axis-refs-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const axis = { id: "a", type: "axes", x: 100, y: 100, width: 300, height: 200, domain: [6, 12], range: [10, 30], yTicks: [10, 20, 30], xLabel: "Hour" };
+  const actions = [
+    { add: axis },
+    { add: { id: "readings", type: "line", points: [["a", 6, 10], ["a", 8, 20], ["a", 12, 30]] } },
+    { add: { id: "dot", type: "ellipse", width: 10, height: 10, on: ["a", 8, 20] } },
+    { add: { id: "leader", type: "arrow", from: ["a", 6, 30], via: [["a", 8, 20]], to: ["a", 12, 10] } },
+    { update: { id: "dot", along: [["a", 8, 20], [450, 220], ["a", 12, 30]] } },
+    { update: { id: "a", dx: 30, dy: -10 } }, { point: ["a", 8, 20] },
+    { update: { id: "a", angle: Math.PI } }, { point: ["a", 8, 20] },
+    { add: { id: "route", type: "line", points: [[20, 20], [500, 400]] } },
+    { update: { id: "a", along: "route", angle: 0 } },
+    { point: ["a", 8, 20] },
+  ];
+  const file = path.join(dir, "sample.json");
+  await writeFile(file, JSON.stringify({ drawcast: 1, steps: [{ do: actions }] }));
+  const { script } = await loadScript(file);
+  const list = script.steps[0].do;
+  assert.deepEqual(list[1].add.points, [[100, 300], [200, 200], [400, 100]]);
+  assert.deepEqual([list[2].add.x, list[2].add.y], [195, 195]);
+  assert.deepEqual([list[3].add.from, list[3].add.via[0], list[3].add.to], [[100, 100], [200, 200], [400, 300]]);
+  assert.deepEqual(list[4].update.along, [[200, 200], [450, 220], [400, 100]]);
+  assert.deepEqual(list[6].point, [230, 190]);
+  // Rotating half a turn mirrors around the image center, which includes the margins for the labels.
+  const center = list[8].point.map((v, i) => (v + list[6].point[i]) / 2);
+  assert.ok(center[0] < 280 && center[1] > 190);
+  assert.deepEqual(list[11].point.map(Math.round), [500 + 230 - center[0], 400 + 190 - center[1]].map(Math.round));
+  for (const [more, message] of [
+    [[{ point: ["a", 13, 20] }], /outside the axes domain/],
+    [[{ point: ["a", 8, 50] }], /or range/],
+    [[{ point: ["unknown", 8, 20] }], /already on the canvas/],
+    [[{ remove: "a" }, { point: ["a", 8, 20] }], /already on the canvas/],
+    [[{ point: ["a", "8", 20] }], /must be an element id or a point/],
+  ]) assert.match((await report({ do: [{ add: axis }, ...more] })).errors.join("\n"), message);
 });
 
 test("plots lift the pen at clipped and undefined stretches, including when travelling in reverse", () => {

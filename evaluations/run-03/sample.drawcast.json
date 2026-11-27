@@ -1,0 +1,70 @@
+{
+  "drawcast": 1,
+  "cover": 6,
+  "steps": [
+    {
+      "say": "Set a room thermostat to twenty degrees Celsius. How does it know when to stop heating?",
+      "do": [
+        {"at":"Set","add":{"id":"title","type":"text","x":56,"y":39,"text":"Why the heater switches off","fontSize":46,"fontFamily":"normal","strokeColor":"#183153"}},
+        {"at":"room thermostat","add":{"id":"stat","type":"rectangle","x":328,"y":180,"width":212,"height":94,"label":"Thermostat\nTarget 20 °C","fontSize":22,"color":"teal"}},
+        {"at":"twenty degrees","pulse":"stat"},
+        {"at":"stop heating","add":{"id":"heater","type":"rectangle","x":338,"y":412,"width":192,"height":84,"label":"Heater OFF","fontSize":24,"color":"gray"}}
+      ]
+    },
+    {
+      "say": "A sensor measures the room air. It sends the reading to the thermostat, which controls the heater. Heat flows back into the room.",
+      "do": [
+        {"at":"sensor","add":{"id":"sense","type":"rectangle","x":58,"y":180,"width":173,"height":94,"label":"Sensor","fontSize":26,"color":"blue"}},
+        {"at":"room air","add":{"id":"room","type":"rectangle","x":58,"y":412,"width":173,"height":84,"label":"Room air","fontSize":26,"color":"violet"}},
+        {"at":"room air","add":{"id":"sample","type":"arrow","from":"room","to":"sense","strokeColor":"#495057"}},
+        {"at":"sends the reading","add":{"id":"reading","type":"arrow","from":"sense","to":"stat","strokeColor":"#495057"}},
+        {"at":"controls","add":{"id":"control","type":"arrow","from":"stat","to":"heater","strokeColor":"#495057"}},
+        {"at":"Heat flows","add":{"id":"heat","type":"arrow","from":"heater","to":"room","strokeColor":"#495057"}}
+      ]
+    },
+    {
+      "say": "On the chart, the room starts at twenty. Two minutes in, a door opens briefly. Cold air brings the temperature down.",
+      "do": [
+        {"at":"chart","add":{"id":"axes","type":"axes","x":714,"y":192,"width":466,"height":312,"domain":[0,10],"range":[18,21],"xTicks":[0,2,4,6,8,10],"yTicks":[18,19,20,21],"xLabel":"Time (minutes)","yLabel":"Room temperature (°C)","fontSize":22,"strokeColor":"#343a40"}},
+        {"at":"starts at twenty","add":{"id":"baseline","type":"line","points":[[714,296],[807,296]],"strokeColor":"#1971c2","strokeWidth":4,"roughness":0}},
+        {"at":"a door opens","add":{"id":"door-label","type":"text","x":807,"y":215,"textAlign":"center","text":"Door opens","fontFamily":"normal","fontSize":21,"strokeColor":"#495057"}},
+        {"at":"a door opens","add":{"id":"door-mark","type":"arrow","from":[807,246],"to":[807,286],"strokeColor":"#495057","strokeWidth":1,"roughness":0}},
+        {"at":"temperature down","duration":0.9,"add":{"id":"fall","type":"line","points":[[807,296],[839,400]],"strokeColor":"#1971c2","strokeWidth":4,"roughness":0}}
+      ]
+    },
+    {
+      "say": "As the reading falls past nineteen, the thermostat switches the heater on. The room keeps cooling until the door closes.",
+      "do": [
+        {"at":"reading","send":{"along":"reading","color":"blue"}},
+        {"at":"past nineteen","add":{"id":"on-label","type":"text","x":750,"y":428,"textAlign":"center","text":"Heat on","fontFamily":"normal","fontSize":21,"strokeColor":"#984100"}},
+        {"at":"past nineteen","add":{"id":"on-mark","type":"arrow","from":[791,435],"to":[835,405],"strokeColor":"#984100","strokeWidth":1,"roughness":0}},
+        {"at":"switches","send":{"along":"control","color":"orange"}},
+        {"at":"heater on","update":{"id":"heater","label":"Heater ON","color":"orange"}},
+        {"at":"keeps cooling","duration":0.85,"add":{"id":"dip","type":"line","points":[[839,400],[850,427],[861,446],[870,448]],"strokeColor":"#1971c2","strokeWidth":4,"roughness":0}},
+        {"at":"door closes","point":[870,448]}
+      ]
+    },
+    {
+      "say": "With the door closed, heat from the heater raises the room temperature. The sensor reports the climb.",
+      "do": [
+        {"at":"heat from the heater","send":{"along":"heat","color":"orange"}},
+        {"at":"raises","duration":2.3,"add":{"id":"rise","type":"line","points":[[870,448],[879,447],[890,438],[918,408],[960,366],[1007,328],[1040,307],[1063,296]],"strokeColor":"#1971c2","strokeWidth":4,"roughness":0}},
+        {"at":"sensor","send":{"along":"sample","color":"blue"}},
+        {"at":"reports","send":{"along":"reading","color":"blue"}}
+      ]
+    },
+    {
+      "say": "At twenty degrees again, the room has reached its target. The thermostat switches the heater off. That is negative feedback. The heating response counteracts the original drop.",
+      "do": [
+        {"at":"twenty degrees again","point":[1063,296]},
+        {"at":"target","pulse":"stat"},
+        {"at":"switches","send":{"along":"control","color":"teal"}},
+        {"at":"heater off","update":{"id":"heater","label":"Heater OFF","color":"gray"}},
+        {"at":"heater off","add":{"id":"off-label","type":"text","x":1071,"y":214,"textAlign":"center","text":"Heat off","fontFamily":"normal","fontSize":21,"strokeColor":"#087f5b"}},
+        {"at":"heater off","add":{"id":"off-mark","type":"arrow","from":[1070,245],"to":[1064,285],"strokeColor":"#087f5b","strokeWidth":1,"roughness":0}},
+        {"at":"negative feedback","add":{"id":"conclusion","type":"text","x":294,"y":545,"textAlign":"center","text":"Negative feedback","fontSize":31,"fontFamily":"normal","strokeColor":"#183153"}},
+        {"at":"counteracts","duration":1.2,"send":{"along":"rise","color":"blue"}}
+      ]
+    }
+  ]
+}
