@@ -22,3 +22,4 @@ The traces record timestamped tool inputs and outcomes. Long command outputs are
 | [7 · Sliding tiles](run-07/trace.md) | 158.601 s | 6.02 s | Capture brief movements in one encoded inspection sheet. [Walkthrough](run-07/walkthrough.mp4) |
 | [8 · Energy on a curved track](run-08/trace.md) | 168.615 s | 7.76 s | Compare exact instants in one decode and draw straight chords between plot points. [Walkthrough](run-08/walkthrough.mp4) |
 | [9 · Typing after Undo](run-09/trace.md) | 195.182 s | 8.54 s + 4.25 s | Update distinct objects together on a single frame. [Walkthrough](run-09/walkthrough.mp4) |
+| [10 · Undo and Redo replay](run-10/trace.md) | 143.499 s | 7.27 s | First draft delivered. Zero actionable findings on the repeated prompt. [Walkthrough](run-10/walkthrough.mp4) |

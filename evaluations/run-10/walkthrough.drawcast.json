@@ -1,0 +1,266 @@
+{
+  "drawcast": 1,
+  "voice": "maple",
+  "steps": [
+    {
+      "say": "We gave a fresh author the same editor prompt. The first draft starts with cat and makes the available history visible.",
+      "do": [
+        {
+          "enter": "none",
+          "add": [
+            {
+              "id": "title",
+              "type": "text",
+              "x": 72,
+              "y": 52,
+              "text": "Did the first draft get the history right?",
+              "fontFamily": "normal",
+              "fontSize": 45,
+              "strokeColor": "#202b39"
+            },
+            {
+              "id": "documentFrame",
+              "type": "rectangle",
+              "x": 72,
+              "y": 181,
+              "width": 540,
+              "height": 304,
+              "rounded": false,
+              "roughness": 0,
+              "strokeColor": "#4b6785",
+              "backgroundColor": "#f1f7fd"
+            },
+            {
+              "id": "documentTitle",
+              "type": "text",
+              "x": 98,
+              "y": 202,
+              "text": "Document",
+              "fontFamily": "normal",
+              "fontSize": 26,
+              "strokeColor": "#355675"
+            },
+            {
+              "id": "rule",
+              "type": "line",
+              "points": [
+                [
+                  74,
+                  259
+                ],
+                [
+                  610,
+                  259
+                ]
+              ],
+              "roughness": 0,
+              "strokeWidth": 1,
+              "strokeColor": "#7790a9"
+            },
+            {
+              "id": "document",
+              "type": "text",
+              "x": 102,
+              "y": 295,
+              "text": "CAT",
+              "fontFamily": "code",
+              "fontSize": 78,
+              "strokeColor": "#102f4d"
+            },
+            {
+              "id": "historyTitle",
+              "type": "text",
+              "x": 700,
+              "y": 181,
+              "text": "Available history",
+              "fontFamily": "normal",
+              "fontSize": 36,
+              "strokeColor": "#202b39"
+            },
+            {
+              "id": "undoLabel",
+              "type": "text",
+              "x": 700,
+              "y": 276,
+              "text": "Undo returns to",
+              "fontFamily": "normal",
+              "fontSize": 27,
+              "strokeColor": "#394655"
+            },
+            {
+              "id": "undo",
+              "type": "rectangle",
+              "x": 949,
+              "y": 254,
+              "width": 230,
+              "height": 83,
+              "label": "Empty",
+              "fontFamily": "code",
+              "fontSize": 34,
+              "strokeColor": "#68737d",
+              "backgroundColor": "#f1f3f5",
+              "roughness": 0
+            },
+            {
+              "id": "redoLabel",
+              "type": "text",
+              "x": 700,
+              "y": 396,
+              "text": "Redo restores",
+              "fontFamily": "normal",
+              "fontSize": 27,
+              "strokeColor": "#394655"
+            },
+            {
+              "id": "redo",
+              "type": "rectangle",
+              "x": 949,
+              "y": 374,
+              "width": 230,
+              "height": 83,
+              "label": "Empty",
+              "fontFamily": "code",
+              "fontSize": 34,
+              "strokeColor": "#68737d",
+              "backgroundColor": "#f1f3f5",
+              "roughness": 0
+            },
+            {
+              "id": "action",
+              "type": "text",
+              "x": 72,
+              "y": 522,
+              "text": "Starting version",
+              "fontFamily": "hand",
+              "fontSize": 34,
+              "strokeColor": "#355675"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "say": "Type S. The document and Undo destination change together. The author grouped these edits at one spoken cue.",
+      "do": [
+        {
+          "at": "Type S",
+          "duration": 0,
+          "update": [
+            {
+              "id": "document",
+              "text": "CATS"
+            },
+            {
+              "id": "undo",
+              "label": "CAT",
+              "strokeColor": "#17654e",
+              "backgroundColor": "#dbf4e9"
+            },
+            {
+              "id": "action",
+              "text": "Typed S"
+            }
+          ]
+        },
+        {
+          "at": "Undo",
+          "pulse": "undo"
+        }
+      ]
+    },
+    {
+      "say": "Choose Undo. The document goes back to cat. Redo still offers cats, because that version is still reachable.",
+      "do": [
+        {
+          "at": "Choose Undo",
+          "duration": 0,
+          "update": [
+            {
+              "id": "document",
+              "text": "CAT"
+            },
+            {
+              "id": "undo",
+              "label": "Empty",
+              "strokeColor": "#68737d",
+              "backgroundColor": "#f1f3f5"
+            },
+            {
+              "id": "redo",
+              "label": "CATS",
+              "strokeColor": "#17654e",
+              "backgroundColor": "#dbf4e9"
+            },
+            {
+              "id": "action",
+              "text": "Undid S"
+            }
+          ]
+        },
+        {
+          "at": "Redo",
+          "pulse": "redo"
+        }
+      ]
+    },
+    {
+      "say": "Type E. The current document now ends in E, and there is nothing left to redo. The inspection of the encoded file confirmed all four states.",
+      "do": [
+        {
+          "at": "Type E",
+          "duration": 0,
+          "update": [
+            {
+              "id": "document",
+              "text": "CATE"
+            },
+            {
+              "id": "undo",
+              "label": "CAT",
+              "strokeColor": "#17654e",
+              "backgroundColor": "#dbf4e9"
+            },
+            {
+              "id": "redo",
+              "label": "Empty",
+              "strokeColor": "#68737d",
+              "backgroundColor": "#f1f3f5"
+            },
+            {
+              "id": "action",
+              "text": "Typed E"
+            }
+          ]
+        },
+        {
+          "at": "nothing left",
+          "pulse": "redo"
+        }
+      ]
+    },
+    {
+      "say": "One snapshot and one render delivered the lesson. The video runs for twenty three seconds and took seven point two seven seconds to render. This replay produced no actionable finding, so the trials stop here.",
+      "do": [
+        {
+          "at": 0,
+          "update": {
+            "id": "title",
+            "text": "One preview and one render"
+          }
+        },
+        {
+          "at": "seven point two seven",
+          "update": {
+            "id": "action",
+            "text": "7.27 s to render 23.0 s of video"
+          }
+        },
+        {
+          "at": "no actionable finding",
+          "pulse": "redo"
+        }
+      ]
+    }
+  ],
+  "title": "Replay of the Undo and Redo author trial"
+}
