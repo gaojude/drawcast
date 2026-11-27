@@ -1,0 +1,137 @@
+{
+  "drawcast": 1,
+  "voice": "maple",
+  "title": "Inspect the reveal",
+  "steps": [
+    {
+      "say": "The author finished a library film in one render. The step sheet verified every completed layout, including the final comparison.",
+      "do": [
+        {
+          "enter": "none",
+          "add": [
+            {
+              "id": "title",
+              "type": "text",
+              "x": 62,
+              "y": 37,
+              "text": "Which frames show the reveal?",
+              "fontSize": 45,
+              "fontFamily": "normal",
+              "strokeColor": "#213746"
+            },
+            {
+              "id": "steps",
+              "type": "image",
+              "src": "sample.inspect.steps.png",
+              "x": 64,
+              "y": 130,
+              "width": 1148
+            },
+            {
+              "id": "caption",
+              "type": "text",
+              "x": 66,
+              "y": 578,
+              "text": "Six completed layouts",
+              "fontSize": 25,
+              "fontFamily": "normal",
+              "strokeColor": "#213746"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "say": "To check the sweeps, the author then entered nine timestamps. Motion inspection can find those changes directly in the encoded movie.",
+      "do": [
+        {
+          "at": "nine timestamps",
+          "duration": 0,
+          "remove": [
+            "steps",
+            "caption"
+          ]
+        },
+        {
+          "at": "nine timestamps",
+          "enter": "none",
+          "add": [
+            {
+              "id": "times",
+              "type": "text",
+              "x": 70,
+              "y": 195,
+              "text": "3.3, 3.65, 4.0, 5.55, 5.9, 6.3, 7.9, 8.25, 8.65",
+              "fontSize": 36,
+              "fontFamily": "normal",
+              "strokeColor": "#213746"
+            },
+            {
+              "id": "old",
+              "type": "text",
+              "x": 70,
+              "y": 294,
+              "text": "Nine manually selected times",
+              "fontSize": 32,
+              "fontFamily": "normal",
+              "strokeColor": "#70431d"
+            }
+          ]
+        },
+        {
+          "at": "Motion inspection",
+          "add": {
+            "id": "new",
+            "type": "text",
+            "x": 70,
+            "y": 409,
+            "text": "drawcast inspect sample.mp4 --motion",
+            "fontSize": 40,
+            "fontFamily": "normal",
+            "strokeColor": "#155950"
+          }
+        }
+      ]
+    },
+    {
+      "say": "Here are the moving fiction, history and science slices. The last tile shows the silent ending. The quick start now points to this single review when a lesson calls for movement.",
+      "do": [
+        {
+          "at": "Here",
+          "duration": 0,
+          "remove": [
+            "times",
+            "old",
+            "new"
+          ]
+        },
+        {
+          "at": "Here",
+          "enter": "none",
+          "add": {
+            "id": "motion",
+            "type": "image",
+            "src": "motion-review.png",
+            "x": 64,
+            "y": 130,
+            "width": 1148
+          }
+        },
+        {
+          "at": "last tile",
+          "add": {
+            "id": "new-caption",
+            "type": "text",
+            "x": 66,
+            "y": 573,
+            "text": "Three reveals and the final comparison in one sheet",
+            "fontSize": 25,
+            "fontFamily": "normal",
+            "strokeColor": "#213746"
+          }
+        }
+      ],
+      "pause": 1
+    }
+  ]
+}
