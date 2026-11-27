@@ -6,7 +6,7 @@ Use the same CLI invocation that printed this guide for the commands below.
 2. Run `drawcast snapshot lesson.drawcast.json --sheet`. Read the diagnostics and look at the step layouts. Revise if needed.
 3. Run `drawcast render lesson.drawcast.json` and return the MP4. Review movement with `drawcast inspect lesson.mp4 --motion`, or compare exact times on one sheet with `--at 2,2.5,3`. Omit both for evenly spaced frames.
 
-Video defaults to 1080p at 30 fps. Use `--width` and `--fps` to change it. Speech is cached. Leave `voice` unset for online narration with local fallback, or choose a built-in offline voice.
+Video defaults to 1080p at 30 fps. Set `--width` and `--fps` on render. On an inspection sheet, `--width` sets each tile's width. Inspect prints encoded dimensions, duration, frame count, average fps and audio codec. Speech is cached. For offline English use `"voice":"maple"`.
 
 ```json
 {
@@ -40,6 +40,8 @@ Request the topics your scene needs together, e.g. `drawcast guide plots math el
 
 | Topic | Use it for |
 | --- | --- |
+| `pie` | Reveal labeled pie slices by percentage |
+| `script` | Canvas background and size, voice, speed, captions and cover |
 | `plots` | Function curves, moving parameters, markers that follow a path |
 | `math` | Typeset LaTeX, animate a derivation |
 | `elements` | Shapes, lines, arrows, images, text, colours and fonts |

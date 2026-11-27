@@ -13,6 +13,7 @@ import { Plots, isPlotRef, type PlotRef } from "../shared/expr.ts";
 import { type AxisRef, axesLayout, axesPoint, isAxisRef } from "../shared/axes.ts";
 import { partialPolyline, rotatePath, type Pt } from "../player/motion.ts";
 import { arrowCourse, arrowLabelCenter, type ArrowEnd } from "../shared/arrows.ts";
+import { type Slice, separateSlices, sliceBounds } from "../shared/slice.ts";
 import { DEFAULT_CANVAS, type ElementSpec, type Formula, PALETTE, type Point, type Script, type ShapeCenter, type TextAlign, alignOffset, isShapeCenter } from "../shared/types.ts";
 
 export interface Report {
@@ -41,6 +42,7 @@ interface Live {
   labelled?: boolean;
   /** A line or pen stroke, in canvas coordinates, for moves along its path. */
   points?: Pt[];
+  slice?: Pick<Slice, "start" | "share">;
   axes?: { spec: ElementSpec; offset: Point; strokes: Box[]; labels: Box[] };
   /** an arrow: what it runs between, to tell where it goes as the things at its ends move */
   arrow?: { from: string | [number, number]; to: string | [number, number]; via: Pt[]; rounded?: boolean };
@@ -87,6 +89,10 @@ function rotatedBox(b: Box, type: string, angle = 0): Box {
   return { x: b.x + (b.w - w) / 2, y: b.y + (b.h - h) / 2, w, h };
 }
 
+function sliceAt(b: Box, el: Pick<Live, "slice" | "angle">): Slice | undefined {
+  return el.slice && { x: b.x, y: b.y, width: b.w, height: b.h, angle: el.angle, ...el.slice };
+}
+
 const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 const inside = (p: Box, q: Box) => p.x >= q.x && p.y >= q.y && p.x + p.w <= q.x + q.w && p.y + p.h <= q.y + q.h;
 
@@ -122,11 +128,12 @@ function axesMarks(axes: NonNullable<Live["axes"]>, box: Box, angle = 0, labelsO
 }
 
 const SHAPES = ["rectangle", "ellipse", "diamond"];
-const TYPES = [...SHAPES, "text", "math", "arrow", "line", "freedraw", "image", "axes"];
+const TYPES = [...SHAPES, "slice", "text", "math", "arrow", "line", "freedraw", "image", "axes"];
 const STYLE = ["strokeColor", "backgroundColor", "fillStyle", "strokeWidth", "strokeStyle", "roughness", "opacity", "angle", "color"];
 const ELEMENT_KEYS: Record<string, string[]> = {
   rectangle: ["x", "y", "width", "height", "rounded", "label", "fontSize", "fontFamily", "on"],
   ellipse: ["x", "y", "width", "height", "label", "fontSize", "fontFamily", "on"],
+  slice: ["center", "radius", "start", "share", "label", "fontSize", "fontFamily"],
   diamond: ["x", "y", "width", "height", "rounded", "label", "fontSize", "fontFamily", "on"],
   text: ["x", "y", "text", "fontSize", "fontFamily", "textAlign"],
   math: ["x", "y", "tex", "fontSize", "textAlign"],
@@ -304,12 +311,14 @@ export async function check(input: unknown, baseDir: string, resolvedPoints?: We
     if (typeof ref !== "string") return fail(where, `${name} must be an element id or a point [x, y].`), false;
     const target = live.get(ref);
     if (!target) return fail(where, `${name} refers to ${quote(ref)}, which is not on the canvas at this point (never added, or already removed).`), false;
+    if (attachable && target.slice) return fail(where, `${name} refers to a slice. Give a point [x, y] on its edge.`), false;
     if (attachable && PATHS.includes(target.type)) return fail(where, `${name} refers to ${quote(ref)}, a ${target.type}; arrows attach to shapes, text, math and images. Give a point [x, y] instead.`), false;
     return true;
   };
 
   const place = (where: string, id: string, type: string, base: Box | null, anchor: Omit<Live, "type" | "box"> = {}, onAxes?: string) => {
-    const box = base && rotatedBox(base, type, anchor.angle);
+    const slice = base && sliceAt(base, anchor);
+    const box = slice ? sliceBounds(slice) : base && rotatedBox(base, type, anchor.angle);
     if (box && !movesCamera) {
       if (box.x < 0 || box.y < 0 || box.x + box.w > canvas.width || box.y + box.h > canvas.height) {
         warn(where, `extends past the canvas (${canvas.width} x ${canvas.height}); it spans ${span(box)}.`);
@@ -322,7 +331,9 @@ export async function check(input: unknown, baseDir: string, resolvedPoints?: We
       for (const [otherId, other] of live) {
         if (!other.box || other.type === "line") continue;
         const a = box;
-        const o = rotatedBox(other.box, other.type, other.angle);
+        const otherSlice = sliceAt(other.box, other);
+        if (slice && otherSlice && separateSlices(slice, otherSlice)) continue;
+        const o = otherSlice ? sliceBounds(otherSlice) : rotatedBox(other.box, other.type, other.angle);
         if (!overlaps(a, o)) continue;
         if (anchor.axes || other.axes) {
           if (anchor.axes && !other.axes && SHAPES.includes(other.type) && inside(a, o)) continue;
@@ -361,7 +372,7 @@ export async function check(input: unknown, baseDir: string, resolvedPoints?: We
       return !missing.length;
     };
     let box: Box | null = null;
-    let anchor: Pick<Live, "align" | "fontSize" | "fontFamily" | "points" | "axes"> = {};
+    let anchor: Pick<Live, "align" | "fontSize" | "fontFamily" | "points" | "axes" | "slice"> = {};
     plainText(where, "label", el.label);
 
     if (el.on !== undefined) {
@@ -383,6 +394,13 @@ export async function check(input: unknown, baseDir: string, resolvedPoints?: We
           warn(where, `the label ${quote(el.label)} needs about ${lines} line(s) and will not fit; make the shape wider or taller, or shorten the label.`);
         }
       }
+    } else if (type === "slice") {
+      if (!isPoint(el.center)) return fail(where, 'A slice needs "center": [x, y] in canvas coordinates.');
+      if (!isNumber(el.radius) || el.radius <= 0 || !Number.isFinite(2 * el.radius)) return fail(where, 'A slice needs a positive finite radius.');
+      if (!isNumber(el.share) || el.share <= 0 || el.share > 100) return fail(where, '"share" must be greater than 0 and at most 100 percent.');
+      if (el.start !== undefined && !(isNumber(el.start) && el.start >= 0 && el.start <= 100)) return fail(where, '"start" must be a percentage from 0 to 100 clockwise from twelve o\'clock.');
+      box = { x: el.center[0] - el.radius, y: el.center[1] - el.radius, w: 2 * el.radius, h: 2 * el.radius };
+      anchor.slice = { start: el.start ?? 0, share: el.share };
     } else if (type === "axes") {
       if (!need(["x", "y", "width", "height"])) return;
       if (el.width! <= 0 || el.height! <= 0) return fail(where, "width and height must be positive.");
@@ -584,6 +602,9 @@ export async function check(input: unknown, baseDir: string, resolvedPoints?: We
       }
       if (!checkRef(where, "id", typeof target === "string" ? target : undefined)) continue;
       const el = live.get(target as string)!;
+      if (el.slice && ["x", "y", "width", "height"].some((key) => u[key] !== undefined)) {
+        fail(where, "Set the center and radius when adding a slice. Move it with dx and dy or along a path.");
+      }
       if (el.type === "axes" && ["x", "y", "width", "height", "strokeWidth", "strokeColor", "color", "fillStyle", "strokeStyle", "backgroundColor", "roughness"].some((key) => u[key] !== undefined)) {
         fail(where, "Set the scale, position and stroke on the axes when adding them. Use dx and dy to move the complete chart axes.");
       }

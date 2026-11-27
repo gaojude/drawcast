@@ -1,6 +1,7 @@
 /** Building Excalidraw elements from the specs in a script. */
 import { convertToExcalidrawElements, getCommonBounds } from "@excalidraw/excalidraw";
-import { type ElementSpec, MATH_PIXELS_PER_EM, type Point, type Style, alignOffset } from "../shared/types.ts";
+import { type ElementSpec, MATH_PIXELS_PER_EM, PALETTE, type Point, type Style, alignOffset } from "../shared/types.ts";
+import { type Slice, sliceBounds, sliceLabelCenter, sliceOutline } from "../shared/slice.ts";
 import { type Pt, rotatePath, smooth } from "./motion.ts";
 import { ARROW_GAP, type ArrowEnd, arrowCourse as connection, arrowLabelCenter } from "../shared/arrows.ts";
 import { parseFunction, plotSegments } from "../shared/expr.ts";
@@ -70,7 +71,7 @@ export function makeShape(spec: ElementSpec): El[] {
   });
 }
 
-export function makeText(spec: ElementSpec): El {
+export function makeText(spec: Omit<ElementSpec, "id"> & { id?: string }): El {
   return convert({
     type: "text",
     id: spec.id,
@@ -127,6 +128,37 @@ export function makeLine(spec: ElementSpec): El {
     roundness: spec.rounded ? { type: 2 } : null,
   });
   return spec.breaks?.length ? { ...line, breaks: spec.breaks, closeSegments: spec.closed } : line;
+}
+
+/** Keep the pie's center fixed while a wedge grows, rotates or pulses. Convert to a filled line only for display. */
+export function makeSlice(spec: ElementSpec): El[] {
+  const [cx, cy] = spec.center!, r = spec.radius!;
+  const [line] = convert({
+    id: spec.id, type: "line", x: cx, y: cy, points: [[0, 0], [1, 0]],
+    ...style({ ...spec, backgroundColor: spec.backgroundColor ?? PALETTE.gray[1], roughness: spec.roughness ?? 0 }),
+    roundness: null,
+  });
+  const slice = {
+    ...line, type: "slice", points: undefined, x: cx - r, y: cy - r, width: 2 * r, height: 2 * r,
+    start: spec.start ?? 0, share: spec.share!, angle: spec.angle ?? 0,
+  };
+  if (!spec.label) return [slice];
+  const text = makeText({ ...spec, type: "text", id: undefined, x: cx, y: cy, text: spec.label, textAlign: "center" });
+  // A line cannot own bound text in Excalidraw. Track the label with the sector and export it as ordinary text.
+  return [slice, { ...centerOn(text, sliceLabelCenter(slice)), sliceId: spec.id }];
+}
+
+export const isSlice = (el: El): el is El & Slice => el.type === "slice";
+
+const polygons = new WeakMap<El, El>();
+export function visibleSlice(el: El): El {
+  if (!isSlice(el)) return el;
+  let polygon = polygons.get(el);
+  if (!polygon) {
+    polygon = withPath({ ...el, type: "line", angle: 0 }, sliceOutline(el));
+    polygons.set(el, polygon);
+  }
+  return polygon;
 }
 
 /** Sample a parameterized line in its original coordinates, then apply its independently animated translation. */
@@ -256,11 +288,14 @@ export function pathMiddle(el: El): Pt {
   return arrowLabelCenter(scenePoints(el));
 }
 
+export const labelCenter = (el: El): Pt => isSlice(el) ? sliceLabelCenter(el) : el.type === "arrow" ? pathMiddle(el) : center(el);
+
 export const centerOn = (el: El, c: Pt): El => ({ ...el, x: c.x - el.width / 2, y: c.y - el.height / 2 });
 
 export const translate = <T extends End>(e: T, dx: number, dy: number): T => ({ ...e, x: e.x + dx, y: e.y + dy });
 
 export function bbox(el: El): Rect {
+  if (isSlice(el)) return sliceBounds(el);
   const [x, y, right, bottom] = getCommonBounds([el as any]);
   return { x, y, w: right - x, h: bottom - y };
 }

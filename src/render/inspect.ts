@@ -16,11 +16,17 @@ async function readTimeline(file: string, signal?: AbortSignal) {
   const starts: number[] = [];
   let ticksPerSecond = 0;
   let end = -Infinity;
+  let dimensions: string | undefined;
+  let audioCodec: string | undefined;
   try {
     for await (const line of lines) {
       if (line.startsWith("#tb 0:")) {
         const [n, d] = line.slice(6).trim().split("/").map(Number);
         ticksPerSecond = d / n;
+      } else if (line.startsWith("#dimensions 0:")) {
+        dimensions = line.slice(line.indexOf(":") + 1).trim();
+      } else if (line.startsWith("#codec_id 1:")) {
+        audioCodec = line.slice(line.indexOf(":") + 1).trim();
       } else if (line.startsWith("0,")) {
         const [, , pts, duration] = line.split(",", 4).map(Number);
         starts.push(pts);
@@ -34,7 +40,7 @@ async function readTimeline(file: string, signal?: AbortSignal) {
   if (!starts.length || !(ticksPerSecond > 0) || !Number.isFinite(end)) throw new Error("The MP4 has no timed video frames.");
   // H.264 with B-frames stores packets in decode order. The select filter sees display order.
   starts.sort((a, b) => a - b);
-  return { starts, ticksPerSecond, duration: (end - starts[0]) / ticksPerSecond };
+  return { starts, ticksPerSecond, duration: (end - starts[0]) / ticksPerSecond, dimensions, audioCodec };
 }
 
 /** Keep the opening and ending, then find up to four separated moments of sustained visual change. */
@@ -70,8 +76,9 @@ async function motionFrames(file: string, times: number[], signal?: AbortSignal)
   return [0, ...peaks.sort((a, b) => a - b), times.length - 1];
 }
 
-export async function inspectVideo(input: string, output: string, at?: number | number[], signal?: AbortSignal, motion = false): Promise<number[]> {
+export async function inspectVideo(input: string, output: string, at?: number | number[], signal?: AbortSignal, motion = false, width?: number) {
   signal?.throwIfAborted();
+  if (width !== undefined && (!Number.isSafeInteger(width) || width < 1)) throw new Error("--width must be a positive integer in pixels.");
   if (at !== undefined && motion) throw new Error("Choose --motion for automatic selection or --at for specific times.");
   const requested = at === undefined ? undefined : [at].flat();
   if (requested?.some(s => !Number.isFinite(s) || s < 0)) throw new Error("--at must be a nonnegative number of seconds.");
@@ -83,8 +90,8 @@ export async function inspectVideo(input: string, output: string, at?: number | 
   const options = { windowsHide: true, signal, killSignal: "SIGKILL" as const };
   try {
     const metadata = path.join(work, "packets.txt");
-    await exec(ffmpeg, [...source, "-c:v", "copy", "-f", "framecrc", metadata], options);
-    const { starts, ticksPerSecond, duration } = await readTimeline(metadata, signal);
+    await exec(ffmpeg, [...source, "-map", "0:a:0?", "-c", "copy", "-f", "framecrc", metadata], options);
+    const { starts, ticksPerSecond, duration, dimensions, audioCodec } = await readTimeline(metadata, signal);
     if (requested?.some(s => s >= duration)) throw new Error(`--at must be less than the video duration (${Number(duration.toFixed(6))} s).`);
     const seconds = (i: number) => (starts[i] - starts[0]) / ticksPerSecond;
     const count = Math.min(6, starts.length);
@@ -100,13 +107,14 @@ export async function inspectVideo(input: string, output: string, at?: number | 
 
     const selected = indices.map((i) => `eq(n\\,${i})`).join("+");
     const columns = Math.min(indices.length, 3);
-    const filter = requested?.length !== 1
-      ? `select=${selected},scale=512:-1,tile=${columns}x${Math.ceil(indices.length / columns)}:nb_frames=${indices.length}:padding=4:margin=4:color=white`
-      : `select=${selected}`;
+    const filters = [`select=${selected}`];
+    const sheet = requested?.length !== 1;
+    if (sheet || width !== undefined) filters.push(`scale=${width ?? 512}:-1`);
+    if (sheet) filters.push(`tile=${columns}x${Math.ceil(indices.length / columns)}:nb_frames=${indices.length}:padding=4:margin=4:color=white`);
     const staged = path.join(work, "preview.png");
-    await exec(ffmpeg, [...source, "-vf", filter, "-frames:v", "1", "-abort_on", "empty_output", "-update", "1", staged], options);
+    await exec(ffmpeg, [...source, "-vf", filters.join(","), "-frames:v", "1", "-abort_on", "empty_output", "-update", "1", staged], options);
     await publishFile(staged, output, signal);
-    return indices.map(seconds);
+    return { times: indices.map(seconds), duration, frames: starts.length, dimensions, audioCodec };
   } catch (error) {
     signal?.throwIfAborted();
     const diagnostic = (error as { stderr?: string }).stderr?.trim();

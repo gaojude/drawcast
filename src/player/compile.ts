@@ -258,6 +258,8 @@ class Builder {
       case "ellipse":
       case "diamond":
         return E.makeShape(spec);
+      case "slice":
+        return E.makeSlice(spec);
       case "text":
         return [E.makeText(spec)];
       case "math": {
@@ -339,6 +341,12 @@ class Builder {
 
   /** The element being drawn: a shape dragged out from its corner, a path growing from its start. */
   private stroke(el: El, t0: number, t1: number): (t: number) => El {
+    if (E.isSlice(el)) {
+      return (t) => {
+        const u = minJerk(progress(t, t0, t1));
+        return { ...el, share: el.share * u, opacity: u > 0 ? el.opacity : 0 };
+      };
+    }
     if (!el.points) {
       return (t) => {
         const u = dragEase(progress(t, t0, t1));
@@ -433,7 +441,7 @@ class Builder {
       let target: El = { ...base };
       const spec = this.specs.get(id)!;
       if (u.p !== undefined) target.plotParameter = u.p;
-      if (u.color && (["rectangle", "diamond", "ellipse"].includes(spec.type) || (spec.type === "line" && spec.closed))) {
+      if (u.color && (["rectangle", "diamond", "ellipse", "slice"].includes(spec.type) || (spec.type === "line" && spec.closed))) {
         target.backgroundColor = PALETTE[u.color][1];
       }
       for (const key of E.STYLE_KEYS) if (u[key] !== undefined) target[key] = u[key];
@@ -533,20 +541,19 @@ class Builder {
       const label = this.cur.get(this.labels.get(id) ?? "");
       if (!label) continue;
       // a label keeps its place in the middle of its shape (or, on an arrow, of its path)
-      const middle = (el: El) => (el.points ? E.pathMiddle(el) : E.center(el));
       const next = relabel.get(id);
       // a label is drawn in its shape's stroke colour, and changes colour with it
       const color = (t: number) => (u.strokeColor !== undefined ? { strokeColor: lerpColor(label.strokeColor, u.strokeColor, ease(t)) } : {});
       const follow = (t: number) => {
         const el = fn(t);
         const angle = el.type === "arrow" ? label.angle : el.angle;
-        if (!next) return { ...E.centerOn(label, middle(el)), opacity: el.opacity, angle, ...color(t) };
+        if (!next) return { ...E.centerOn(label, E.labelCenter(el)), opacity: el.opacity, angle, ...color(t) };
         // the old words fade out and the new ones in
         const k = ease(t);
-        return { ...E.centerOn(k < 0.5 ? label : next, middle(el)), opacity: el.opacity * Math.abs(1 - 2 * k), angle, ...color(t) };
+        return { ...E.centerOn(k < 0.5 ? label : next, E.labelCenter(el)), opacity: el.opacity * Math.abs(1 - 2 * k), angle, ...color(t) };
       };
       const end = this.cur.get(id)!;
-      const finalLabel = { ...E.centerOn(next ?? label, middle(end)), angle: end.type === "arrow" ? label.angle : end.angle, opacity: end.opacity, ...color(t1) };
+      const finalLabel = { ...E.centerOn(next ?? label, E.labelCenter(end)), angle: end.type === "arrow" ? label.angle : end.angle, opacity: end.opacity, ...color(t1) };
       this.animate(label, finalLabel, t0, t1, follow, next ? ["opacity"] : []);
     }
     for (const [id, link] of this.links) {
@@ -596,14 +603,14 @@ class Builder {
       present.set(el.id, this.attachedArrow(present.get(el.id)!, this.links.get(el.id)!, present));
     }
     for (const el of elements) {
-      const owner = el.containerId && present.get(el.containerId);
-      if (owner) present.set(el.id, E.centerOn(present.get(el.id)!, owner.type === "arrow" ? E.pathMiddle(owner) : E.center(owner)));
+      const owner = present.get(el.containerId ?? el.sliceId);
+      if (owner) present.set(el.id, E.centerOn(present.get(el.id)!, E.labelCenter(owner)));
     }
     return present;
   }
 
   frameElements(elements: El[], t: number, upTo: number): El[] {
-    return E.withBindings(E.visibleSegments([...this.placed(elements, t, upTo).values()]));
+    return E.withBindings(E.visibleSegments([...this.placed(elements, t, upTo).values()].map(E.visibleSlice)));
   }
 
   /** A pointer samples its own target and any attached ends at each instant in its trail. */

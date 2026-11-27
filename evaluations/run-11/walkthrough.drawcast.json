@@ -1,0 +1,900 @@
+{
+  "drawcast": 1,
+  "voice": "maple",
+  "title": "Drawing a budget by percentage",
+  "steps": [
+    {
+      "say": "A household budget gave the first author a simple picture to draw. Three shares took a hundred and twenty six coordinate pairs in the script.",
+      "do": [
+        {
+          "enter": "none",
+          "add": [
+            {
+              "id": "title",
+              "type": "text",
+              "x": 68,
+              "y": 54,
+              "text": "Drawing a budget by percentage",
+              "fontSize": 48,
+              "fontFamily": "normal",
+              "strokeColor": "#183744"
+            },
+            {
+              "id": "old0",
+              "type": "line",
+              "points": [
+                [
+                  320,
+                  345
+                ],
+                [
+                  320,
+                  165
+                ],
+                [
+                  329.42,
+                  165.24
+                ],
+                [
+                  338.81,
+                  165.99
+                ],
+                [
+                  348.16,
+                  167.22
+                ],
+                [
+                  357.42,
+                  168.93
+                ],
+                [
+                  366.59,
+                  171.13
+                ],
+                [
+                  375.63,
+                  173.81
+                ],
+                [
+                  384.5,
+                  176.95
+                ],
+                [
+                  393.21,
+                  180.56
+                ],
+                [
+                  401.72,
+                  184.62
+                ],
+                [
+                  410,
+                  189.12
+                ],
+                [
+                  418.04,
+                  194.04
+                ],
+                [
+                  425.8,
+                  199.37
+                ],
+                [
+                  433.28,
+                  205.12
+                ],
+                [
+                  440.44,
+                  211.23
+                ],
+                [
+                  447.28,
+                  217.72
+                ],
+                [
+                  453.77,
+                  224.56
+                ],
+                [
+                  459.88,
+                  231.72
+                ],
+                [
+                  465.63,
+                  239.2
+                ],
+                [
+                  470.96,
+                  246.96
+                ],
+                [
+                  475.88,
+                  255
+                ],
+                [
+                  480.38,
+                  263.28
+                ],
+                [
+                  484.44,
+                  271.79
+                ],
+                [
+                  488.05,
+                  280.5
+                ],
+                [
+                  491.19,
+                  289.37
+                ],
+                [
+                  493.87,
+                  298.41
+                ],
+                [
+                  496.07,
+                  307.58
+                ],
+                [
+                  497.78,
+                  316.84
+                ],
+                [
+                  499.01,
+                  326.19
+                ],
+                [
+                  499.76,
+                  335.58
+                ],
+                [
+                  500,
+                  345
+                ],
+                [
+                  499.76,
+                  354.42
+                ],
+                [
+                  499.01,
+                  363.81
+                ],
+                [
+                  497.78,
+                  373.16
+                ],
+                [
+                  496.07,
+                  382.42
+                ],
+                [
+                  493.87,
+                  391.59
+                ],
+                [
+                  491.19,
+                  400.63
+                ],
+                [
+                  488.05,
+                  409.5
+                ],
+                [
+                  484.44,
+                  418.21
+                ],
+                [
+                  480.38,
+                  426.72
+                ],
+                [
+                  475.88,
+                  435
+                ],
+                [
+                  470.96,
+                  443.04
+                ],
+                [
+                  465.63,
+                  450.8
+                ],
+                [
+                  459.88,
+                  458.28
+                ],
+                [
+                  453.77,
+                  465.44
+                ],
+                [
+                  447.28,
+                  472.28
+                ],
+                [
+                  440.44,
+                  478.77
+                ],
+                [
+                  433.28,
+                  484.88
+                ],
+                [
+                  425.8,
+                  490.63
+                ],
+                [
+                  418.04,
+                  495.96
+                ],
+                [
+                  410,
+                  500.88
+                ],
+                [
+                  401.72,
+                  505.38
+                ],
+                [
+                  393.21,
+                  509.44
+                ],
+                [
+                  384.5,
+                  513.05
+                ],
+                [
+                  375.63,
+                  516.19
+                ],
+                [
+                  366.59,
+                  518.87
+                ],
+                [
+                  357.42,
+                  521.07
+                ],
+                [
+                  348.16,
+                  522.78
+                ],
+                [
+                  338.81,
+                  524.01
+                ],
+                [
+                  329.42,
+                  524.76
+                ],
+                [
+                  320,
+                  525
+                ]
+              ],
+              "strokeColor": "#ffffff",
+              "strokeWidth": 2,
+              "roughness": 0,
+              "closed": true,
+              "backgroundColor": "#a8d8e8"
+            },
+            {
+              "id": "old1",
+              "type": "line",
+              "points": [
+                [
+                  320,
+                  345
+                ],
+                [
+                  320,
+                  525
+                ],
+                [
+                  310.58,
+                  524.76
+                ],
+                [
+                  301.19,
+                  524.01
+                ],
+                [
+                  291.84,
+                  522.78
+                ],
+                [
+                  282.58,
+                  521.07
+                ],
+                [
+                  273.41,
+                  518.87
+                ],
+                [
+                  264.37,
+                  516.19
+                ],
+                [
+                  255.5,
+                  513.05
+                ],
+                [
+                  246.79,
+                  509.44
+                ],
+                [
+                  238.28,
+                  505.38
+                ],
+                [
+                  230,
+                  500.88
+                ],
+                [
+                  221.96,
+                  495.96
+                ],
+                [
+                  214.2,
+                  490.63
+                ],
+                [
+                  206.72,
+                  484.88
+                ],
+                [
+                  199.56,
+                  478.77
+                ],
+                [
+                  192.72,
+                  472.28
+                ],
+                [
+                  186.23,
+                  465.44
+                ],
+                [
+                  180.12,
+                  458.28
+                ],
+                [
+                  174.37,
+                  450.8
+                ],
+                [
+                  169.04,
+                  443.04
+                ],
+                [
+                  164.12,
+                  435
+                ],
+                [
+                  159.62,
+                  426.72
+                ],
+                [
+                  155.56,
+                  418.21
+                ],
+                [
+                  151.95,
+                  409.5
+                ],
+                [
+                  148.81,
+                  400.63
+                ],
+                [
+                  146.13,
+                  391.59
+                ],
+                [
+                  143.93,
+                  382.42
+                ],
+                [
+                  142.22,
+                  373.16
+                ],
+                [
+                  140.99,
+                  363.81
+                ],
+                [
+                  140.24,
+                  354.42
+                ],
+                [
+                  140,
+                  345
+                ],
+                [
+                  140.24,
+                  335.58
+                ],
+                [
+                  140.99,
+                  326.19
+                ],
+                [
+                  142.22,
+                  316.84
+                ],
+                [
+                  143.93,
+                  307.58
+                ],
+                [
+                  146.13,
+                  298.41
+                ],
+                [
+                  148.81,
+                  289.37
+                ]
+              ],
+              "strokeColor": "#ffffff",
+              "strokeWidth": 2,
+              "roughness": 0,
+              "closed": true,
+              "backgroundColor": "#f3be7e"
+            },
+            {
+              "id": "old2",
+              "type": "line",
+              "points": [
+                [
+                  320,
+                  345
+                ],
+                [
+                  148.81,
+                  289.37
+                ],
+                [
+                  151.95,
+                  280.5
+                ],
+                [
+                  155.56,
+                  271.79
+                ],
+                [
+                  159.62,
+                  263.28
+                ],
+                [
+                  164.12,
+                  255
+                ],
+                [
+                  169.04,
+                  246.96
+                ],
+                [
+                  174.37,
+                  239.2
+                ],
+                [
+                  180.12,
+                  231.72
+                ],
+                [
+                  186.23,
+                  224.56
+                ],
+                [
+                  192.72,
+                  217.72
+                ],
+                [
+                  199.56,
+                  211.23
+                ],
+                [
+                  206.72,
+                  205.12
+                ],
+                [
+                  214.2,
+                  199.37
+                ],
+                [
+                  221.96,
+                  194.04
+                ],
+                [
+                  230,
+                  189.12
+                ],
+                [
+                  238.28,
+                  184.62
+                ],
+                [
+                  246.79,
+                  180.56
+                ],
+                [
+                  255.5,
+                  176.95
+                ],
+                [
+                  264.37,
+                  173.81
+                ],
+                [
+                  273.41,
+                  171.13
+                ],
+                [
+                  282.58,
+                  168.93
+                ],
+                [
+                  291.84,
+                  167.22
+                ],
+                [
+                  301.19,
+                  165.99
+                ],
+                [
+                  310.58,
+                  165.24
+                ],
+                [
+                  320,
+                  165
+                ]
+              ],
+              "strokeColor": "#ffffff",
+              "strokeWidth": 2,
+              "roughness": 0,
+              "closed": true,
+              "backgroundColor": "#94d3b5"
+            },
+            {
+              "id": "sub",
+              "type": "text",
+              "x": 615,
+              "y": 177,
+              "text": "The author’s first draft",
+              "fontSize": 33,
+              "fontFamily": "normal",
+              "strokeColor": "#183744"
+            },
+            {
+              "id": "metric",
+              "type": "text",
+              "x": 615,
+              "y": 249,
+              "text": "126 coordinate pairs",
+              "fontSize": 38,
+              "fontFamily": "normal",
+              "strokeColor": "#006f65"
+            },
+            {
+              "id": "detail",
+              "type": "text",
+              "x": 615,
+              "y": 344,
+              "text": "Housing     62\nFood          38\nSavings      26",
+              "fontSize": 28,
+              "fontFamily": "normal",
+              "strokeColor": "#183744"
+            }
+          ]
+        },
+        {
+          "at": "coordinate pairs",
+          "enter": "none",
+          "add": [
+            {
+              "id": "p0",
+              "type": "ellipse",
+              "x": 362.09,
+              "y": 166.63,
+              "width": 9,
+              "height": 9,
+              "backgroundColor": "#21536a",
+              "strokeColor": "#21536a",
+              "roughness": 0
+            },
+            {
+              "id": "p1",
+              "type": "ellipse",
+              "x": 413.54,
+              "y": 189.54,
+              "width": 9,
+              "height": 9,
+              "backgroundColor": "#21536a",
+              "strokeColor": "#21536a",
+              "roughness": 0
+            },
+            {
+              "id": "p2",
+              "type": "ellipse",
+              "x": 455.38,
+              "y": 227.22,
+              "width": 9,
+              "height": 9,
+              "backgroundColor": "#21536a",
+              "strokeColor": "#21536a",
+              "roughness": 0
+            },
+            {
+              "id": "p3",
+              "type": "ellipse",
+              "x": 483.55,
+              "y": 276,
+              "width": 9,
+              "height": 9,
+              "backgroundColor": "#21536a",
+              "strokeColor": "#21536a",
+              "roughness": 0
+            },
+            {
+              "id": "p4",
+              "type": "ellipse",
+              "x": 495.26,
+              "y": 331.08,
+              "width": 9,
+              "height": 9,
+              "backgroundColor": "#21536a",
+              "strokeColor": "#21536a",
+              "roughness": 0
+            },
+            {
+              "id": "p5",
+              "type": "ellipse",
+              "x": 489.37,
+              "y": 387.09,
+              "width": 9,
+              "height": 9,
+              "backgroundColor": "#21536a",
+              "strokeColor": "#21536a",
+              "roughness": 0
+            },
+            {
+              "id": "p6",
+              "type": "ellipse",
+              "x": 466.46,
+              "y": 438.54,
+              "width": 9,
+              "height": 9,
+              "backgroundColor": "#21536a",
+              "strokeColor": "#21536a",
+              "roughness": 0
+            },
+            {
+              "id": "p7",
+              "type": "ellipse",
+              "x": 428.78,
+              "y": 480.38,
+              "width": 9,
+              "height": 9,
+              "backgroundColor": "#21536a",
+              "strokeColor": "#21536a",
+              "roughness": 0
+            },
+            {
+              "id": "p8",
+              "type": "ellipse",
+              "x": 380,
+              "y": 508.54999999999995,
+              "width": 9,
+              "height": 9,
+              "backgroundColor": "#21536a",
+              "strokeColor": "#21536a",
+              "roughness": 0
+            },
+            {
+              "id": "p9",
+              "type": "ellipse",
+              "x": 324.92,
+              "y": 520.26,
+              "width": 9,
+              "height": 9,
+              "backgroundColor": "#21536a",
+              "strokeColor": "#21536a",
+              "roughness": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "say": "Now each slice takes a center, a radius and a share. Housing sweeps through fifty percent of the circle. Its label lands inside.",
+      "do": [
+        {
+          "at": "Now",
+          "duration": 0,
+          "remove": [
+            "old0",
+            "old1",
+            "old2",
+            "p0",
+            "p1",
+            "p2",
+            "p3",
+            "p4",
+            "p5",
+            "p6",
+            "p7",
+            "p8",
+            "p9"
+          ]
+        },
+        {
+          "at": "Now",
+          "duration": 0,
+          "update": [
+            {
+              "id": "sub",
+              "text": "A native slice"
+            },
+            {
+              "id": "metric",
+              "text": "One percentage per wedge"
+            },
+            {
+              "id": "detail",
+              "text": "center   [320, 345]\nradius    180\nshare     50"
+            }
+          ]
+        },
+        {
+          "at": "Housing",
+          "duration": 1.3,
+          "add": {
+            "id": "newH",
+            "type": "slice",
+            "center": [
+              320,
+              345
+            ],
+            "radius": 180,
+            "start": 0,
+            "share": 50,
+            "label": "Housing\n50%",
+            "color": "blue",
+            "strokeColor": "#1a5674",
+            "fontFamily": "normal",
+            "fontSize": 24
+          }
+        }
+      ]
+    },
+    {
+      "say": "Food starts at fifty and covers thirty percent. Savings starts at eighty and fills the remaining twenty. The picture keeps all three shares on screen.",
+      "do": [
+        {
+          "at": "Food",
+          "duration": 1,
+          "add": {
+            "id": "newF",
+            "type": "slice",
+            "center": [
+              320,
+              345
+            ],
+            "radius": 180,
+            "start": 50,
+            "share": 30,
+            "label": "Food\n30%",
+            "color": "orange",
+            "strokeColor": "#763811",
+            "fontFamily": "normal",
+            "fontSize": 24
+          }
+        },
+        {
+          "at": "Savings",
+          "duration": 1,
+          "add": {
+            "id": "newS",
+            "type": "slice",
+            "center": [
+              320,
+              345
+            ],
+            "radius": 180,
+            "start": 80,
+            "share": 20,
+            "label": "Savings\n20%",
+            "color": "teal",
+            "strokeColor": "#145844",
+            "fontFamily": "normal",
+            "fontSize": 24
+          }
+        },
+        {
+          "at": "picture",
+          "duration": 0,
+          "update": [
+            {
+              "id": "sub",
+              "text": "Start at the previous total"
+            },
+            {
+              "id": "metric",
+              "text": "50% = 30% + 20%"
+            },
+            {
+              "id": "detail",
+              "text": "drawcast guide pie script"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "say": "The author also retried an inspection command, then wrote a small program to check the file. Inspection now accepts a tile width and prints what it decoded.",
+      "do": [
+        {
+          "at": "author",
+          "duration": 0,
+          "update": [
+            {
+              "id": "sub",
+              "text": "Inspect the encoded film"
+            },
+            {
+              "id": "metric",
+              "text": "880 frames · 30 fps"
+            },
+            {
+              "id": "detail",
+              "text": "1280 × 720  ·  29.33 seconds\nAAC narration\n\ninspect sample.mp4 --width 480"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "say": "The author took two minutes and thirty five seconds. With speech cached, two control renders finished in under three seconds each. A frame reuse experiment took longer, so the encoder stays as it is.",
+      "do": [
+        {
+          "at": "author",
+          "duration": 0,
+          "update": [
+            {
+              "id": "sub",
+              "text": "Author wall time"
+            },
+            {
+              "id": "metric",
+              "text": "154.900 seconds"
+            },
+            {
+              "id": "detail",
+              "text": "First render    10.247 s\n11 uncached sentences"
+            }
+          ]
+        },
+        {
+          "at": "control renders",
+          "duration": 0,
+          "update": [
+            {
+              "id": "sub",
+              "text": "Same 880 frames, cached speech"
+            },
+            {
+              "id": "metric",
+              "text": "2.78 s  /  2.90 s"
+            },
+            {
+              "id": "detail",
+              "text": "Existing encoder, two controls\nFrame reuse experiment    3.01 s"
+            }
+          ]
+        }
+      ],
+      "pause": 1
+    }
+  ]
+}

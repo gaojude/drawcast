@@ -5,5 +5,5 @@ description: Make a narrated whiteboard video (MP4) in which an Excalidraw diagr
 
 # drawcast
 
-Start with the supplied CLI's `guide`. Otherwise use `npx -y drawcast@latest guide` (Node.js 22.12+),
-or `drawcast guide` offline. The quick start gives the workflow and lists topics for deeper reference.
+Run the supplied CLI's `guide` first. Otherwise use `npx -y drawcast@latest guide` (Node.js 22.12+)
+or `drawcast guide` offline. Use its quick start and request the topics your scene needs in one call.

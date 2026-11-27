@@ -52,6 +52,23 @@ test("a colour by name is a stroke and, on a shape, a fill", () => {
   assert.deepEqual([out.steps[0].do[1].update.strokeColor, out.steps[0].do[1].update.backgroundColor], ["#2f9e44", "#b2f2bb"]);
 });
 
+test("slices validate percentages and check the occupied sector of the disk", async () => {
+  const wedge = { id: "w", type: "slice", center: [20, 100], radius: 80, share: 25, color: "teal" };
+  const checkWedge = (extra) => report({ do: [{ add: { ...wedge, ...extra } }] });
+  assert.deepEqual(await checkWedge({}), { errors: [], warnings: [] });
+  assert.match((await checkWedge({ start: 75 })).warnings.join("\n"), /extends past the canvas/);
+  for (const [changes, issue] of [
+    [{ center: [0] }, /center/], [{ center: ["w", 2] }, /center/], [{ radius: 0 }, /radius/],
+    [{ start: -1 }, /start/], [{ start: 101 }, /start/], [{ start: "25" }, /start/],
+    [{ share: 0 }, /share/], [{ share: 100.1 }, /share/], [{ share: undefined }, /share/],
+  ]) assert.match((await checkWedge(changes)).errors.join("\n"), issue);
+  const slices = [[90, 35], [25, 45], [70, 20]].map(([start, share], i) => ({
+    ...wedge, id: String(i), center: [300, 300], start, share, label: share + "%",
+  }));
+  assert.deepEqual(await report({ do: [{ add: slices }] }), { errors: [], warnings: [] });
+  assert.deepEqual(await checkWedge({ center: [300, 300], start: 100, share: 100 }), { errors: [], warnings: [] });
+});
+
 test("a line with fn becomes the points of the plot", () => {
   const out = expand({ drawcast: 1, steps: [{ do: [{ add: { id: "c", type: "line", fn: "x^2", domain: [-1, 1], x: 0, y: 0, width: 100, height: 50 } }] }] });
   const c = out.steps[0].do[0].add;

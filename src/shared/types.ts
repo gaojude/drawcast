@@ -4,7 +4,7 @@ export type Point = [number, number];
 export type ShapeCenter = [string];
 export const isShapeCenter = (v: unknown): v is ShapeCenter => Array.isArray(v) && v.length === 1 && typeof v[0] === "string";
 
-export type ElementType = "rectangle" | "ellipse" | "diamond" | "text" | "math" | "arrow" | "line" | "freedraw" | "image" | "axes";
+export type ElementType = "rectangle" | "ellipse" | "diamond" | "slice" | "text" | "math" | "arrow" | "line" | "freedraw" | "image" | "axes";
 
 export type FontName = "hand" | "normal" | "code";
 
@@ -49,6 +49,11 @@ export interface ElementSpec extends Style {
   y?: number;
   width?: number;
   height?: number;
+  /** slice: center of the pie, radius, and percentages clockwise from twelve o'clock. */
+  center?: Point;
+  radius?: number;
+  start?: number;
+  share?: number;
   /** rectangle, diamond: rounded corners (default true). arrow, line: curve through the points. */
   rounded?: boolean;
   /** Text typed inside a shape, or on an arrow. */

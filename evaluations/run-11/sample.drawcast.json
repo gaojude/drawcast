@@ -1,0 +1,659 @@
+{
+  "drawcast": 1,
+  "title": "Reading a household budget",
+  "voice": "maple",
+  "steps": [
+    {
+      "say": "The whole circle stands for the whole household budget. Picture it as one hundred dollars.",
+      "do": [
+        {
+          "add": [
+            {
+              "id": "title",
+              "type": "text",
+              "x": 76,
+              "y": 38,
+              "text": "Reading a household budget",
+              "fontSize": 54,
+              "fontFamily": "hand",
+              "strokeColor": "#1b3034"
+            },
+            {
+              "id": "rule",
+              "type": "line",
+              "points": [
+                [76, 118],
+                [1200, 118]
+              ],
+              "strokeColor": "#b9c9c6",
+              "strokeWidth": 1,
+              "roughness": 0
+            }
+          ],
+          "enter": "none",
+          "duration": 0
+        },
+        {
+          "at": "whole circle",
+          "add": {
+            "id": "whole",
+            "type": "ellipse",
+            "x": 133,
+            "y": 149,
+            "width": 412,
+            "height": 412,
+            "strokeColor": "#8d9f9e",
+            "backgroundColor": "#eef2f1",
+            "roughness": 0
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "whole household",
+          "add": {
+            "id": "center-total",
+            "type": "text",
+            "x": 339,
+            "y": 328,
+            "text": "100%",
+            "fontSize": 46,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034",
+            "textAlign": "center"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "one hundred dollars",
+          "add": {
+            "id": "ledger-heading",
+            "type": "text",
+            "x": 704,
+            "y": 178,
+            "text": "For every $100",
+            "fontSize": 41,
+            "fontFamily": "hand",
+            "strokeColor": "#1b3034"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        }
+      ]
+    },
+    {
+      "say": "Housing takes fifty percent. Half the circle means fifty dollars out of every hundred.",
+      "do": [
+        {
+          "at": "Housing",
+          "remove": "center-total",
+          "duration": 0.12
+        },
+        {
+          "at": "Housing",
+          "add": {
+            "id": "housing",
+            "type": "line",
+            "points": [
+              [339, 355],
+              [339, 149],
+              [349.78, 149.28],
+              [360.53, 150.13],
+              [371.23, 151.54],
+              [381.83, 153.5],
+              [392.32, 156.02],
+              [402.66, 159.08],
+              [412.82, 162.68],
+              [422.79, 166.81],
+              [432.52, 171.45],
+              [442, 176.6],
+              [451.2, 182.23],
+              [460.08, 188.34],
+              [468.64, 194.91],
+              [476.84, 201.91],
+              [484.66, 209.34],
+              [492.09, 217.16],
+              [499.09, 225.36],
+              [505.66, 233.92],
+              [511.77, 242.8],
+              [517.4, 252],
+              [522.55, 261.48],
+              [527.19, 271.21],
+              [531.32, 281.18],
+              [534.92, 291.34],
+              [537.98, 301.68],
+              [540.5, 312.17],
+              [542.46, 322.77],
+              [543.87, 333.47],
+              [544.72, 344.22],
+              [545, 355],
+              [544.72, 365.78],
+              [543.87, 376.53],
+              [542.46, 387.23],
+              [540.5, 397.83],
+              [537.98, 408.32],
+              [534.92, 418.66],
+              [531.32, 428.82],
+              [527.19, 438.79],
+              [522.55, 448.52],
+              [517.4, 458],
+              [511.77, 467.2],
+              [505.66, 476.08],
+              [499.09, 484.64],
+              [492.09, 492.84],
+              [484.66, 500.66],
+              [476.84, 508.09],
+              [468.64, 515.09],
+              [460.08, 521.66],
+              [451.2, 527.77],
+              [442, 533.4],
+              [432.52, 538.55],
+              [422.79, 543.19],
+              [412.82, 547.32],
+              [402.66, 550.92],
+              [392.32, 553.98],
+              [381.83, 556.5],
+              [371.23, 558.46],
+              [360.53, 559.87],
+              [349.78, 560.72],
+              [339, 561]
+            ],
+            "strokeColor": "#ffffff",
+            "strokeWidth": 2,
+            "roughness": 0,
+            "closed": true,
+            "backgroundColor": "#a8d8e8"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "fifty percent",
+          "add": {
+            "id": "housing-name",
+            "type": "text",
+            "x": 435,
+            "y": 316,
+            "text": "Housing",
+            "fontSize": 24,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034",
+            "textAlign": "center"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "fifty percent",
+          "add": {
+            "id": "housing-share",
+            "type": "text",
+            "x": 435,
+            "y": 350,
+            "text": "50%",
+            "fontSize": 34,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034",
+            "textAlign": "center"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "fifty dollars",
+          "add": {
+            "id": "housing-row-swatch",
+            "type": "rectangle",
+            "x": 705,
+            "y": 280,
+            "width": 21,
+            "height": 21,
+            "roughness": 0,
+            "rounded": false,
+            "backgroundColor": "#a8d8e8",
+            "strokeColor": "#a8d8e8",
+            "strokeWidth": 1
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "fifty dollars",
+          "add": {
+            "id": "housing-row-label",
+            "type": "text",
+            "x": 751,
+            "y": 269,
+            "text": "Housing",
+            "fontSize": 32,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "fifty dollars",
+          "add": {
+            "id": "housing-row-value",
+            "type": "text",
+            "x": 1110,
+            "y": 269,
+            "text": "$50",
+            "fontSize": 32,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034",
+            "textAlign": "right"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        }
+      ]
+    },
+    {
+      "say": "Food takes thirty percent. That's thirty dollars out of the same hundred.",
+      "do": [
+        {
+          "at": "Food",
+          "add": {
+            "id": "food",
+            "type": "line",
+            "points": [
+              [339, 355],
+              [339, 561],
+              [328.22, 560.72],
+              [317.47, 559.87],
+              [306.77, 558.46],
+              [296.17, 556.5],
+              [285.68, 553.98],
+              [275.34, 550.92],
+              [265.18, 547.32],
+              [255.21, 543.19],
+              [245.48, 538.55],
+              [236, 533.4],
+              [226.8, 527.77],
+              [217.92, 521.66],
+              [209.36, 515.09],
+              [201.16, 508.09],
+              [193.34, 500.66],
+              [185.91, 492.84],
+              [178.91, 484.64],
+              [172.34, 476.08],
+              [166.23, 467.2],
+              [160.6, 458],
+              [155.45, 448.52],
+              [150.81, 438.79],
+              [146.68, 428.82],
+              [143.08, 418.66],
+              [140.02, 408.32],
+              [137.5, 397.83],
+              [135.54, 387.23],
+              [134.13, 376.53],
+              [133.28, 365.78],
+              [133, 355],
+              [133.28, 344.22],
+              [134.13, 333.47],
+              [135.54, 322.77],
+              [137.5, 312.17],
+              [140.02, 301.68],
+              [143.08, 291.34]
+            ],
+            "strokeColor": "#ffffff",
+            "strokeWidth": 2,
+            "roughness": 0,
+            "closed": true,
+            "backgroundColor": "#f3be7e"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "thirty percent",
+          "add": {
+            "id": "food-name",
+            "type": "text",
+            "x": 237,
+            "y": 398,
+            "text": "Food",
+            "fontSize": 24,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034",
+            "textAlign": "center"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "thirty percent",
+          "add": {
+            "id": "food-share",
+            "type": "text",
+            "x": 237,
+            "y": 432,
+            "text": "30%",
+            "fontSize": 34,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034",
+            "textAlign": "center"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "thirty dollars",
+          "add": {
+            "id": "food-row-swatch",
+            "type": "rectangle",
+            "x": 705,
+            "y": 356,
+            "width": 21,
+            "height": 21,
+            "roughness": 0,
+            "rounded": false,
+            "backgroundColor": "#f3be7e",
+            "strokeColor": "#f3be7e",
+            "strokeWidth": 1
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "thirty dollars",
+          "add": {
+            "id": "food-row-label",
+            "type": "text",
+            "x": 751,
+            "y": 345,
+            "text": "Food",
+            "fontSize": 32,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "thirty dollars",
+          "add": {
+            "id": "food-row-value",
+            "type": "text",
+            "x": 1110,
+            "y": 345,
+            "text": "$30",
+            "fontSize": 32,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034",
+            "textAlign": "right"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        }
+      ]
+    },
+    {
+      "say": "Savings gets the remaining twenty percent, or twenty dollars.",
+      "do": [
+        {
+          "at": "Savings",
+          "add": {
+            "id": "savings",
+            "type": "line",
+            "points": [
+              [339, 355],
+              [143.08, 291.34],
+              [146.68, 281.18],
+              [150.81, 271.21],
+              [155.45, 261.48],
+              [160.6, 252],
+              [166.23, 242.8],
+              [172.34, 233.92],
+              [178.91, 225.36],
+              [185.91, 217.16],
+              [193.34, 209.34],
+              [201.16, 201.91],
+              [209.36, 194.91],
+              [217.92, 188.34],
+              [226.8, 182.23],
+              [236, 176.6],
+              [245.48, 171.45],
+              [255.21, 166.81],
+              [265.18, 162.68],
+              [275.34, 159.08],
+              [285.68, 156.02],
+              [296.17, 153.5],
+              [306.77, 151.54],
+              [317.47, 150.13],
+              [328.22, 149.28],
+              [339, 149]
+            ],
+            "strokeColor": "#ffffff",
+            "strokeWidth": 2,
+            "roughness": 0,
+            "closed": true,
+            "backgroundColor": "#94d3b5"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "twenty percent",
+          "add": {
+            "id": "savings-name",
+            "type": "text",
+            "x": 265,
+            "y": 212,
+            "text": "Savings",
+            "fontSize": 24,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034",
+            "textAlign": "center"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "twenty percent",
+          "add": {
+            "id": "savings-share",
+            "type": "text",
+            "x": 265,
+            "y": 246,
+            "text": "20%",
+            "fontSize": 34,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034",
+            "textAlign": "center"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "twenty dollars",
+          "add": {
+            "id": "savings-row-swatch",
+            "type": "rectangle",
+            "x": 705,
+            "y": 432,
+            "width": 21,
+            "height": 21,
+            "roughness": 0,
+            "rounded": false,
+            "backgroundColor": "#94d3b5",
+            "strokeColor": "#94d3b5",
+            "strokeWidth": 1
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "twenty dollars",
+          "add": {
+            "id": "savings-row-label",
+            "type": "text",
+            "x": 751,
+            "y": 421,
+            "text": "Savings",
+            "fontSize": 32,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "twenty dollars",
+          "add": {
+            "id": "savings-row-value",
+            "type": "text",
+            "x": 1110,
+            "y": 421,
+            "text": "$20",
+            "fontSize": 32,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034",
+            "textAlign": "right"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        }
+      ]
+    },
+    {
+      "say": "Now compare the halves. Housing fills one half. Food and savings together fill the other. Thirty plus twenty equals fifty percent.",
+      "pause": 1.2,
+      "do": [
+        {
+          "at": "compare",
+          "remove": [
+            "ledger-heading",
+            "housing-row-swatch",
+            "housing-row-label",
+            "housing-row-value",
+            "food-row-swatch",
+            "food-row-label",
+            "food-row-value",
+            "savings-row-swatch",
+            "savings-row-label",
+            "savings-row-value"
+          ],
+          "duration": 0.16
+        },
+        {
+          "at": "the halves",
+          "add": {
+            "id": "comparison",
+            "type": "text",
+            "x": 704,
+            "y": 174,
+            "text": "Two equal halves",
+            "fontSize": 41,
+            "fontFamily": "hand",
+            "strokeColor": "#1b3034"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "Housing",
+          "add": {
+            "id": "housing-bar-label",
+            "type": "text",
+            "x": 705,
+            "y": 256,
+            "text": "Housing",
+            "fontSize": 28,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "Housing",
+          "add": {
+            "id": "housing-bar",
+            "type": "rectangle",
+            "x": 705,
+            "y": 304,
+            "width": 400,
+            "height": 33,
+            "roughness": 0,
+            "rounded": false,
+            "backgroundColor": "#a8d8e8",
+            "strokeColor": "#a8d8e8",
+            "strokeWidth": 1
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "Food and savings",
+          "add": {
+            "id": "pair-label",
+            "type": "text",
+            "x": 705,
+            "y": 372,
+            "text": "Food + savings",
+            "fontSize": 28,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "Food and savings",
+          "add": {
+            "id": "food-bar",
+            "type": "rectangle",
+            "x": 705,
+            "y": 420,
+            "width": 240,
+            "height": 33,
+            "roughness": 0,
+            "rounded": false,
+            "backgroundColor": "#f3be7e",
+            "strokeColor": "#f3be7e",
+            "strokeWidth": 1
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "Food and savings",
+          "add": {
+            "id": "savings-bar",
+            "type": "rectangle",
+            "x": 945,
+            "y": 420,
+            "width": 160,
+            "height": 33,
+            "roughness": 0,
+            "rounded": false,
+            "backgroundColor": "#94d3b5",
+            "strokeColor": "#94d3b5",
+            "strokeWidth": 1
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        },
+        {
+          "at": "Thirty plus twenty",
+          "add": {
+            "id": "equation",
+            "type": "text",
+            "x": 705,
+            "y": 503,
+            "text": "30% + 20% = 50%",
+            "fontSize": 42,
+            "fontFamily": "normal",
+            "strokeColor": "#1b3034"
+          },
+          "duration": 0.3,
+          "enter": "fade"
+        }
+      ]
+    }
+  ]
+}

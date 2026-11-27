@@ -22,6 +22,7 @@ test("inspect samples the encoded video in display order and extracts the frame 
   const expected = pixels(input, "crop=2:2:16:12");
   const sheet = run(input);
   assert.equal(sheet.status, 0, sheet.stderr);
+  assert.match(sheet.stdout, /1 s, 32x24, 10 frames, 10 fps average, no audio track/);
   assert.match(sheet.stdout, /lesson 1\.inspect\.png .*0, 0\.2, 0\.4, 0\.5, 0\.7, 0\.9 s/);
   const sheetFile = path.join(dir, "lesson 1.inspect.png");
   const indices = [0, 2, 4, 5, 7, 9];
@@ -46,6 +47,11 @@ test("inspect samples the encoded video in display order and extracts the frame 
   for (const [column, frame] of [2, 7].entries()) {
     assert.ok(Math.abs(pixels(batchFile, `crop=2:2:${260 + 516 * column}:196`)[0] - expected[frame * 12]) <= 1);
   }
+  for (const [at, width] of [["0.2,0.7", 140], ["0.2", 64]]) {
+    const resized = run(input, "--at", at, "--width", "64", "-o", custom);
+    assert.equal(resized.status, 0, resized.stderr);
+    assert.equal(readFileSync(custom).readUInt32BE(16), width);
+  }
   const previous = "previous output";
   writeFileSync(custom, previous);
   for (const [args, message] of [
@@ -57,6 +63,7 @@ test("inspect samples the encoded video in display order and extracts the frame 
     [[input, "--at", "0.1,,0.3"], /--at must be a number/],
     [[input, "--at", Array(13).fill("0").join(",")], /twelve times/],
     [[input, "--sheet"], /--sheet does not apply/],
+    [[input, "--width", "0"], /positive integer/],
     [[custom], /Could not inspect/],
   ]) {
     const failure = run(...args, "-o", args[0] === custom ? sheetFile : custom);
