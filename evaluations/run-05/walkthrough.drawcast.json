@@ -1,0 +1,41 @@
+{
+  "drawcast": 1,
+  "voice": "maple",
+  "cover": 3,
+  "steps": [
+    {
+      "say": "Trial five asked for a lesson about a lost acknowledgment. One combined topic lookup explained how to draw the retry and time it to the voice.",
+      "do": [
+        {"at": 0, "enter": "none", "add": {"id": "title", "type": "text", "x": 64, "y": 43, "text": "Trial 05  /  Lost acknowledgment", "fontFamily": "normal", "fontSize": 38}},
+        {"at": "one combined", "add": {"id": "guide", "type": "text", "x": 74, "y": 158, "text": "> node dist/cli.js guide elements actions narration layout", "fontFamily": "code", "fontSize": 25, "strokeColor": "#1864ab"}}
+      ]
+    },
+    {
+      "say": "The first script draft passed its storyboard sheet review. One render produced the lesson. Narration and encoding took ten point eight nine seconds for forty-one point three seconds of video, at ten eighty p and thirty frames per second.",
+      "do": [
+        {"at": "first script", "add": {"id": "sheet", "type": "text", "x": 74, "y": 242, "text": "> node dist/cli.js snapshot lost-ack.drawcast.json --sheet", "fontFamily": "code", "fontSize": 25, "strokeColor": "#1864ab"}},
+        {"at": "one render", "add": {"id": "render", "type": "text", "x": 74, "y": 326, "text": "> node dist/cli.js render lost-ack.drawcast.json", "fontFamily": "code", "fontSize": 25, "strokeColor": "#1864ab"}},
+        {"at": "ten point", "enter": "fade", "add": {"id": "time", "type": "text", "x": 110, "y": 400, "text": "10.89 s elapsed", "fontFamily": "code", "fontSize": 30, "strokeColor": "#087f5b"}},
+        {"at": "forty-one point", "enter": "fade", "add": {"id": "file", "type": "text", "x": 110, "y": 461, "text": "41.3 s lesson  |  1920 x 1080  |  30 fps", "fontFamily": "code", "fontSize": 30}}
+      ]
+    },
+    {
+      "say": "Inspect sampled the encoded frames. Here is the final frame. The red cross marks the lost reply. The sender retries order forty-two. The receiver recognizes the ID and returns an acknowledgment. The book still shows one order.",
+      "do": [
+        {"at": "Inspect", "duration": 0.2, "remove": ["guide", "sheet", "render", "time", "file"]},
+        {"at": "sampled", "update": {"id": "title", "text": "Inspecting the encoded lesson"}},
+        {"at": "here is", "enter": "fade", "add": {"id": "frame", "type": "image", "src": "lesson-frame.png", "x": 78, "y": 127, "width": 1122, "height": 449}},
+        {"at": "red cross", "point": [507, 340]},
+        {"at": "retries", "point": [510, 394]},
+        {"at": "returns", "point": [510, 490]},
+        {"at": "one order", "point": [1055, 326]}
+      ]
+    },
+    {
+      "say": "The first render showed every requested event, with one order left on the books. This trial yielded zero actionable improvements.",
+      "do": [
+        {"at": "this trial", "update": {"id": "title", "text": "Trial 05  /  Zero actionable improvements"}}
+      ]
+    }
+  ]
+}
