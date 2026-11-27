@@ -30,3 +30,4 @@ The traces record timestamped tool inputs and outcomes. Long command outputs are
 | [11 · Household budget](run-11/trace.md) | 154.900 s | 10.247 s | Percentage-based pie slices, focused guide topics, tile sizing and media details during inspection. [Walkthrough](run-11/walkthrough.mp4) |
 | [12 · Budget replay](run-12/trace.md) | 103.854 s | 8.959 s | Continue a pie from the previous slice and find a complete narrated pie example in one topic. [Walkthrough](run-12/walkthrough.mp4) |
 | [13 · Library acquisitions](run-13/trace.md) | 97.791 s | 9.146 s | Review encoded frames by step and reveal the unallocated part of a pie with one shared circle. [Walkthrough](run-13/walkthrough.mp4) |
+| [14 · Library replay](run-14/trace.md) | 122.571 s | 7.414 s | Place independently cued text at a shared join, include the final hold in step review and report overlapping phase times. [Walkthrough](run-14/walkthrough.mp4) |

@@ -6,6 +6,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { findBrowser } from "../src/render/browser.ts";
+import { findFfmpeg } from "../src/render/encode.ts";
 import { loadScript, parseSteps, renderSnapshot } from "../src/render/render.ts";
 
 const cli = path.resolve(import.meta.dirname, "../src/cli.ts");
@@ -65,6 +66,29 @@ test("an invalid encoder is reported before any narration is requested", () => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /DRAWCAST_FFMPEG/);
   assert.doesNotMatch(result.stderr, /Narration|speaking/);
+});
+
+test("even a silent render reports elapsed speech and encoding time", async (t) => {
+  if (!existsSync(path.join(import.meta.dirname, "../dist/player/index.html"))) return t.skip("requires the built player");
+  const browser = await findBrowser(false, () => {});
+  if (!browser || !findFfmpeg()) return t.skip("requires a browser and ffmpeg");
+  const dir = mkdtempSync(path.join(os.tmpdir(), "drawcast-timings-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const file = path.join(dir, "silent.json");
+  writeFileSync(file, JSON.stringify({ drawcast: 1, steps: [{ duration: 1 }] }));
+  for (const encoder of ["browser", "ffmpeg"]) {
+    const result = spawnSync(process.execPath, [cli, "render", file, "--width", "160", "--fps", "2"], {
+      encoding: "utf8", env: { ...process.env, DRAWCAST_BROWSER: browser, DRAWCAST_ENCODER: encoder }, timeout: 30000,
+    });
+    assert.ifError(result.error);
+    assert.equal(result.status, 0, result.stderr);
+    const total = /rendered in (\d+\.\d{3}) s/.exec(result.stdout);
+    const phases = /Phase wall times \(may overlap\): speech preparation and synthesis (\d+\.\d{3}) s, video encoding and MP4 muxing (\d+\.\d{3}) s/.exec(result.stderr);
+    assert.ok(total, result.stdout);
+    assert.ok(phases, result.stderr);
+    assert.ok(Number(phases[1]) <= Number(total[1]), result.stdout);
+    assert.ok(Number(phases[2]) > 0 && Number(phases[2]) <= Number(total[1]), result.stdout);
+  }
 });
 
 test("interrupting a render stops the voice, preserves the previous MP4 and cleans up", { timeout: 20000 }, async (t) => {

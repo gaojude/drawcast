@@ -101,7 +101,8 @@ export async function inspectVideo(input: string, output: string, { at, signal, 
   const stepsByFrame = new Map<number, number[]>();
   if (index) {
     for (const n of parseSteps(step!, index.stepFrames.length).sort((a, b) => a - b)) {
-      const frame = index.stepFrames[n - 1];
+      // The final hold shows what the viewer is left with after narration and captions.
+      const frame = n === index.stepFrames.length ? index.frames - 1 : index.stepFrames[n - 1];
       if (!stepsByFrame.has(frame)) stepsByFrame.set(frame, []);
       stepsByFrame.get(frame)!.push(n);
     }

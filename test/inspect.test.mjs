@@ -32,7 +32,8 @@ test("inspect --step extracts indexed B-frames and pages long selections in disp
   execFileSync(ffmpeg, ["-v", "error", "-f", "lavfi", "-i", "nullsrc=s=32x24:r=10:d=2,geq=lum=24+10*N:cb=128:cr=128", "-c:v", "libx264", "-bf", "2", "-video_track_timescale", "90000", input]);
   const original = readFileSync(input);
   assert.match(run(input, "--step", "1").stderr, /no usable Drawcast step index.*--at.*--motion/);
-  const index = { frames: 20, stepFrames: [1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 19] };
+  // Step 14 finishes on frame 15, then the movie holds. Its review should show frame 19.
+  const index = { frames: 20, stepFrames: [1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15] };
   await appendStepIndex(input, index);
   assert.deepEqual(await readStepIndex(input), index);
   const single = run(input, "--step", "14");

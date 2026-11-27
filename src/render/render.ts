@@ -20,6 +20,20 @@ export { parseSteps } from "../shared/steps.ts";
 
 type Log = (line: string) => void;
 
+/** Accumulate wall time across successive attempts, including time waiting for input. */
+function stopwatch() {
+  let elapsed = 0;
+  return {
+    get ms() { return elapsed; },
+    start() {
+      const started = performance.now();
+      return () => { elapsed += performance.now() - started; };
+    },
+  };
+}
+
+type RecordingOutput = Output & { encodingTimer?: ReturnType<typeof stopwatch> };
+
 /** A script the checker turned down. */
 export class ScriptError extends Error {
   report: Report;
@@ -310,7 +324,7 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (listene
  * False when this browser cannot do it, and then the player is still open for the other way. Either way
  * closes the player once the frames are out.
  */
-export async function recordInBrowser(player: Player, telling: Telling, o: Output & { guess: number; cover: boolean; log: Log }): Promise<boolean> {
+export async function recordInBrowser(player: Player, telling: Telling, o: RecordingOutput & { guess: number; cover: boolean; log: Log }): Promise<boolean> {
   if (!browserMayEncode()) return false;
   // the page has been looking for its encoder since it opened
   const { encoder: info, tried } = await player.encoder().catch((e: Error) => ({ encoder: null, tried: [e.message.split("\n")[0]] }));
@@ -325,6 +339,7 @@ export async function recordInBrowser(player: Player, telling: Telling, o: Outpu
   // and the video is made again from what that voice says.
   for (;;) {
     const round = telling.round;
+    const stopTiming = o.encodingTimer?.start();
     const muxer = startMuxer({ ...o, color: info.color, sampleRate: SAMPLE_RATE });
     // set when the round is over before the video is: it started over, or something broke
     let over = false;
@@ -429,7 +444,7 @@ export async function recordInBrowser(player: Player, telling: Telling, o: Outpu
     if (!broken && telling.round === round) {
       // the browser has nothing left to do, and closes while ffmpeg finishes the file
       try {
-        await muxer.finish();
+        await muxer.finish().finally(stopTiming);
       } catch (e) {
         o.signal?.throwIfAborted();
         await player.stopEncoding().catch(() => {});
@@ -440,6 +455,7 @@ export async function recordInBrowser(player: Player, telling: Telling, o: Outpu
       return true;
     }
     await muxer.abort();
+    stopTiming?.();
     o.signal?.throwIfAborted();
     // a narration that failed is the end of the render, whichever way it is encoded
     if (telling.failure) {
@@ -458,7 +474,8 @@ export async function recordInBrowser(player: Player, telling: Telling, o: Outpu
  * The way that always works: every frame leaves the browser as a PNG and ffmpeg encodes the lot. With
  * `cover`, the first frame is the canvas at that time instead of the empty one.
  */
-export async function recordWithFfmpeg(player: Player, o: Output & { audio: string; pcmRate?: number; frames: number; cover: number | null; log: Log }): Promise<void> {
+export async function recordWithFfmpeg(player: Player, o: RecordingOutput & { audio: string; pcmRate?: number; frames: number; cover: number | null; log: Log }): Promise<void> {
+  const stopTiming = o.encodingTimer?.start();
   const encoder = startEncoder(o);
   const report = progress(o.frames, o.log);
   try {
@@ -475,7 +492,7 @@ export async function recordWithFfmpeg(player: Player, o: Output & { audio: stri
     await encoder.abort();
     throw e;
   }
-  await Promise.all([encoder.finish(), player.close()]);
+  await Promise.all([encoder.finish().finally(stopTiming), player.close()]);
 }
 
 export interface RenderOptions {
@@ -491,17 +508,21 @@ export interface RenderOptions {
   log: Log;
 }
 
-export async function renderVideo(loaded: Loaded, o: RenderOptions): Promise<{ duration: number }> {
+export async function renderVideo(loaded: Loaded, o: RenderOptions): Promise<{ duration: number; speechMs: number; encodingMs: number }> {
   o.signal?.throwIfAborted();
   const { script } = loaded;
   if (!Number.isFinite(o.fps) || o.fps <= 0) throw new Error("--fps must be a positive frame rate.");
   const speed = speakingRate(o.speed ?? script.speed);
+  const speechTimer = stopwatch();
+  const encodingTimer = stopwatch();
+  const finishVoiceSelection = speechTimer.start();
   const voice = await resolveVoice({
     spec: o.voice ?? script.voice,
     narration: script.steps.map((s) => s.say ?? "").join(" "),
     ttsCommand: o.ttsCommand,
     log: o.log,
   });
+  finishVoiceSelection();
   await prepareOutputs(loaded, [o.output]);
   const ffmpeg = requireFfmpeg();
   // The first frame is a cover, the canvas as this step ends: the empty canvas makes a poor thumbnail.
@@ -515,16 +536,18 @@ export async function renderVideo(loaded: Loaded, o: RenderOptions): Promise<{ d
   const opening = openPlayer(request, o.log, signal);
   o.log("Narration");
   // And the video is drawn behind the narration, as far as it has been spoken.
-  const telling = tell(opening, script, (listener) => narrate(script, voice, speed, o.log, listener, signal), {
+  const finishSpeech = speechTimer.start();
+  const telling = tell(opening, script, (listener) => narrate(script, voice, speed, o.log, listener, signal).finally(finishSpeech), {
     fps: o.fps,
     captions,
     cover,
     log: o.log,
   });
 
+  let video: Awaited<Telling["whole"]>;
   try {
     const player = await opening;
-    const job = { output: path.join(work, "video.mp4"), fps: o.fps, ffmpeg, log: o.log, signal };
+    const job = { output: path.join(work, "video.mp4"), fps: o.fps, ffmpeg, log: o.log, signal, encodingTimer };
     if (!(await recordInBrowser(player, telling, { ...job, guess: guessFrames(script, o.fps), cover: cover !== null }))) {
       // the slow way takes the narration whole, from a file
       const { frames } = await telling.whole;
@@ -540,11 +563,10 @@ export async function renderVideo(loaded: Loaded, o: RenderOptions): Promise<{ d
       }
       await recordWithFfmpeg(player, { ...job, audio: audioFile, pcmRate: SAMPLE_RATE, frames, cover: telling.cover });
     }
-    const { duration, index } = await telling.whole;
+    video = await telling.whole;
     signal.throwIfAborted();
-    await appendStepIndex(job.output, index, signal);
+    await appendStepIndex(job.output, video.index, signal);
     await publishFile(job.output, o.output, signal);
-    return { duration };
   } catch (error) {
     signal.throwIfAborted();
     throw error;
@@ -557,6 +579,7 @@ export async function renderVideo(loaded: Loaded, o: RenderOptions): Promise<{ d
       await rm(work, { recursive: true, force: true });
     }
   }
+  return { duration: video.duration, speechMs: speechTimer.ms, encodingMs: encodingTimer.ms };
 }
 
 function speakingRate(value: number | undefined): number {

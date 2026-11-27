@@ -190,15 +190,18 @@ async function main(signal: AbortSignal): Promise<number> {
         return 0;
       }
       const output = values.output ?? withExtension(file, ".mp4");
-      const started = Date.now();
-      const { duration } = await renderVideo(loaded, {
+      const started = performance.now();
+      const { duration, speechMs, encodingMs } = await renderVideo(loaded, {
         output,
         width,
         fps: number(values.fps, "fps") ?? 30,
         ...speech,
         log,
       });
-      console.log(`${output} (${duration.toFixed(1)} s, rendered in ${((Date.now() - started) / 1000).toFixed(0)} s)`);
+      const wall = (ms: number) => `${(ms / 1000).toFixed(3)} s`;
+      const totalMs = performance.now() - started;
+      log(`Phase wall times (may overlap): speech preparation and synthesis ${wall(speechMs)}, video encoding and MP4 muxing ${wall(encodingMs)}`);
+      console.log(`${output} (${duration.toFixed(1)} s, rendered in ${wall(totalMs)})`);
       return 0;
     }
 
