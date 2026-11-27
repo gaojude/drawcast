@@ -1,0 +1,62 @@
+{
+  "drawcast": 1,
+  "voice": "maple",
+  "cover": 1,
+  "steps": [
+    {
+      "say": "Two, five, and eight are already sorted. The next value, four, is our key.",
+      "do": [
+        {"at":0,"enter":"none","add":{"id":"title","type":"text","x":640,"y":58,"text":"One step of insertion sort","textAlign":"center","fontSize":49,"fontFamily":"hand","strokeColor":"#293747"}},
+        {"at":0,"enter":"none","add":{"id":"slot-1","type":"rectangle","x":272,"y":336,"width":142,"height":96,"strokeColor":"#8896a4","strokeStyle":"dashed","roughness":0}},
+        {"at":0,"enter":"none","add":{"id":"slot-2","type":"rectangle","x":470,"y":336,"width":142,"height":96,"strokeColor":"#8896a4","strokeStyle":"dashed","roughness":0}},
+        {"at":0,"enter":"none","add":{"id":"slot-3","type":"rectangle","x":668,"y":336,"width":142,"height":96,"strokeColor":"#8896a4","strokeStyle":"dashed","roughness":0}},
+        {"at":0,"enter":"none","add":{"id":"slot-4","type":"rectangle","x":866,"y":336,"width":142,"height":96,"strokeColor":"#8896a4","strokeStyle":"dashed","roughness":0}},
+        {"at":0,"enter":"none","add":{"id":"tile-2","type":"rectangle","x":268,"y":332,"width":150,"height":104,"label":"2","fontSize":56,"backgroundColor":"#c3e8dc","strokeColor":"#185747","roughness":0}},
+        {"at":0,"enter":"none","add":{"id":"tile-5","type":"rectangle","x":466,"y":332,"width":150,"height":104,"label":"5","fontSize":56,"backgroundColor":"#cbe4ff","strokeColor":"#204f82","roughness":0}},
+        {"at":0,"enter":"none","add":{"id":"tile-8","type":"rectangle","x":664,"y":332,"width":150,"height":104,"label":"8","fontSize":56,"backgroundColor":"#ddd5fa","strokeColor":"#4a397b","roughness":0}},
+        {"at":0,"enter":"none","add":{"id":"tile-4","type":"rectangle","x":862,"y":332,"width":150,"height":104,"label":"4","fontSize":56,"backgroundColor":"#ffdb9d","strokeColor":"#7e4114","roughness":0}},
+        {"at":0,"enter":"none","add":{"id":"prefix","type":"line","points":[[268,465],[268,481],[814,481],[814,465]],"roughness":0,"strokeColor":"#536577"}},
+        {"at":0,"enter":"none","add":{"id":"prefix-label","type":"text","x":541,"y":492,"text":"Sorted prefix","textAlign":"center","fontSize":30,"fontFamily":"hand","strokeColor":"#293747"}},
+        {"at":"four","pulse":"tile-4"}
+      ]
+    },
+    {
+      "say": "Lift the orange four and hold it above the row. Its empty slot is the hole.",
+      "do": [
+        {"at":"Lift","update":{"id":"tile-4","y":173},"duration":0.8},
+        {"at":"Lift","remove":["prefix","prefix-label"]},
+        {"at":"hole","point":"slot-4"}
+      ]
+    },
+    {
+      "say": "Eight is larger than four. Slide eight one slot to the right.",
+      "do": [
+        {"at":"Eight is","pulse":"tile-8"},
+        {"at":"Slide","update":{"id":"tile-8","dx":198},"duration":0.9}
+      ]
+    },
+    {
+      "say": "Five is also larger. Slide five one slot right, leaving a hole beside two.",
+      "do": [
+        {"at":"Five is","pulse":"tile-5"},
+        {"at":"Slide","update":{"id":"tile-5","dx":198},"duration":0.9},
+        {"at":"hole","point":"slot-2"}
+      ]
+    },
+    {
+      "say": "Two is smaller than four, so it stays. Bring the same orange four over the hole and lower it into place.",
+      "do": [
+        {"at":"Two is","pulse":"tile-2"},
+        {"at":"Bring","update":{"id":"tile-4","x":466},"duration":1.1},
+        {"at":"lower","update":{"id":"tile-4","y":332},"duration":0.8}
+      ]
+    },
+    {
+      "say": "The sorted prefix now includes all four values. Two, four, five, eight.",
+      "do": [
+        {"at":"sorted prefix","add":{"id":"result","type":"line","points":[[268,465],[268,481],[1012,481],[1012,465]],"roughness":0,"strokeColor":"#536577"}},
+        {"at":"sorted prefix","add":{"id":"result-label","type":"text","x":640,"y":492,"text":"Sorted prefix","textAlign":"center","fontSize":30,"fontFamily":"hand","strokeColor":"#293747"}}
+      ]
+    }
+  ]
+}

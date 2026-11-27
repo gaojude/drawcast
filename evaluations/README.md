@@ -13,3 +13,9 @@ Five fresh authors used the local CLI and the skill shipped with it. Each ran a 
 Author wall time runs from task start through the final report, including visual review and any requested diagnosis. The render column is a separate process stopwatch. The prompts and narration lengths differ. For a controlled speed comparison, see the [same-script A/B measurements and decoded-frame comparison](run-01/trace.md#renderer-timing).
 
 The traces record timestamped tool inputs and outcomes. Long command outputs are excerpted, image payloads are represented by media type, and machine-specific paths and agent progress messages are abridged. Each directory contains the sample script and the matching narrated evaluation walkthrough. From a built checkout, render a script with `node dist/cli.js render evaluations/run-05/sample.drawcast.json`.
+
+## Trials from v0.5.0
+
+| Trial | Author wall time | Render process time | Outcome |
+| --- | ---: | ---: | --- |
+| [6 · Insertion sort](run-06/trace.md) | 209.672 s | 12.55 s + 4.64 s | Mark the first frame on the preview sheet and place tiles by the centers of named shapes. [Walkthrough](run-06/walkthrough.mp4) |

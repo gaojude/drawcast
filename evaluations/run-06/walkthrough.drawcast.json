@@ -1,0 +1,323 @@
+{
+  "drawcast": 1,
+  "title": "Choosing the opening frame",
+  "cover": 1,
+  "voice": "maple",
+  "steps": [
+    {
+      "say": "We asked an author to show four being inserted into a sorted row. This is the order the viewer needs to see first.",
+      "do": [
+        {
+          "enter": "none",
+          "add": [
+            {
+              "id": "head",
+              "type": "text",
+              "x": 170,
+              "y": 64,
+              "text": "Which row opens the video?",
+              "fontSize": 46,
+              "fontFamily": "normal",
+              "strokeColor": "#24384a"
+            },
+            {
+              "id": "s0",
+              "type": "rectangle",
+              "x": 170,
+              "y": 296,
+              "width": 150,
+              "height": 96,
+              "strokeStyle": "dashed",
+              "strokeColor": "#718096",
+              "roughness": 0
+            },
+            {
+              "id": "s1",
+              "type": "rectangle",
+              "x": 410,
+              "y": 296,
+              "width": 150,
+              "height": 96,
+              "strokeStyle": "dashed",
+              "strokeColor": "#718096",
+              "roughness": 0
+            },
+            {
+              "id": "s2",
+              "type": "rectangle",
+              "x": 650,
+              "y": 296,
+              "width": 150,
+              "height": 96,
+              "strokeStyle": "dashed",
+              "strokeColor": "#718096",
+              "roughness": 0
+            },
+            {
+              "id": "s3",
+              "type": "rectangle",
+              "x": 890,
+              "y": 296,
+              "width": 150,
+              "height": 96,
+              "strokeStyle": "dashed",
+              "strokeColor": "#718096",
+              "roughness": 0
+            },
+            {
+              "id": "two",
+              "type": "rectangle",
+              "on": [
+                "s0"
+              ],
+              "label": "2",
+              "color": "teal",
+              "width": 142,
+              "height": 88,
+              "fontSize": 46,
+              "roughness": 0
+            },
+            {
+              "id": "five",
+              "type": "rectangle",
+              "on": [
+                "s1"
+              ],
+              "label": "5",
+              "color": "blue",
+              "width": 142,
+              "height": 88,
+              "fontSize": 46,
+              "roughness": 0
+            },
+            {
+              "id": "eight",
+              "type": "rectangle",
+              "on": [
+                "s2"
+              ],
+              "label": "8",
+              "color": "violet",
+              "width": 142,
+              "height": 88,
+              "fontSize": 46,
+              "roughness": 0
+            },
+            {
+              "id": "four",
+              "type": "rectangle",
+              "on": [
+                "s3"
+              ],
+              "label": "4",
+              "color": "orange",
+              "width": 142,
+              "height": 88,
+              "fontSize": 46,
+              "roughness": 0
+            },
+            {
+              "id": "note",
+              "type": "text",
+              "x": 170,
+              "y": 469,
+              "text": "Requested opening",
+              "fontSize": 29,
+              "fontFamily": "normal",
+              "strokeColor": "#24384a"
+            }
+          ]
+        },
+        {
+          "at": "four",
+          "pulse": "four"
+        }
+      ]
+    },
+    {
+      "say": "The author chose the finished row for the cover. The encoded video showed the answer on its very first frame.",
+      "do": [
+        {
+          "at": "finished row",
+          "duration": 0.55,
+          "update": {
+            "id": "four",
+            "dy": -120
+          }
+        },
+        {
+          "at": "finished row",
+          "update": {
+            "id": "note",
+            "text": "Original cover choice   ·   step 6"
+          }
+        },
+        {
+          "at": "cover",
+          "duration": 0.7,
+          "update": {
+            "id": "eight",
+            "along": [
+              [
+                "eight"
+              ],
+              [
+                "s3"
+              ]
+            ]
+          }
+        },
+        {
+          "at": "cover",
+          "duration": 0.7,
+          "update": {
+            "id": "five",
+            "along": [
+              [
+                "five"
+              ],
+              [
+                "s2"
+              ]
+            ]
+          }
+        },
+        {
+          "at": "encoded",
+          "duration": 0.7,
+          "update": {
+            "id": "four",
+            "along": [
+              [
+                "four"
+              ],
+              [
+                "s1"
+              ]
+            ]
+          }
+        },
+        {
+          "at": "answer",
+          "pulse": "four"
+        }
+      ]
+    },
+    {
+      "say": "The first render took twelve and a half seconds. A second render to change the cover took another four point six seconds, even with the speech cached.",
+      "do": [
+        {
+          "at": "first render",
+          "update": {
+            "id": "head",
+            "text": "The cost of discovering it after encoding"
+          }
+        },
+        {
+          "at": "first render",
+          "update": {
+            "id": "note",
+            "text": "First render    12.55 s"
+          }
+        },
+        {
+          "at": "another",
+          "update": {
+            "id": "note",
+            "text": "First render    12.55 s        Cover correction    +4.64 s"
+          }
+        }
+      ]
+    },
+    {
+      "say": "The preview sheet now marks the first frame. Step one opens on the unsorted key. And a tile can now name the center of its slot, so a shifted or resized slot can be used without copying its coordinates.",
+      "do": [
+        {
+          "at": "preview",
+          "update": {
+            "id": "head",
+            "text": "Preview the opening before rendering"
+          }
+        },
+        {
+          "at": "marks",
+          "update": {
+            "id": "note",
+            "text": "Step 1   ·   first frame"
+          }
+        },
+        {
+          "at": "Step one",
+          "duration": 0.65,
+          "update": {
+            "id": "two",
+            "along": [
+              [
+                "two"
+              ],
+              [
+                "s0"
+              ]
+            ]
+          }
+        },
+        {
+          "at": "Step one",
+          "duration": 0.65,
+          "update": {
+            "id": "five",
+            "along": [
+              [
+                "five"
+              ],
+              [
+                "s1"
+              ]
+            ]
+          }
+        },
+        {
+          "at": "Step one",
+          "duration": 0.65,
+          "update": {
+            "id": "eight",
+            "along": [
+              [
+                "eight"
+              ],
+              [
+                "s2"
+              ]
+            ]
+          }
+        },
+        {
+          "at": "Step one",
+          "duration": 0.65,
+          "update": {
+            "id": "four",
+            "along": [
+              [
+                "four"
+              ],
+              [
+                "s3"
+              ]
+            ]
+          }
+        },
+        {
+          "at": "center",
+          "update": {
+            "id": "note",
+            "text": "Place the tile with  \"on\": [\"slot\"]"
+          }
+        },
+        {
+          "at": "center",
+          "pulse": "four"
+        }
+      ]
+    }
+  ]
+}
