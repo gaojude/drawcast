@@ -6,7 +6,7 @@ import { findBrowser } from "./render/browser.ts";
 import { findFfmpeg } from "./render/encode.ts";
 import { ScriptError, loadScript, parseSteps, renderSnapshot, renderVideo } from "./render/render.ts";
 import { ensureModels, modelsDir, modelsInstalled } from "./voice/models.ts";
-import { EDGE_PREFIX, EDGE_VOICES, findEdgeTts } from "./voice/edge.ts";
+import { EDGE_PREFIX, EDGE_VOICES, edgeTtsStatus } from "./voice/edge.ts";
 import { SPEAKERS, builtInVoices } from "./voice/voice.ts";
 
 const HELP = `drawcast: turn a narrated Excalidraw script into a video
@@ -22,12 +22,14 @@ Usage
 Options
   -o, --output <file>     where to write (default: the script's name with .mp4 or .png)
   --voice <name>          render, snapshot: a voice from "drawcast voices", instead of the script's
-  --speed <n>             render: speaking rate, 1 = normal
-  --no-captions           render: leave the captions out
+  --speed <n>             render, snapshot: speaking rate from 0.5 to 2, 1 = normal
+  --no-captions           render, snapshot: leave the captions out
   --fps <n>               render: frames per second (default 30)
-  --width <px>            output width (render: 1.5 x the canvas, so 1920; snapshot: the canvas, 1280)
+  --width <px>            output width (default 1.5 x the canvas for video, canvas width for a still,
+                          or 512 per tile for a sheet)
   --tts-command <cmd>     render: speak with your own program. It gets one sentence on stdin
-                          and must write a WAV file to the path in $DRAWCAST_OUT.
+                          and must write a WAV file to the path in $DRAWCAST_OUT. With snapshot,
+                          use cached timing from that command.
   --step <n>              snapshot: the canvas as step n is done (every action finished). Several:
                           2,5,9 or 3-6 or all, a file each
   --sheet                 snapshot: the steps (default all) on one picture, in a grid
@@ -48,11 +50,11 @@ const withExtension = (file: string, ext: string) => path.join(path.dirname(file
 function number(value: string | undefined, name: string): number | undefined {
   if (value === undefined) return undefined;
   const n = Number(value);
-  if (!Number.isFinite(n)) throw new Error(`--${name} must be a number (got "${value}").`);
+  if (!value.trim() || !Number.isFinite(n)) throw new Error(`--${name} must be a number (got "${value}").`);
   return n;
 }
 
-async function main(): Promise<number> {
+async function main(signal: AbortSignal): Promise<number> {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
     options: {
@@ -76,6 +78,16 @@ async function main(): Promise<number> {
   if (values.version) return console.log(version), 0;
   if (values.help || !command) return console.log(HELP), command || values.help ? 0 : 1;
 
+  const takesScript = ["check", "snapshot", "render"].includes(command);
+  if (positionals.length > (takesScript ? 2 : 1)) throw new Error(`Unexpected argument for ${command}: ${positionals[takesScript ? 2 : 1]}.`);
+  const allowed = command === "render" || command === "snapshot"
+    ? ["output", "width", "voice", "speed", "no-captions", "tts-command", ...(command === "snapshot" ? ["sheet", "at", "step"] : ["fps"])]
+    : [];
+  for (const [option, value] of Object.entries(values)) {
+    if (!allowed.includes(option)) throw new Error(`--${option} does not apply to ${command}.`);
+    if (typeof value === "string" && !value.trim()) throw new Error(`--${option} needs a nonempty value.`);
+  }
+
   switch (command) {
     case "guide":
       // The version comes first: the guide tells an agent to compare it with `drawcast --version`.
@@ -86,21 +98,23 @@ async function main(): Promise<number> {
       const width = Math.max(...EDGE_VOICES.map((v) => EDGE_PREFIX.length + v.name.length));
       for (const [name, v] of Object.entries(builtInVoices())) console.log(`${name.padEnd(width)}  ${v.language}  ${v.description}`);
       console.log(`\nThese run on this machine. The model has ${SPEAKERS.length} speakers and these are names for four of them;\nany other works by its own name, such as zf_001 or zm_100:\n  https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh/tree/main/voices`);
-      console.log(`\nOnline voices, from Microsoft. They sound more natural, send the narration to Microsoft, and need\nthe edge-tts program (${findEdgeTts() ? "installed" : 'not found: "pipx install edge-tts" or "uv tool install edge-tts"'}).\nLeft unset, a script gets the first online voice of its language, or the first built-in one if that\ncannot be had:`);
+      console.log(`\nOnline voices send the narration to Microsoft and need the edge-tts program.\nedge-tts: ${edgeTtsStatus().description}\nLeft unset, a script gets the first online voice of its language, or the first built-in one if that\ncannot be had:`);
       for (const v of EDGE_VOICES) console.log(`${(EDGE_PREFIX + v.name).padEnd(width)}  ${v.language}  ${v.description}`);
       console.log(`"edge-tts --list-voices" lists the rest; put "${EDGE_PREFIX}" in front of a name.`);
       return 0;
     }
 
     case "setup": {
-      await ensureModels(log);
-      const browser = await findBrowser(true, log);
+      await ensureModels(log, signal);
+      const browser = await findBrowser(true, log, signal);
+      signal.throwIfAborted();
       console.log(`speech model  ${modelsInstalled() ? modelsDir() : "missing"}`);
       console.log(`browser       ${browser ?? "missing: install Chrome, Chromium or Edge"}`);
-      console.log(`ffmpeg        ${findFfmpeg() ?? "missing: install ffmpeg, or reinstall drawcast with install scripts allowed"}`);
+      const ffmpeg = findFfmpeg();
+      console.log(`ffmpeg        ${ffmpeg ?? "missing: install ffmpeg, or reinstall drawcast with install scripts allowed"}`);
       // optional: without it a script left without a voice is spoken by the built-in one
-      console.log(`edge-tts      ${findEdgeTts() ?? 'not found (optional: the online voices need it; "pipx install edge-tts" or "uv tool install edge-tts")'}`);
-      return browser && findFfmpeg() ? 0 : 1;
+      console.log(`edge-tts      ${edgeTtsStatus().description} (needed for online voices)`);
+      return browser && ffmpeg ? 0 : 1;
     }
 
     case "check":
@@ -108,7 +122,8 @@ async function main(): Promise<number> {
     case "render": {
       if (!file) throw new Error(`Which script? Usage: drawcast ${command} <script>`);
       if (!existsSync(file)) throw new Error(`${file} does not exist.`);
-      const loaded = await loadScript(file);
+      if (values.output !== undefined && path.relative(file, values.output) === "") throw new Error("Choose an output file different from the input script.");
+      const loaded = await loadScript(file, signal);
       printReport(loaded.report);
       const width = number(values.width, "width");
 
@@ -116,13 +131,20 @@ async function main(): Promise<number> {
         console.log(loaded.report.warnings.length ? `${loaded.report.warnings.length} warning(s), no errors.` : "No problems found.");
         return 0;
       }
+      const speech = {
+        signal,
+        voice: values.voice,
+        speed: number(values.speed, "speed"),
+        captions: values["no-captions"] ? false : undefined,
+        ttsCommand: values["tts-command"],
+      };
       if (command === "snapshot") {
         const sheet = values.sheet ?? false;
         const steps = values.step !== undefined ? parseSteps(values.step, loaded.script.steps.length) : sheet ? parseSteps("all", loaded.script.steps.length) : undefined;
         // each kind of still gets its own name, so that looking at one does not overwrite another
         const kind = sheet ? ".sheet" : values.at !== undefined ? `.at${values.at}` : steps?.length === 1 ? `.step${steps[0]}` : "";
         const output = values.output ?? withExtension(file, `${kind}.png`);
-        const { files, timing } = await renderSnapshot(loaded, { output, at: number(values.at, "at"), steps, sheet, width, voice: values.voice, log });
+        const { files, timing } = await renderSnapshot(loaded, { output, at: number(values.at, "at"), steps, sheet, width, ...speech, log });
         for (const f of files) console.log(`${f.file} (${f.shows})`);
         console.log(timing);
         return 0;
@@ -133,10 +155,7 @@ async function main(): Promise<number> {
         output,
         width,
         fps: number(values.fps, "fps") ?? 30,
-        voice: values.voice,
-        speed: number(values.speed, "speed"),
-        captions: values["no-captions"] ? false : undefined,
-        ttsCommand: values["tts-command"],
+        ...speech,
         log,
       });
       console.log(`${output} (${duration.toFixed(1)} s, rendered in ${((Date.now() - started) / 1000).toFixed(0)} s)`);
@@ -148,13 +167,26 @@ async function main(): Promise<number> {
   }
 }
 
-main().then(
-  (code) => process.exit(code),
+const controller = new AbortController();
+let interrupted = 0;
+const stop = (signal: NodeJS.Signals) => {
+  if (controller.signal.aborted) return;
+  interrupted = signal === "SIGINT" ? 130 : 143;
+  controller.abort(new Error(`Interrupted by ${signal}.`));
+};
+process.on("SIGINT", stop);
+process.on("SIGTERM", stop);
+main(controller.signal).then(
+  (code) => { process.exitCode = interrupted || code; },
   (e) => {
+    if (interrupted) e = controller.signal.reason;
     if (e instanceof ScriptError) {
       printReport(e.report);
       log(`\n${e.report.errors.length} error(s). Run "drawcast guide" for the format.`);
     } else log(`drawcast: ${e instanceof Error ? e.message : e}`);
-    process.exit(1);
+    process.exitCode = interrupted || 1;
   },
-);
+).finally(() => {
+  process.off("SIGINT", stop);
+  process.off("SIGTERM", stop);
+});

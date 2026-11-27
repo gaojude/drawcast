@@ -51,10 +51,15 @@ function chineseSection(n: number): string {
 function chineseInteger(n: number): string {
   if (n === 0) return "零";
   let out = "";
-  for (const [size, unit] of [[1e8, "亿"], [1e4, "万"], [1, ""]] as const) {
+  let skipped = false;
+  for (const [size, unit] of [[1e12, "万亿"], [1e8, "亿"], [1e4, "万"], [1, ""]] as const) {
     const section = Math.floor(n / size) % 10000;
-    if (!section) continue;
-    out += (out && section < 1000 ? "零" : "") + chineseSection(section) + unit;
+    if (!section) {
+      skipped = true;
+      continue;
+    }
+    out += (out && (skipped || section < 1000) ? "零" : "") + chineseSection(section) + unit;
+    skipped = false;
   }
   // 一十二 is said 十二
   return out.replace(/^一十/, "十");
@@ -75,6 +80,9 @@ const SYMBOLS: Record<string, [english: string, chinese: string]> = {
   "%": ["percent", "百分号"],
   "&": ["and", "和"],
   "+": ["plus", "加"],
+  "−": ["minus", "减"],
+  "×": ["times", "乘以"],
+  "÷": ["divided by", "除以"],
   "=": ["equals", "等于"],
   "@": ["at", "at"],
 };
@@ -85,7 +93,7 @@ const HISSING = new Set(["s", "z", "ʃ", "ʒ", "ʧ", "ʤ"]);
 /** What -s adds after a sound: boxes, bakes, runs. */
 const plural = (last: string) => (HISSING.has(last) ? "ᵻ z" : VOICELESS.has(last) ? "s" : "z");
 /** What -ed adds: narrated, baked, played. */
-const past = (last: string) => (last === "t" || last === "d" ? "ᵻ d" : VOICELESS.has(last) || HISSING.has(last) ? "t" : "d");
+const past = (last: string) => (last === "t" || last === "d" ? "ᵻ d" : VOICELESS.has(last) || ["s", "ʃ", "ʧ"].includes(last) ? "t" : "d");
 
 /** An ending and the sounds it adds, given the last sound of the word it is added to. */
 const SUFFIXES: [suffix: string, phones: (last: string) => string][] = [
@@ -125,9 +133,13 @@ export function normalize(text: string, lexicon: Lexicon): Normalized {
   const entries = new Map<string, string>();
   const chinese = isCjk(text);
 
-  let out = text
+  // Fold full-width Latin text and digits. The built-in English lexicon uses unaccented spellings.
+  let out = text.replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+    .normalize("NFD").replace(/(\p{Script=Latin})\p{M}+/gu, "$1").normalize("NFC")
     .replace(/[‘’]/g, "'")
-    .replace(/(\d),(?=\d{3}\b)/g, "$1")
+    .replace(/(\d),(?=\d{3}(?!\d))/g, "$1")
+    .replace(/(?<![\d.])\.(?=\d)/g, "0.")
+    .replace(/(?<!\d)[-−](?=\d)/g, chinese ? "负" : " minus ")
     // a percentage is read "百分之五" in Chinese
     .replace(/(\d+(?:\.\d+)?)%/g, (_, n) => (chinese ? `百分之${readNumber(n, true, false)}` : `${readNumber(n, false, false)} percent`))
     .replace(/(\d+(?:\.\d+)?)(年)?/g, (_, n: string, year?: string) => {
@@ -135,10 +147,10 @@ export function normalize(text: string, lexicon: Lexicon): Normalized {
       const said = !chinese && asYear ? englishYear(n) : readNumber(n, chinese, asYear);
       return chinese ? said + (year ?? "") : ` ${said} `;
     })
-    .replace(/[%&+=@]/g, (c) => ` ${SYMBOLS[c][chinese ? 1 : 0]} `);
+    .replace(/[%&+=@−×÷]/g, (c) => ` ${SYMBOLS[c][chinese ? 1 : 0]} `);
 
   // getUserName -> get User Name, so each part can be looked up
-  out = out.replace(/([a-z])([A-Z])/g, "$1 $2");
+  out = out.replace(/([A-Z])([A-Z][a-z])/g, "$1 $2").replace(/([a-z])([A-Z])/g, "$1 $2");
 
   out = out.replace(/[A-Za-z]+(?:'[A-Za-z]+)*/g, (raw) => {
     const word = raw.toLowerCase();
@@ -158,6 +170,7 @@ export function normalize(text: string, lexicon: Lexicon): Normalized {
 /** 1987 -> nineteen eighty seven, 2005 -> two thousand five. */
 function englishYear(n: string): string {
   const [century, rest] = [Number(n.slice(0, 2)), Number(n.slice(2))];
+  if (rest === 0 && century % 10 !== 0) return `${englishInteger(century)} hundred`;
   if (rest < 10) return century % 10 === 0 ? `${englishInteger(Number(n))}` : `${englishInteger(century)} oh ${ONES[rest]}`;
   return `${englishInteger(century)} ${englishInteger(rest)}`;
 }

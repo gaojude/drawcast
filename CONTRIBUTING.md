@@ -2,6 +2,8 @@
 
 ## Build and test
 
+Use Node.js 22.18 or newer to run the TypeScript source tests.
+
 ```sh
 npm install
 npm run build        # dist/cli.js and the player page in dist/player

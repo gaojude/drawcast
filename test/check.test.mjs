@@ -18,7 +18,7 @@ test("the examples have no errors or warnings", async () => {
 
 test("the script in the guide is valid", async () => {
   const guide = readFileSync(path.join(import.meta.dirname, "../docs/format.md"), "utf8");
-  const scripts = [...guide.matchAll(/```json\n(\{\n  "drawcast"[\s\S]*?)```/g)].map((m) => JSON.parse(m[1]));
+  const scripts = [...guide.matchAll(/```json\r?\n(\{\r?\n  "drawcast"[\s\S]*?)```/g)].map((m) => JSON.parse(m[1]));
   assert.equal(scripts.length, 2);
   for (const s of scripts) assert.deepEqual(await check(s, examples), { errors: [], warnings: [] });
 });
@@ -175,4 +175,67 @@ test("centred text is measured from its middle", async () => {
   // about 740 wide: from its left edge it runs off the canvas, from its middle it does not
   assert.match((await report({ do: [{ add: title }] })).warnings[0], /extends past the canvas/);
   assert.deepEqual((await report({ do: [{ add: { ...title, textAlign: "center" } }] })).warnings, []);
+});
+
+test("malformed drawing properties are caught before they reach the player", async () => {
+  for (const action of [
+    { add: box("bad", 0, { type: ["rectangle"] }) },
+    { add: box("bad", 0, { label: 7 }) },
+    { add: box("bad", 0, { strokeColor: ["#fff"] }) },
+    { add: box("bad", 0, { rounded: "false" }) },
+    { add: { id: "bad", type: "line", points: [[0, 0], [20, 40]], closed: "no" } },
+    { update: { id: "label", label: false } },
+    { update: { id: "text", text: {} } },
+    { update: { id: "label", width: -2 } },
+    { camera: { fit: ["label"], padding: "wide" } },
+    { add: [] }, { remove: [] }, { pulse: [] }, { update: { id: [] } },
+  ]) {
+    const result = await report({ do: [{ add: [box("label", 300, { label: "Box" }), { id: "text", type: "text", x: 20, y: 20, text: "Hi" }] }, action] });
+    assert.ok(result.errors.length, JSON.stringify(action));
+  }
+});
+
+test("an image with intrinsic dimensions can be an arrow endpoint", async () => {
+  const img = { type: "image", id: "img", src: "../promo/cover.en.png", x: 20, y: 10 };
+  const { errors } = await report({ do: [{ add: img }, { add: { id: "arrow", type: "arrow", from: "img", to: [500, 100] } }] });
+  assert.deepEqual(errors, []);
+  assert.match((await report({ do: [{ add: { ...img, height: -5 } }] })).errors[0], /positive number/);
+});
+
+test("layout checks use the position reached at the end of a partial path", async () => {
+  const { errors, warnings } = await report({ do: [
+    { add: box("a", 0, { width: 40, height: 40 }) },
+    { add: { id: "path", type: "line", points: [[100, 120], [500, 120]] } },
+    { update: { id: "a", along: "path", span: [0, 0.5] } },
+    { add: box("near", 310, { width: 40, height: 40 }) },
+  ] });
+  assert.deepEqual(errors, []);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /partly overlaps "a"/);
+});
+
+test("invalid canvas dimensions yield diagnostics even when they cannot be coerced", async () => {
+  for (const key of ["width", "height"]) {
+    const input = { ...script({ do: [{ add: box("a", 100) }] }), canvas: { [key]: { valueOf: false, toString: false } } };
+    assert.match((await check(input, examples)).errors[0], /width and height must be numbers/);
+  }
+});
+
+test("layout accounts for a shape rotated past the canvas", async () => {
+  const { warnings } = await report({ do: [{ add: box("bar", 30, { y: 2, width: 200, height: 20, angle: Math.PI / 2 }) }] });
+  assert.match(warnings[0], /extends past the canvas/);
+});
+
+test("after removing a shape, its arrow can still guide another element to the old outline", async () => {
+  const { errors, warnings } = await report({ do: [
+    { add: box("source", 0) },
+    { add: box("dest", 500) },
+    { add: { id: "edge", type: "arrow", from: "source", to: "dest" } },
+    { remove: "dest" },
+    { add: box("ball", 10, { y: 400, width: 30, height: 30 }) },
+    { update: { id: "ball", along: "edge" } },
+    { add: box("near", 500, { y: 140, width: 20, height: 20 }) },
+  ] });
+  assert.deepEqual(errors, []);
+  assert.ok(warnings.some((w) => /partly overlaps "ball"/.test(w)), warnings.join("\n"));
 });

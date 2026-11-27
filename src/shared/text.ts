@@ -22,7 +22,8 @@ export function findPhrase(phrase: string[], haystack: string[], from = 0): numb
 }
 
 const SENTENCE_END = /([.!?。！？…]+["'”’)）]*)(\s+|$)|([。！？…]+["”’）]*)|\n+/g;
-const CLAUSE_END = /([,;:，；：、—]+)(\s*)/g;
+// A comma or colon inside a number is part of that number (1,000; 12:30).
+const CLAUSE_END = /(?:(?<!\d)[,:]|[,:](?!\d)|[;，；：、—])+\s*/g;
 
 /** How long a piece of text takes to say, in rough syllables. */
 export function spokenLength(s: string): number {

@@ -19,9 +19,13 @@ const PROFILES = ["6400", "42e0"];
  * pictures this big this often. Empty when H.264 cannot hold the video: odd dimensions, or too many pixels.
  */
 export function avcCodecs(width: number, height: number, fps: number): string[] {
-  if (width % 2 || height % 2) return [];
-  const blocks = Math.ceil(width / 16) * Math.ceil(height / 16);
-  const level = LEVELS.find(([, picture, second]) => blocks <= picture && blocks * fps <= second)?.[0];
+  if (![width, height].every((size) => Number.isSafeInteger(size) && size > 0 && size % 2 === 0) || !Number.isFinite(fps) || fps <= 0) return [];
+  const columns = Math.ceil(width / 16);
+  const rows = Math.ceil(height / 16);
+  const blocks = columns * rows;
+  // Annex A limits each dimension to sqrt(8 * MaxFS) macroblocks as well as limiting area.
+  const longest = Math.max(columns, rows);
+  const level = LEVELS.find(([, picture, second]) => blocks <= picture && longest ** 2 <= 8 * picture && blocks * fps <= second)?.[0];
   return level ? PROFILES.map((profile) => `avc1.${profile}${level.toString(16).padStart(2, "0")}`) : [];
 }
 

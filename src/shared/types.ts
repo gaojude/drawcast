@@ -68,6 +68,8 @@ export interface ElementSpec extends Style {
   endArrowhead?: Arrowhead | null;
   /** line, freedraw: the path, in canvas coordinates. */
   points?: Point[];
+  /** Expanded plots only: indices where the pen lifts to begin a new visible stretch. */
+  breaks?: number[];
   /** line: join the last point to the first, so that `backgroundColor` fills it. */
   closed?: boolean;
   /** image: a file path relative to the script. */
@@ -113,6 +115,8 @@ export interface UpdateSpec extends Style {
   fontSize?: number;
   /** Travel along a path to its end: the id of an arrow or line, or points [[x, y], ...]. The element's middle follows it. */
   along?: string | Point[];
+  /** Expanded routes only: indices where travel jumps across a clipped portion of a plot. */
+  breaks?: number[];
   /** with `along`: the part of the path to travel, as fractions of its length (default [0, 1]). */
   span?: [number, number];
 }

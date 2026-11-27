@@ -15,13 +15,13 @@
       "pause": 0.3
     },
     {
-      "say": "Step one. No terminal needed. Paste one line into your coding agent, and it installs the skill for you. It works for Claude Code, Codex, Cursor, and many more. All you need is Node 20 or newer.",
+      "say": "Step one. No terminal needed. Paste one line into your coding agent, and it installs the skill for you. It works for Claude Code, Codex, Cursor, and many more. All you need is Node twenty-two point twelve or newer.",
       "do": [
         { "camera": { "x": 1400, "y": 0, "width": 1280 }, "duration": 0.6 },
         { "at": "Step one", "add": { "id": "h-1", "type": "text", "x": 1470, "y": 40, "text": "1 · Ask your agent to install it", "fontSize": 40, "strokeColor": "#6741d9" } },
         { "at": "Paste", "duration": 1.6, "add": { "id": "term", "type": "rectangle", "x": 1470, "y": 120, "width": 1140, "height": 84, "label": "“Install the drawcast skill: npx skills add gaojude/drawcast -g -y”", "fontSize": 26, "backgroundColor": "#d0bfff", "strokeColor": "#6741d9" } },
         { "at": "Claude Code", "duration": 1.2, "add": { "id": "out", "type": "text", "x": 1470, "y": 224, "text": "→ Claude Code · Codex · Cursor · Gemini CLI · and more", "fontSize": 20, "strokeColor": "#868e96" } },
-        { "at": "Node", "enter": "fade", "add": { "id": "node", "type": "text", "x": 2610, "y": 224, "textAlign": "right", "text": "needs Node.js 20+", "fontSize": 20, "strokeColor": "#868e96" } }
+        { "at": "Node", "enter": "fade", "add": { "id": "node", "type": "text", "x": 2610, "y": 224, "textAlign": "right", "text": "needs Node.js 22.12+", "fontSize": 20, "strokeColor": "#868e96" } }
       ],
       "pause": 0.3
     },

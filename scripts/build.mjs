@@ -28,7 +28,7 @@ await build({
   bundle: true,
   platform: "node",
   format: "esm",
-  target: "node20",
+  target: "node22.12",
   // What npm installs next to the command stays outside it. MathJax is a devDependency and goes in: it
   // is imported on demand (see src/format/check.ts), so a script without formulas never runs it.
   external: Object.keys(dependencies),

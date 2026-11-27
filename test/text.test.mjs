@@ -29,3 +29,10 @@ test("a long sentence is cut at its commas", () => {
   assert.ok(parts.length > 1);
   assert.equal(parts.join(" "), long);
 });
+
+test("sentence splitting preserves grouped numbers and clock times", () => {
+  const text = "We counted 1,000,000 people at 12:30, and then we went back to count the rest.";
+  const parts = sentences(text, 10);
+  assert.ok(parts.length > 1);
+  assert.equal(parts.join(" "), text);
+});

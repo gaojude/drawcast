@@ -46,7 +46,7 @@ Install the drawcast skill with `npx skills add gaojude/drawcast -g -y`, then ma
 
 After that, just ask for a video. [skills.sh](https://skills.sh) puts the skill where each agent on
 your machine looks for skills, and the skill runs the `drawcast` command through `npx`, so there is
-nothing else to install. It needs Node.js 20 or newer.
+nothing else to install. It needs Node.js 22.12 or newer.
 
 To try it once without installing anything:
 
@@ -145,7 +145,7 @@ scene and minified. It has no narration and no timing in it, and it is still two
 size of the script that draws it, narrates it and times it.
 
 What an agent reads first does not grow with the video: the skill is about 190 tokens and
-`drawcast guide` about 5,800. Layout problems come back from `check` as text, so finding them costs
+`drawcast guide` about 6,100. Layout problems come back from `check` as text, so finding them costs
 no screenshots, and the rest is one contact sheet of every step rather than a picture per step.
 
 These are counts from `o200k_base`, a tokenizer from OpenAI that runs offline; another model's

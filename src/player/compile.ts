@@ -9,7 +9,7 @@ import { type Action, type CameraSpec, type ColorName, DEFAULT_CANVAS, type Elem
 import { findPhrase, tokens } from "../shared/text.ts";
 import * as E from "./elements.ts";
 import type { El, Rect } from "./elements.ts";
-import { type Pt, clamp, dragEase, lerp, lerpColor, minJerk, partialPolyline, polylineLength, subPath } from "./motion.ts";
+import { type Pt, clamp, dragEase, lerp, lerpColor, minJerk, partialPolyline, polylineLength, reversePath, subPath } from "./motion.ts";
 
 /** Silence before the first step, between spoken steps, and after the last one. */
 const LEAD_IN = 0.5;
@@ -54,7 +54,7 @@ interface PointerSeg {
   step: number;
   t0: number;
   t1: number;
-  at: (u: number) => Pt;
+  at: (u: number, time: number, upTo: number) => Pt;
   color?: string;
 }
 
@@ -154,6 +154,7 @@ function wrapMap(original: string, wrapped: string): number[] {
 class Builder {
   tracks = new Map<string, Seg[]>();
   order: string[] = [];
+  indices = new Map<string, string>();
   /** elements on the canvas after everything compiled so far */
   cur = new Map<string, El>();
   labels = new Map<string, string>();
@@ -161,6 +162,7 @@ class Builder {
   /** the formulas on the canvas, as they are now: an update can change the LaTeX and the colour */
   math = new Map<string, ElementSpec>();
   views: ViewSeg[] = [];
+  pulses: { step: number; t0: number; t1: number; ids: string[] }[] = [];
   pointers: PointerSeg[] = [];
   /** the step (0-based) being compiled */
   step = 0;
@@ -170,13 +172,12 @@ class Builder {
   specs = new Map<string, ElementSpec>();
   /** whether captions cover the bottom of the picture */
   captions: boolean;
-  view: Rect;
   canvas: Rect;
   images: Map<string, ImageInfo>;
   formula: FormulaFile;
 
   constructor(canvas: Rect, images: Map<string, ImageInfo>, formula: FormulaFile, captions: boolean) {
-    this.canvas = this.view = canvas;
+    this.canvas = canvas;
     this.captions = captions;
     this.images = images;
     this.formula = formula;
@@ -185,9 +186,10 @@ class Builder {
   private seg(id: string, seg: Seg) {
     if (!this.tracks.has(id)) {
       this.tracks.set(id, []);
+      this.indices.set(id, E.fractionalIndex(this.order.length));
       this.order.push(id);
     }
-    const index = E.fractionalIndex(this.order.indexOf(id));
+    const index = this.indices.get(id)!;
     const { fn, end } = seg;
     this.tracks.get(id)!.push({ ...seg, step: this.step, end: end && { ...end, index }, fn: fn && ((t) => ({ ...fn(t), index })) });
     if (end) this.cur.set(id, { ...end, index });
@@ -198,6 +200,9 @@ class Builder {
   run(a: Action, t0: number): number {
     if (a.add) {
       return list(a.add).reduce((t, spec) => {
+        if (spec.type === "arrow") {
+          for (const ref of [spec.from, spec.to]) if (typeof ref === "string") t = Math.max(t, this.drawn.get(ref) ?? t);
+        }
         const end = this.add(spec, t, spec.enter ?? a.enter ?? "draw", a.duration);
         this.drawn.set(spec.id, end);
         return end;
@@ -258,15 +263,16 @@ class Builder {
       case "image": {
         const file = this.images.get(spec.src ?? "");
         if (!file) return [];
-        const width = spec.width ?? file.width;
+        const width = spec.width ?? (spec.height === undefined ? file.width : spec.height * file.width / file.height);
         return [E.makeImage({ ...spec, width, height: spec.height ?? (width * file.height) / file.width }, file.fileId)];
       }
     }
   }
 
   private add(spec: ElementSpec, t0: number, enter: Enter, duration?: number): number {
-    const [el, label] = this.build(spec);
+    const [el, boundText] = this.build(spec);
     if (!el) return t0;
+    const label: El | undefined = boundText && { ...boundText, opacity: el.opacity };
     if (spec.type === "arrow") {
       const ref = (r: string | Point) => (Array.isArray(r) ? asPt(r) : r);
       this.links.set(el.id, { spec, from: ref(spec.from!), to: ref(spec.to!) });
@@ -319,13 +325,14 @@ class Builder {
         return { ...el, width: Math.max(1, el.width * u), height: Math.max(1, el.height * u) };
       };
     }
-    const pts = E.absolutePoints(el);
+    const pts = E.scenePoints(el);
     const ease = el.type === "arrow" ? (u: number) => clamp(dragEase(u, 0.03), 0, 1) : minJerk;
     return (t) => ({
       ...E.withPath(el, partialPolyline(pts, ease(progress(t, t0, t1)))),
+      angle: 0,
       // an arrow is attached, and a closed line filled, once the stroke arrives
       ...(el.type === "arrow" ? { endBinding: null } : {}),
-      ...(el.type === "line" ? { backgroundColor: "transparent" } : {}),
+      ...(el.type === "line" ? { backgroundColor: "transparent", closeSegments: false } : {}),
     });
   }
 
@@ -353,6 +360,44 @@ class Builder {
     return this.math.get(el.id)?.textAlign ?? (el.type === "text" && !el.containerId ? el.textAlign : undefined);
   }
 
+  private latest(id: string, t: number, upTo = Infinity): Seg | undefined {
+    let latest: Seg | undefined;
+    for (const seg of this.tracks.get(id) ?? []) {
+      if ((seg.step ?? 0) <= upTo && seg.t0 <= t && (!latest || seg.t0 >= latest.t0)) latest = seg;
+    }
+    return latest;
+  }
+
+  private overlapping(id: string, t: number): Seg | undefined {
+    const seg = this.latest(id, t);
+    return seg && seg.t1 > t && seg.end ? seg : undefined;
+  }
+
+  private sample(id: string, t: number, upTo: number): El | undefined {
+    const seg = this.latest(id, t, upTo);
+    return seg && (t < seg.t1 && seg.fn ? seg.fn(t) : seg.end ?? undefined);
+  }
+
+  /** An overlapping update takes over only the properties it changes. Earlier animations can finish independently. */
+  private animate(base: El, end: El, t0: number, t1: number, fn: (t: number) => El, transient: string[] = []): (t: number) => El {
+    const previous = this.overlapping(base.id, t0);
+    if (previous?.fn) {
+      const changed = [...new Set([...Object.keys(end).filter((key) => end[key] !== base[key]), ...transient])];
+      const current = fn;
+      const finishes = t1;
+      fn = (t) => {
+        const behind = t < previous.t1 ? previous.fn!(t) : previous.end!;
+        const front = t < finishes ? current(t) : end;
+        const el = { ...behind };
+        for (const key of changed) el[key] = front[key];
+        return el;
+      };
+      t1 = Math.max(t1, previous.t1);
+    }
+    this.seg(base.id, { t0, t1, end, fn });
+    return fn;
+  }
+
   private update(u: UpdateSpec, t0: number, duration: number): number {
     const t1 = t0 + duration;
     const ease = (t: number) => minJerk(progress(t, t0, t1));
@@ -364,12 +409,17 @@ class Builder {
     for (const id of list(u.id)) {
       const base = this.cur.get(id);
       if (!base) continue;
+      const start = this.overlapping(id, t0)?.fn?.(t0) ?? base;
       let target: El = { ...base };
+      const spec = this.specs.get(id)!;
+      if (u.color && (["rectangle", "diamond", "ellipse"].includes(spec.type) || (spec.type === "line" && spec.closed))) {
+        target.backgroundColor = PALETTE[u.color][1];
+      }
       for (const key of E.STYLE_KEYS) if (u[key] !== undefined) target[key] = u[key];
       if (base.points) {
         target = E.translate(target, u.dx ?? 0, u.dy ?? 0);
         // an arrow that was moved by hand no longer follows its ends
-        if (u.dx || u.dy) this.links.delete(id);
+        if (base.type === "arrow" && (u.dx || u.dy)) target.startBinding = target.endBinding = null;
       } else {
         target.y = (u.y ?? base.y) + (u.dy ?? 0);
         target.width = u.width ?? base.width;
@@ -400,10 +450,11 @@ class Builder {
       let route: Pt[] | null = null;
       if (u.along !== undefined && !base.points) {
         const source = typeof u.along === "string" ? this.cur.get(u.along) : null;
-        const all = Array.isArray(u.along) ? u.along.map(asPt) : source?.points ? E.absolutePoints(source) : null;
+        const breaks = u.breaks && new Set(u.breaks);
+        const all = Array.isArray(u.along) ? u.along.map((p, i) => ({ ...asPt(p), move: breaks?.has(i) })) : source?.points ? E.scenePoints(source) : null;
         if (all && all.length > 1) {
           const path = subPath(all, ...(u.span ?? [0, 1]));
-          const here = E.center(base);
+          const here = E.center(start);
           route = Math.hypot(path[0].x - here.x, path[0].y - here.y) > 1 ? [here, ...path] : path;
           const last = route[route.length - 1];
           target.x = last.x - target.width / 2;
@@ -412,26 +463,29 @@ class Builder {
       }
       if (u.label !== undefined) {
         const old = this.cur.get(this.labels.get(id) ?? "");
-        const spec = this.specs.get(id);
-        const [, rebuilt] = old && spec ? this.build({ ...spec, ...(base.points ? {} : { x: target.x, y: target.y, width: target.width, height: target.height }), label: u.label }) : [];
-        if (old && rebuilt) relabel.set(id, { ...old, text: rebuilt.text, originalText: rebuilt.originalText, width: rebuilt.width, height: rebuilt.height });
+        if (old) {
+          const pts = base.points && E.absolutePoints(base);
+          const geometry = pts ? { from: [pts[0].x, pts[0].y] as Point, to: [pts.at(-1)!.x, pts.at(-1)!.y] as Point } : { x: target.x, y: target.y, width: target.width, height: target.height };
+          const [, rebuilt] = this.build({ ...spec, ...geometry, label: u.label });
+          relabel.set(id, rebuilt ? { ...old, text: rebuilt.text, originalText: rebuilt.originalText, width: rebuilt.width, height: rebuilt.height } : { ...old, text: "", originalText: "", width: 0 });
+        }
       }
       const blend = (t: number): El => {
         const k = ease(t);
-        const width = lerp(base.width, target.width, k);
-        const height = lerp(base.height, target.height, k);
+        const width = lerp(start.width, target.width, k);
+        const height = lerp(start.height, target.height, k);
         const on = route && partialPolyline(route, k).at(-1)!;
         return {
           ...target,
-          x: on ? on.x - width / 2 : lerp(base.x, target.x, k),
-          y: on ? on.y - height / 2 : lerp(base.y, target.y, k),
+          x: on ? on.x - width / 2 : lerp(start.x, target.x, k),
+          y: on ? on.y - height / 2 : lerp(start.y, target.y, k),
           width,
           height,
-          opacity: lerp(base.opacity, target.opacity, k),
-          angle: lerp(base.angle, target.angle, k),
-          strokeColor: lerpColor(base.strokeColor, target.strokeColor, k),
-          backgroundColor: lerpColor(base.backgroundColor, target.backgroundColor, k),
-          ...(base.type === "text" ? { fontSize: lerp(base.fontSize, target.fontSize, k) } : {}),
+          opacity: lerp(start.opacity, target.opacity, k),
+          angle: lerp(start.angle, target.angle, k),
+          strokeColor: lerpColor(start.strokeColor, target.strokeColor, k),
+          backgroundColor: lerpColor(start.backgroundColor, target.backgroundColor, k),
+          ...(base.type === "text" ? { fontSize: lerp(start.fontSize, target.fontSize, k) } : {}),
         };
       };
       let fn = blend;
@@ -449,11 +503,10 @@ class Builder {
           return { ...el, fileId: this.formula(formula.tex ?? "", el.strokeColor)?.fileId ?? el.fileId };
         };
       }
-      moving.set(id, fn);
-      this.seg(id, { t0, t1, end: target, fn });
+      const transient = [...(retypeset ? ["opacity"] : []), ...(route ? ["x", "y"] : [])];
+      moving.set(id, this.animate(base, target, t0, t1, fn, transient));
     }
 
-    const follow = (id: string, fn: (t: number) => El) => this.seg(id, { t0, t1, end: fn(t1), fn });
     for (const [id, fn] of moving) {
       const label = this.cur.get(this.labels.get(id) ?? "");
       if (!label) continue;
@@ -462,33 +515,77 @@ class Builder {
       const next = relabel.get(id);
       // a label is drawn in its shape's stroke colour, and changes colour with it
       const color = (t: number) => (u.strokeColor !== undefined ? { strokeColor: lerpColor(label.strokeColor, u.strokeColor, ease(t)) } : {});
-      follow(label.id, (t) => {
+      const follow = (t: number) => {
         const el = fn(t);
-        if (!next) return { ...E.centerOn(label, middle(el)), opacity: el.opacity, ...color(t) };
+        const angle = el.type === "arrow" ? label.angle : el.angle;
+        if (!next) return { ...E.centerOn(label, middle(el)), opacity: el.opacity, angle, ...color(t) };
         // the old words fade out and the new ones in
         const k = ease(t);
-        return { ...E.centerOn(k < 0.5 ? label : next, middle(el)), opacity: el.opacity * Math.abs(1 - 2 * k), ...color(t) };
-      });
+        return { ...E.centerOn(k < 0.5 ? label : next, middle(el)), opacity: el.opacity * Math.abs(1 - 2 * k), angle, ...color(t) };
+      };
+      const end = this.cur.get(id)!;
+      const finalLabel = { ...E.centerOn(next ?? label, middle(end)), angle: end.type === "arrow" ? label.angle : end.angle, opacity: end.opacity, ...color(t1) };
+      this.animate(label, finalLabel, t0, t1, follow, next ? ["opacity"] : []);
     }
     for (const [id, link] of this.links) {
-      if (!this.cur.has(id)) continue;
-      if (![link.from, link.to].some((end) => typeof end === "string" && moving.has(end))) continue;
-      const base = this.cur.get(id)!;
-      // Each end as it is now: a point, an element that stays put, or one on the move. Looked up here and
-      // not when a frame is drawn, by which time later steps may have moved or removed the element.
-      const [fromEnd, toEnd] = [link.from, link.to].map((end) => (typeof end !== "string" ? end : (moving.get(end) ?? this.cur.get(end))));
-      const endAt = (end: Pt | El | ((t: number) => El) | undefined, t: number) => (typeof end === "function" ? end(t) : end);
-      const via = (link.spec.via ?? []).map(asPt);
-      const arrowAt = (t: number): El => {
-        const from = endAt(fromEnd, t);
-        const to = endAt(toEnd, t);
-        return from && to ? E.withPath(base, E.arrowCourse(from, to, via, link.spec.rounded)) : base;
-      };
+      const base = this.cur.get(id);
+      if (!base || ![base.startBinding, base.endBinding].some((binding) => binding && moving.has(binding.elementId))) continue;
+      const arrow = this.attachedArrow(base, link, this.cur);
+      this.cur.set(id, arrow);
       const label = this.cur.get(this.labels.get(id) ?? "");
-      follow(id, arrowAt);
-      if (label) follow(label.id, (t) => E.centerOn(label, E.pathMiddle(arrowAt(t))));
+      if (label) this.cur.set(label.id, E.centerOn(label, E.pathMiddle(arrow)));
     }
     return t1;
+  }
+
+  private attachedArrow(el: El, link: Link, elements: Map<string, El>): El {
+    const pts = E.absolutePoints(el);
+    const end = (binding: El | null, ref: string | Pt, fallback: Pt) =>
+      (binding && elements.get(binding.elementId)) ?? (typeof ref === "string" ? fallback : ref);
+    const from = end(el.startBinding, link.from, pts[0]);
+    const to = end(el.endBinding, link.to, pts[pts.length - 1]);
+    return {
+      ...E.withPath(el, E.arrowCourse(from, to, (link.spec.via ?? []).map(asPt), link.spec.rounded)),
+      startBinding: E.isPoint(from) ? null : el.startBinding,
+      endBinding: E.isPoint(to) ? null : el.endBinding,
+    };
+  }
+
+  /** Attach both ends to the shapes visible in this frame, including when separate actions move them at once. */
+  private placed(elements: El[], t: number, upTo: number): Map<string, El> {
+    const present = new Map(elements.map((el) => [el.id, el]));
+    for (const pulse of this.pulses) {
+      if (pulse.step > upTo || t <= pulse.t0 || t >= pulse.t1) continue;
+      const swell = Math.sin(Math.PI * progress(t, pulse.t0, pulse.t1)) ** 2;
+      const scale = 1 + PULSE * swell;
+      for (const id of pulse.ids) {
+        const el = present.get(id);
+        if (!el) continue;
+        if (el.points) present.set(id, { ...el, strokeWidth: el.strokeWidth * (1 + 1.5 * swell) });
+        else present.set(id, E.centerOn({ ...el, width: el.width * scale, height: el.height * scale, ...(el.type === "text" ? { fontSize: el.fontSize * scale } : {}) }, E.center(el)));
+      }
+    }
+    for (const el of elements) {
+      if (el.type !== "arrow" || !(el.startBinding || el.endBinding) || t < this.drawn.get(el.id)!) continue;
+      present.set(el.id, this.attachedArrow(present.get(el.id)!, this.links.get(el.id)!, present));
+    }
+    for (const el of elements) {
+      const owner = el.containerId && present.get(el.containerId);
+      if (owner) present.set(el.id, E.centerOn(present.get(el.id)!, owner.type === "arrow" ? E.pathMiddle(owner) : E.center(owner)));
+    }
+    return present;
+  }
+
+  frameElements(elements: El[], t: number, upTo: number): El[] {
+    return E.withBindings(E.visibleSegments([...this.placed(elements, t, upTo).values()]));
+  }
+
+  /** A pointer samples its own target and any attached ends at each instant in its trail. */
+  private pointerTarget(id: string, t: number, upTo: number): El | undefined {
+    const el = this.sample(id, t, upTo);
+    if (!el) return undefined;
+    const ends = [el.startBinding, el.endBinding].flatMap((binding) => binding ? (this.sample(binding.elementId, t, upTo) ?? []) : []);
+    return this.placed([el, ...ends], t, upTo).get(id);
   }
 
   // ---------------------------------------------------------------- remove
@@ -496,10 +593,9 @@ class Builder {
   private remove(ids: string[], t0: number, duration: number): number {
     const t1 = t0 + duration;
     const gone = ids.flatMap((id) => [id, this.labels.get(id) ?? ""]).filter((id) => this.cur.has(id));
-    for (const id of gone) {
-      const el = this.cur.get(id)!;
+    const removed = new Map(gone.map((id) => [id, this.sample(id, t0, this.step) ?? this.cur.get(id)!]));
+    for (const [id, el] of removed) {
       this.seg(id, { t0, t1, end: null, fn: (t) => ({ ...el, opacity: el.opacity * (1 - minJerk(progress(t, t0, t1))) }) });
-      this.links.delete(id);
       this.labels.delete(id);
       this.math.delete(id);
     }
@@ -507,7 +603,16 @@ class Builder {
     for (const [id, link] of this.links) {
       const arrow = this.cur.get(id);
       if (!arrow) continue;
-      const pts = E.absolutePoints(arrow);
+      if (![link.from, link.to].some((end) => typeof end === "string" && removed.has(end))) continue;
+      // Freeze exactly where the connection leaves the disappearing shape, even if a move was interrupted.
+      const ends = new Map(removed);
+      for (const ref of [link.from, link.to]) {
+        if (typeof ref === "string" && !ends.has(ref)) {
+          const el = this.sample(ref, t1, this.step);
+          if (el) ends.set(ref, el);
+        }
+      }
+      const pts = E.absolutePoints(this.attachedArrow(arrow, link, ends));
       if (typeof link.from === "string" && gone.includes(link.from)) link.from = pts[0];
       if (typeof link.to === "string" && gone.includes(link.to)) link.to = pts[pts.length - 1];
     }
@@ -515,6 +620,16 @@ class Builder {
   }
 
   // ---------------------------------------------------------------- camera and pointer
+
+  viewAt(t: number, upTo: number): Rect {
+    let view: ViewSeg | undefined;
+    for (const seg of this.views) {
+      if (seg.step <= upTo && seg.t0 <= t && (!view || seg.t0 >= view.t0)) view = seg;
+    }
+    if (!view) return this.canvas;
+    const k = minJerk(progress(t, view.t0, view.t1));
+    return { x: lerp(view.from.x, view.to.x, k), y: lerp(view.from.y, view.to.y, k), w: lerp(view.from.w, view.to.w, k), h: lerp(view.from.h, view.to.h, k) };
+  }
 
   private bounds(ids: string[]): Rect | null {
     const boxes = ids.flatMap((id) => [id, this.labels.get(id) ?? ""]).map((id) => this.cur.get(id)).filter((el): el is El => !!el).map(E.bbox);
@@ -534,12 +649,11 @@ class Builder {
       const pad = spec.padding ?? 80;
       // the part of the picture above the captions is what has to hold it
       const clear = this.captions ? 1 - CAPTION_SHARE : 1;
-      const w = Math.max(b.w + pad * 2, ((b.h + pad * 2) * aspect) / clear);
+      const w = Math.max(1, b.w + pad * 2, ((b.h + pad * 2) * aspect) / clear);
       const h = w / aspect;
       to = { x: b.x + b.w / 2 - w / 2, y: b.y + b.h / 2 - (h * clear) / 2, w, h };
     } else to = { x: spec.x, y: spec.y, w: spec.width, h: spec.width / aspect };
-    this.views.push({ step: this.step, t0, t1: t0 + duration, from: this.view, to });
-    this.view = to;
+    this.views.push({ step: this.step, t0, t1: t0 + duration, from: this.viewAt(t0, this.step), to });
     return t0 + duration;
   }
 
@@ -551,11 +665,13 @@ class Builder {
     for (const id of list(along)) {
       const el = this.cur.get(id);
       if (!el?.points) continue;
-      const pts = reverse ? E.absolutePoints(el).reverse() : E.absolutePoints(el);
-      const t1 = t0 + (duration ?? clamp(polylineLength(pts) / SEND_SPEED, ...SEND_TIME));
+      const t1 = t0 + (duration ?? clamp(polylineLength(E.absolutePoints(el)) / SEND_SPEED, ...SEND_TIME));
       // eased gently at both ends, so the dot sets off and arrives rather than blinking in and out
       const ease = (u: number) => 0.15 * minJerk(u) + 0.85 * u;
-      this.pointers.push({ step: this.step, t0, t1, color: hex, at: (u) => partialPolyline(pts, ease(u)).at(-1)! });
+      this.pointers.push({ step: this.step, t0, t1, color: hex, at: (u, time, upTo) => {
+        const pts = E.scenePoints(this.pointerTarget(id, time, upTo) ?? el);
+        return partialPolyline(reverse ? reversePath(pts) : pts, ease(u)).at(-1)!;
+      } });
       end = Math.max(end, t1);
     }
     return end;
@@ -564,20 +680,7 @@ class Builder {
   /** Elements swell and settle back. A path's stroke thickens instead. */
   private pulse(ids: string[], t0: number, duration: number): number {
     const t1 = t0 + duration;
-    const swell = (t: number) => Math.sin(Math.PI * progress(t, t0, t1)) ** 2;
-    for (const id of ids.flatMap((id) => [id, this.labels.get(id) ?? ""])) {
-      const el = this.cur.get(id);
-      if (!el) continue;
-      const fn = (t: number): El => {
-        const k = 1 + PULSE * swell(t);
-        if (el.points) return { ...el, strokeWidth: el.strokeWidth * (1 + 1.5 * swell(t)) };
-        const c = E.center(el);
-        const w = el.width * k;
-        const h = el.height * k;
-        return { ...el, x: c.x - w / 2, y: c.y - h / 2, width: w, height: h, ...(el.type === "text" ? { fontSize: el.fontSize * k } : {}) };
-      };
-      this.seg(id, { t0, t1, end: el, fn });
-    }
+    this.pulses.push({ step: this.step, t0, t1, ids: [...new Set(ids.flatMap((id) => [id, this.labels.get(id) ?? ""]))] });
     return t1;
   }
 
@@ -585,16 +688,18 @@ class Builder {
   private point(target: string | Point, t0: number, duration: number): number {
     const b = Array.isArray(target) ? { x: target[0], y: target[1], w: 0, h: 0 } : this.bounds([target]);
     if (!b) return t0;
-    const rx = clamp(b.w * 0.3, 14, 80);
-    const ry = clamp(b.h * 0.3, 10, 44);
     const phase = -Math.PI * 0.75;
     this.pointers.push({
       step: this.step,
       t0,
       t1: t0 + duration,
-      at: (u) => {
+      at: (u, time, upTo) => {
+        const el = typeof target === "string" && this.pointerTarget(target, time, upTo);
+        const box = el ? E.bbox(el) : b;
+        const rx = clamp(box.w * 0.3, 14, 80);
+        const ry = clamp(box.h * 0.3, 10, 44);
         const th = phase + minJerk(u) * Math.PI * 3;
-        return { x: b.x + b.w / 2 + rx * Math.cos(th), y: b.y + b.h / 2 + ry * Math.sin(th) };
+        return { x: box.x + box.w / 2 + rx * Math.cos(th), y: box.y + box.h / 2 + ry * Math.sin(th) };
       },
     });
     return t0 + duration;
@@ -649,8 +754,9 @@ export function timeline(script: Script, images: Map<string, ImageInfo>, formula
         done = Math.max(done, next + (action.point !== undefined || action.send !== undefined ? POINTER_TRAIL : 0));
       }
       const length = voice?.duration ?? step.duration ?? 0;
-      stepDone.push(Math.max(done, start + length));
-      free = (voice ? start + length + STEP_GAP : Math.max(start + length, next)) + (step.pause ?? 0);
+      stepDone.push(Math.max(done, start + length, stepDone.at(-1) ?? 0));
+      free = voice ? start + length + STEP_GAP : Math.max(start + length, next);
+      if (step.pause) free = Math.max(free, busy) + step.pause;
       stepEnds.push(Math.max(free, busy - OVERLAP) - STEP_END);
     }
     tracks = b.order.map((id) => b.tracks.get(id)!.sort((x, y) => x.t0 - y.t0));
@@ -660,27 +766,18 @@ export function timeline(script: Script, images: Map<string, ImageInfo>, formula
     return { stepStarts: [...stepStarts], stepEnds: [...stepEnds], stepDone: [...stepDone], settled: duration ?? Math.max(free, busy - OVERLAP), duration };
   };
 
-  const viewAt = (t: number, upTo: number): Rect => {
-    let v: ViewSeg | null = null;
-    for (const s of b.views) if (s.t0 <= t && s.step <= upTo) v = s;
-    if (!v) return canvas;
-    const k = minJerk(progress(t, v.t0, v.t1));
-    return { x: lerp(v.from.x, v.to.x, k), y: lerp(v.from.y, v.to.y, k), w: lerp(v.from.w, v.to.w, k), h: lerp(v.from.h, v.to.h, k) };
-  };
-
   const pointersAt = (t: number, upTo: number): Pointer[] =>
     b.pointers
       .filter((p) => p.step <= upTo && t >= p.t0 && t <= p.t1 + POINTER_TRAIL)
       .map((s) => {
-        const span = s.t1 - s.t0;
-        const u = (time: number) => clamp((time - s.t0) / span, 0, 1);
+        const u = (time: number) => progress(time, s.t0, s.t1);
         const trail: Pt[] = [];
         for (let k = 8; k >= 1; k--) {
           const earlier = t - (k / 8) * POINTER_TRAIL;
-          if (earlier >= s.t0) trail.push(s.at(u(earlier)));
+          if (earlier >= s.t0) trail.push(s.at(u(earlier), Math.min(earlier, s.t1), upTo));
         }
         const alpha = clamp(Math.min((t - s.t0) / 0.12, (s.t1 + POINTER_TRAIL - t) / POINTER_TRAIL), 0, 1);
-        return { ...s.at(u(t)), trail, alpha, color: s.color };
+        return { ...s.at(u(t), Math.min(t, s.t1), upTo), trail, alpha, color: s.color };
       });
 
   const frameAt = (t: number, upTo = Infinity): Frame => {
@@ -696,8 +793,8 @@ export function timeline(script: Script, images: Map<string, ImageInfo>, formula
     }
     const lastCaption = upTo === Infinity ? Infinity : (stepEnds[upTo] ?? Infinity);
     return {
-      elements: E.withBindings(els),
-      view: viewAt(t, upTo),
+      elements: b.frameElements(els, t, upTo),
+      view: b.viewAt(t, upTo),
       pointers: pointersAt(t, upTo),
       caption: captions.find((c) => t >= c.t0 && t < c.t1 && c.t0 < lastCaption)?.text ?? null,
     };

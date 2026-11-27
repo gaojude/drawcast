@@ -13,7 +13,7 @@
 
 export interface Dictionaries {
   /** English word -> phonemes, e.g. voice -> v ˈ Y s */
-  english: Map<string, string[]>;
+  english: Pick<Map<string, string[]>, "get">;
   /** Chinese character or word -> syllables that each end in a tone number, e.g. 你好 -> ㄋ ㄧ 2 ㄏ ㄠ 3 */
   chinese: Map<string, string[]>;
 }
@@ -39,7 +39,7 @@ export function toTokens(text: string, dict: Dictionaries): string[] {
   const out: string[] = [];
   let before: "english" | "chinese" | null = null;
   pieces.forEach((piece, i) => {
-    if (PUNCTUATION[piece]) {
+    if (Object.hasOwn(PUNCTUATION, piece)) {
       out.push(PUNCTUATION[piece]);
       before = null;
     } else if (piece.charCodeAt(0) < 128) {
@@ -58,7 +58,7 @@ export function toTokens(text: string, dict: Dictionaries): string[] {
   return out;
 }
 
-function english(word: string, next: string | undefined, words: Map<string, string[]>): string[] | undefined {
+function english(word: string, next: string | undefined, words: Dictionaries["english"]): string[] | undefined {
   // "the" is "thee" before a vowel: the arrow, the end
   if (word === "the") {
     const first = next === undefined ? undefined : words.get(next)?.find((p) => p !== "ˈ" && p !== "ˌ");

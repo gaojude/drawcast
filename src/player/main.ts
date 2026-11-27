@@ -178,6 +178,7 @@ async function loadImages(sources: Record<string, string>): Promise<Map<string, 
 async function prepare(req: PrepareRequest): Promise<void> {
   stopEncoding();
   request = req;
+  known = null;
   still = surface();
   files = {};
   // one set of formula pictures for the page: a timeline made later asks for the same ones by the same names
@@ -285,13 +286,12 @@ async function paint(s: Surface, t: number, bare = false, upTo?: number): Promis
     s.boardKey = s.frameKey = "";
     s.board = await drawBoard(f.elements, f.view);
   }
-  s.boardKey = key;
-  s.frameKey = overlay;
-
   const g = s.stage.getContext("2d", { alpha: false })!;
   g.drawImage(s.board!, 0, 0);
   for (const p of f.pointers) drawPointer(g, p, f.view);
   if (f.caption) drawCaption(g, f.caption);
+  s.boardKey = key;
+  s.frameKey = overlay;
   return true;
 }
 
@@ -364,6 +364,16 @@ async function sheet(steps: number[], columns: number, tileWidth: number): Promi
 /** The Excalidraw elements on the canvas at time `t`, as Excalidraw itself would save them. */
 const elements = (t: number): unknown[] => line.frameAt(t).elements as unknown[];
 
+function scene(t: number) {
+  const visible = line.frameAt(t).elements;
+  const fileIds = new Set(visible.map((el) => el.fileId));
+  return {
+    type: "excalidraw", version: 2, source: "https://excalidraw.com", elements: visible,
+    appState: { viewBackgroundColor: request.script.canvas?.background ?? DEFAULT_CANVAS.background },
+    files: Object.fromEntries(Object.entries(files).filter(([id]) => fileIds.has(id))),
+  };
+}
+
 // ---------------------------------------------------------------- video
 
 /**
@@ -380,6 +390,7 @@ interface Lane {
   encoder: VideoEncoder;
   /** what the encoder has put out since the last segment was collected */
   parts: Uint8Array[];
+  lastTimestamp?: number;
   /** how the encoder says it stores colour, once it has said */
   color: ColorSpace | null;
   error: string | null;
@@ -437,6 +448,12 @@ function openLane(config: VideoEncoderConfig): Lane {
     wake: null,
     encoder: new VideoEncoder({
       output(chunk, metadata) {
+        // The raw H.264 pipe carries no presentation timestamps. A stream that reorders
+        // frames needs the PNG fallback, which supplies ffmpeg with each frame in order.
+        if ((!lane.parts.length && chunk.type !== "key") || (lane.lastTimestamp !== undefined && chunk.timestamp <= lane.lastTimestamp)) {
+          lane.error = "the encoder returned a dependent or reordered segment";
+        }
+        lane.lastTimestamp = chunk.timestamp;
         const space = metadata?.decoderConfig?.colorSpace;
         if (space) {
           lane.color = { fullRange: space.fullRange, matrix: space.matrix, primaries: space.primaries, transfer: space.transfer };
@@ -455,7 +472,12 @@ function openLane(config: VideoEncoderConfig): Lane {
     }),
   };
   lane.encoder.addEventListener("dequeue", () => lane.wake?.());
-  lane.encoder.configure(config);
+  try {
+    lane.encoder.configure(config);
+  } catch (error) {
+    if (lane.encoder.state !== "closed") lane.encoder.close();
+    throw error;
+  }
   return lane;
 }
 
@@ -488,11 +510,17 @@ async function collect(lane: Lane, frames: number): Promise<Uint8Array> {
     at += p.length;
   }
   lane.parts = [];
+  lane.lastTimestamp = undefined;
   return out;
 }
 
-const withTimeout = <T>(work: Promise<T>, seconds: number, what: string): Promise<T> =>
-  Promise.race([work, new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`${what} took more than ${seconds} s`)), seconds * 1000))]);
+function withTimeout<T>(work: Promise<T>, seconds: number, what: string): Promise<T> {
+  let timer: number;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = window.setTimeout(() => reject(new Error(`${what} took more than ${seconds} s`)), seconds * 1000);
+  });
+  return Promise.race([work, timeout]).finally(() => window.clearTimeout(timer));
+}
 
 // An encoder is not taken at its word. Chrome's software encoder, given a canvas from the graphics card
 // whose width is not a multiple of four, quietly stretches the picture by two pixels; an encoder can also
@@ -552,19 +580,25 @@ function pixels(picture: HTMLCanvasElement | VideoFrame, width: number, height: 
   return g.getImageData(0, 0, width, height).data;
 }
 
-function decodeKeyFrame(codec: string, color: ColorSpace | null, data: Uint8Array): Promise<VideoFrame> {
-  return new Promise((resolve, reject) => {
-    let frame: VideoFrame | null = null;
-    const decoder = new VideoDecoder({ output: (f) => (frame ? f.close() : (frame = f)), error: reject });
+async function decodeKeyFrame(codec: string, color: ColorSpace | null, data: Uint8Array): Promise<VideoFrame> {
+  const result: { frame?: VideoFrame; error?: DOMException } = {};
+  const decoder = new VideoDecoder({
+    output: (frame) => result.frame ? frame.close() : (result.frame = frame),
+    error: (error) => { result.error = error; },
+  });
+  try {
     // decoded the way the file will say to: by the colour space the encoder reported
     decoder.configure({ codec, ...(color ? { colorSpace: color as VideoColorSpaceInit } : {}) });
     decoder.decode(new EncodedVideoChunk({ type: "key", timestamp: 0, data }));
-    decoder.flush().then(() => {
-      decoder.close();
-      if (frame) resolve(frame);
-      else reject(new Error("it could not be decoded again"));
-    }, reject);
-  });
+    await withTimeout(decoder.flush(), 20, "decoding its first frame");
+    if (!result.frame) throw new Error("it could not be decoded again");
+    return result.frame;
+  } catch (error) {
+    result.frame?.close();
+    throw result.error ?? error;
+  } finally {
+    if (decoder.state !== "closed") decoder.close();
+  }
 }
 
 /**
@@ -660,7 +694,7 @@ async function startEncoding(o: EncodeRequest): Promise<EncodeStart> {
         const squares = paintTestCard(first.surface.stage);
         await push(first, -1, true);
         const card = await withTimeout(collect(first, 1), 20, "its first frame");
-        const off = await withTimeout(distance(first.surface.stage, squares, codec, first.color, card), 20, "decoding its first frame");
+        const off = await distance(first.surface.stage, squares, codec, first.color, card);
         const measured = `picture off by ${off.shape.toFixed(1)} and colours by ${off.colour.toFixed(1)}, of 255`;
         if (off.shape > SHAPE_LIMIT) throw new Error(`its picture comes out moved or stretched (${measured})`);
         if (off.colour > COLOUR_LIMIT) throw new Error(`its colours come out wrong (${measured})`);
@@ -702,6 +736,6 @@ async function encodeSegment(index: number, first: number, count: number, cover?
 /** The encoder `prepare` was asked to find, once the search is over. */
 const encoder = (): Promise<EncodeStart> => encoderReady ?? Promise.resolve({ encoder: null, tried: ["no video was asked for"] });
 
-const api = { prepare, load, schedule, startOver, frame, stepFrame, sheet, elements, encoder, encodeSegment, stopEncoding };
+const api = { prepare, load, schedule, startOver, frame, stepFrame, sheet, elements, scene, encoder, encodeSegment, stopEncoding };
 export type PlayerApi = typeof api;
 (window as any).drawcast = api;

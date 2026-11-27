@@ -28,6 +28,11 @@ test("LaTeX that cannot be typeset says why", () => {
   assert.throws(() => typeset("{}"), /draws nothing/);
 });
 
+test("macros belong to the formula that defines them", () => {
+  assert.equal(typeset("\\newcommand{\\myletter}{x}\\myletter").width, typeset("x").width);
+  assert.throws(() => typeset("\\myletter"), /Undefined control sequence/);
+});
+
 test("the maths the guide promises is there", () => {
   for (const tex of [
     "\\alpha \\beta \\theta \\lambda \\pi \\sigma \\Delta \\Sigma \\Omega",
