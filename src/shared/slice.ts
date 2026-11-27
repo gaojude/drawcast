@@ -1,4 +1,5 @@
 import type { Pt } from "../player/motion.ts";
+import type { Point } from "./types.ts";
 
 /** The circle's bounding box, plus the clockwise sector in percentages from twelve o'clock. */
 export interface Slice {
@@ -14,6 +15,10 @@ export interface Slice {
 const turn = 2 * Math.PI;
 const percent = (n: number) => ((n % 100) + 100) % 100;
 const startOf = (s: Slice) => percent(s.start + ((s.angle ?? 0) % turn) * 100 / turn);
+
+export function followingSlice(s: Slice): { center: Point; radius: number; start: number } {
+  return { center: [s.x + s.width / 2, s.y + s.height / 2], radius: s.width / 2, start: percent(startOf(s) + s.share) };
+}
 
 function arcPoint(s: Slice, at: number, fraction = 1): Pt {
   const theta = at * turn / 100;

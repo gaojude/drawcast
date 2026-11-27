@@ -54,6 +54,8 @@ export interface ElementSpec extends Style {
   radius?: number;
   start?: number;
   share?: number;
+  /** slice: take the circle and clockwise endpoint of a slice already on the canvas. */
+  after?: string;
   /** rectangle, diamond: rounded corners (default true). arrow, line: curve through the points. */
   rounded?: boolean;
   /** Text typed inside a shape, or on an arrow. */

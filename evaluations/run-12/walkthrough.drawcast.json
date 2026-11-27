@@ -1,0 +1,204 @@
+{
+  "drawcast": 1,
+  "voice": "maple",
+  "title": "Place the next slice",
+  "steps": [
+    {
+      "say": "In the second budget trial, the author wrote the same center and radius three times. Each wedge also needed a starting position.",
+      "do": [
+        {
+          "enter": "none",
+          "add": [
+            {
+              "id": "title",
+              "type": "text",
+              "x": 66,
+              "y": 45,
+              "text": "Where does the next slice start?",
+              "fontSize": 46,
+              "fontFamily": "normal",
+              "strokeColor": "#20323e"
+            },
+            {
+              "id": "sub",
+              "type": "text",
+              "x": 635,
+              "y": 155,
+              "text": "Three entries for one circle",
+              "fontSize": 31,
+              "fontFamily": "normal",
+              "strokeColor": "#20323e"
+            },
+            {
+              "id": "data",
+              "type": "text",
+              "x": 635,
+              "y": 232,
+              "text": "Housing   start 50\nFood        start   0\nSavings   start 30",
+              "fontSize": 34,
+              "fontFamily": "normal",
+              "strokeColor": "#245877"
+            },
+            {
+              "id": "foot",
+              "type": "text",
+              "x": 635,
+              "y": 447,
+              "text": "Each also repeats center and radius.",
+              "fontSize": 24,
+              "fontFamily": "normal",
+              "strokeColor": "#20323e"
+            }
+          ]
+        },
+        {
+          "at": "center",
+          "add": {
+            "id": "base",
+            "type": "ellipse",
+            "x": 131,
+            "y": 144,
+            "width": 410,
+            "height": 410,
+            "backgroundColor": "#f4f5f2",
+            "strokeColor": "#a1adae",
+            "roughness": 0
+          }
+        },
+        {
+          "at": "wedge",
+          "add": {
+            "id": "housing",
+            "type": "slice",
+            "center": [
+              336,
+              349
+            ],
+            "radius": 205,
+            "start": 50,
+            "share": 50,
+            "label": "Housing\n50%",
+            "strokeColor": "#184b76",
+            "backgroundColor": "#afd7f5",
+            "fontFamily": "normal",
+            "fontSize": 27
+          }
+        }
+      ]
+    },
+    {
+      "say": "Now food can follow housing by name. Housing ends at the top, and the food slice sweeps thirty percent clockwise from there.",
+      "do": [
+        {
+          "at": "Now",
+          "duration": 0,
+          "update": [
+            {
+              "id": "sub",
+              "text": "Continue from a named slice"
+            },
+            {
+              "id": "data",
+              "text": "after    \"housing\"\nshare    30"
+            },
+            {
+              "id": "foot",
+              "text": "The circle is inherited."
+            }
+          ]
+        },
+        {
+          "at": "food slice",
+          "duration": 1.4,
+          "add": {
+            "id": "food",
+            "type": "slice",
+            "after": "housing",
+            "share": 30,
+            "label": "Food\n30%",
+            "strokeColor": "#155c4d",
+            "backgroundColor": "#a6dfc8",
+            "fontFamily": "normal",
+            "fontSize": 27
+          }
+        }
+      ]
+    },
+    {
+      "say": "Savings follows food for the last twenty percent. The same three numbers still divide the circle exactly in half between housing and everything else.",
+      "do": [
+        {
+          "at": "Savings",
+          "duration": 0,
+          "update": [
+            {
+              "id": "data",
+              "text": "after    \"food\"\nshare    20"
+            },
+            {
+              "id": "foot",
+              "text": "50% = 30% + 20%"
+            }
+          ]
+        },
+        {
+          "at": "Savings",
+          "duration": 1.2,
+          "add": {
+            "id": "savings",
+            "type": "slice",
+            "after": "food",
+            "share": 20,
+            "label": "Savings\n20%",
+            "strokeColor": "#805021",
+            "backgroundColor": "#f6d399",
+            "fontFamily": "normal",
+            "fontSize": 27
+          }
+        }
+      ]
+    },
+    {
+      "say": "The author delivered this prompt in a hundred and four seconds with one render. The pie guide now gives the whole narrated example in one place.",
+      "do": [
+        {
+          "at": "author",
+          "duration": 0,
+          "update": [
+            {
+              "id": "sub",
+              "text": "Run 12  ·  first draft"
+            },
+            {
+              "id": "data",
+              "text": "103.854 s   author\n8.959 s       render"
+            },
+            {
+              "id": "foot",
+              "text": "31.93 seconds of narrated video"
+            }
+          ]
+        },
+        {
+          "at": "pie guide",
+          "duration": 0,
+          "update": [
+            {
+              "id": "sub",
+              "text": "Start with the pictured primitive"
+            },
+            {
+              "id": "data",
+              "text": "drawcast guide pie"
+            },
+            {
+              "id": "foot",
+              "text": "A complete, narrated two-slice script."
+            }
+          ]
+        }
+      ],
+      "pause": 0.8
+    }
+  ]
+}

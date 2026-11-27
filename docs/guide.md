@@ -36,7 +36,7 @@ Copy `at` phrases from `say` in spoken order. Without `at`, the action follows t
 
 Use `pulse` for emphasis, `point` for a pointer and `remove` to clear space. A step's `pause` adds seconds of silence at the end.
 
-Request the topics your scene needs together, e.g. `drawcast guide plots math elements`. Topics print once in the order listed.
+Start with the topic for your visual. For a pie chart, `drawcast guide pie` gives a complete narrated script. Combine topics when needed, e.g. `drawcast guide plots math`.
 
 | Topic | Use it for |
 | --- | --- |

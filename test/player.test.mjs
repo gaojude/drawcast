@@ -110,6 +110,27 @@ test("the browser timeline", async (t) => {
     assert.deepEqual(gone.elements.map((el) => el.id), ["t"]);
   });
 
+  await t.test("a slice after a traveling, rotated wedge shares its final radial edge", async () => {
+    const script = { drawcast: 1, steps: [
+      { do: [
+        { enter: "none", add: { id: "a", type: "slice", center: [100, 120], radius: 60, share: 25 } },
+        { duration: 0, update: { id: "a", along: [[100, 120], [250, 300]], angle: Math.PI / 2 } },
+      ] },
+      { do: [{ enter: "none", add: { id: "b", type: "slice", after: "a", share: 25, color: "orange" } }] },
+    ] };
+    const geometry = new WeakMap();
+    assert.deepEqual(await check(script, root, geometry), { errors: [], warnings: [] });
+    const { frames: [frame] } = await run(expand(script, geometry).steps);
+    const first = at(frame, "a"), second = at(frame, "b");
+    const world = (el, i) => el.points.at(i).map((n, dim) => Math.round(n + (dim ? el.y : el.x)));
+    assert.deepEqual(world(first, 0), [250, 300]);
+    assert.deepEqual(world(second, 0), [250, 300]);
+    assert.deepEqual(world(first, -2), [250, 360]);
+    assert.deepEqual(world(second, 1), world(first, -2));
+    assert.deepEqual(world(second, -2), [190, 300]);
+    assert.equal(second.backgroundColor, "#ffd8a8");
+  });
+
   await t.test("axes keep their chart and label margins together when moving, fitting and removing", async () => {
     const axes = { id: "scale", type: "axes", x: 30, y: 40, width: 400, height: 200, domain: [-2, 2], range: [0, 1], xTicks: [0, 1], yTicks: [0.5], xLabel: "input" };
     const layout = axesLayout(axes);

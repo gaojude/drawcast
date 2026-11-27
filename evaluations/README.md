@@ -24,3 +24,4 @@ The traces record timestamped tool inputs and outcomes. Long command outputs are
 | [9 · Typing after Undo](run-09/trace.md) | 195.182 s | 8.54 s + 4.25 s | Update distinct objects together on a single frame. [Walkthrough](run-09/walkthrough.mp4) |
 | [10 · Undo and Redo replay](run-10/trace.md) | 143.499 s | 7.27 s | First draft delivered. Zero actionable findings on the repeated prompt. [Walkthrough](run-10/walkthrough.mp4) |
 | [11 · Household budget](run-11/trace.md) | 154.900 s | 10.247 s | Percentage-based pie slices, focused guide topics, tile sizing and media details during inspection. [Walkthrough](run-11/walkthrough.mp4) |
+| [12 · Budget replay](run-12/trace.md) | 103.854 s | 8.959 s | Continue a pie from the previous slice and find a complete narrated pie example in one topic. [Walkthrough](run-12/walkthrough.mp4) |

@@ -69,6 +69,46 @@ test("slices validate percentages and check the occupied sector of the disk", as
   assert.deepEqual(await checkWedge({ center: [300, 300], start: 100, share: 100 }), { errors: [], warnings: [] });
 });
 
+test("after captures the previous slice's circle and clockwise endpoint at each add", async () => {
+  const first = { id: "first", type: "slice", center: [280, 160], radius: 80, start: 80, share: 30 };
+  const second = { id: "second", type: "slice", after: "first", share: 20, label: "20%" };
+  const third = { id: "third", type: "slice", after: "second", share: 50 };
+  const input = { drawcast: 1, steps: [
+    { do: [{ add: [first, second, third] }] },
+    { do: [
+      { update: { id: "second", dx: 240, dy: 40, angle: -Math.PI } },
+      { add: { id: "fourth", type: "slice", after: "second", share: 20 } },
+    ] },
+  ] };
+  const geometry = new WeakMap();
+  assert.deepEqual(await check(input, examples, geometry), { errors: [], warnings: [] });
+  const [initial, moved] = expand(input, geometry).steps;
+  assert.deepEqual(initial.do[0].add, [
+    first,
+    { id: "second", type: "slice", center: [280, 160], radius: 80, start: 10, share: 20, label: "20%" },
+    { id: "third", type: "slice", center: [280, 160], radius: 80, start: 30, share: 50 },
+  ]);
+  assert.deepEqual(moved.do[1].add, { id: "fourth", type: "slice", center: [520, 200], radius: 80, start: 80, share: 20 });
+  assert.equal(Object.hasOwn(second, "center"), false);
+});
+
+test("after requires a live preceding slice, its own share and unambiguous geometry", async () => {
+  const first = { id: "first", type: "slice", center: [280, 160], radius: 80, share: 25 };
+  const next = { id: "next", type: "slice", after: "first", share: 25 };
+  for (const [actions, issue] of [
+    [[{ add: [next, first] }], /after.*"first".*not on the canvas/],
+    [[{ add: first }, { remove: "first" }, { add: next }], /after.*"first".*not on the canvas/],
+    [[{ add: { ...next, after: "missing" } }], /after.*"missing".*not on the canvas/],
+    [[{ add: { ...next, after: "next" } }], /after.*"next".*not on the canvas/],
+    [[{ add: [box("first", 100), next] }], /after.*slice.*rectangle/],
+  ]) assert.match((await report({ do: actions })).errors.join("\n"), issue);
+  for (const [change, issue] of [
+    [{ center: [280, 160] }, /after.*center/], [{ radius: 80 }, /after.*radius/], [{ start: 0 }, /after.*start/],
+    [{ share: undefined }, /share/], [{ share: 0 }, /share/], [{ share: 101 }, /share/],
+    [{ after: null }, /after.*id/], [{ after: ["first"] }, /after.*id/], [{ after: "" }, /after.*id/],
+  ]) assert.match((await report({ do: [{ add: [first, { ...next, ...change }] }] })).errors.join("\n"), issue);
+});
+
 test("a line with fn becomes the points of the plot", () => {
   const out = expand({ drawcast: 1, steps: [{ do: [{ add: { id: "c", type: "line", fn: "x^2", domain: [-1, 1], x: 0, y: 0, width: 100, height: 50 } }] }] });
   const c = out.steps[0].do[0].add;

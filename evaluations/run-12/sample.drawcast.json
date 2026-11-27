@@ -1,0 +1,47 @@
+{
+  "drawcast": 1,
+  "title": "Reading a household budget pie chart",
+  "voice": "maple",
+  "cover": 1,
+  "steps": [
+    {
+      "say": "This circle represents a household's entire budget. Each slice shows how much of every dollar goes to one use.",
+      "do": [
+        {"enter": "none", "add": {"id": "title", "type": "text", "x": 82, "y": 35, "text": "A household budget", "fontSize": 48, "strokeColor": "#19313d"}},
+        {"at": "circle", "duration": 0.55, "add": {"id": "whole", "type": "ellipse", "x": 120, "y": 118, "width": 438, "height": 438, "roughness": 0, "strokeWidth": 2, "strokeColor": "#75858a", "backgroundColor": "#f4f5f2"}},
+        {"at": "entire budget", "add": {"id": "whole-label", "type": "text", "x": 339, "y": 568, "textAlign": "center", "text": "Whole circle = 100%", "fontSize": 23, "fontFamily": "normal", "strokeColor": "#425960"}},
+        {"at": "every dollar", "add": {"id": "dollar", "type": "text", "x": 680, "y": 145, "text": "For every $1", "fontSize": 35, "strokeColor": "#19313d"}}
+      ]
+    },
+    {
+      "say": "Housing takes fifty percent. It fills half the circle, so fifty cents of each dollar goes to housing.",
+      "do": [
+        {"at": "Housing", "duration": 0.8, "add": {"id": "housing", "type": "slice", "center": [339,337], "radius": 219, "start": 50, "share": 50, "label": "Housing\n50%", "fontSize": 31, "strokeColor": "#184b76", "backgroundColor": "#afd7f5"}},
+        {"at": "fifty cents", "add": {"id": "housing-cents", "type": "text", "x": 688, "y": 219, "text": "50¢   Housing", "fontSize": 31, "fontFamily": "normal", "strokeColor": "#184b76"}}
+      ]
+    },
+    {
+      "say": "Food takes thirty percent, or thirty cents of each dollar.",
+      "do": [
+        {"at": "Food", "duration": 0.75, "add": {"id": "food", "type": "slice", "center": [339,337], "radius": 219, "share": 30, "label": "Food\n30%", "fontSize": 29, "strokeColor": "#155c4d", "backgroundColor": "#a6dfc8"}},
+        {"at": "thirty cents", "add": {"id": "food-cents", "type": "text", "x": 688, "y": 275, "text": "30¢   Food", "fontSize": 31, "fontFamily": "normal", "strokeColor": "#155c4d"}}
+      ]
+    },
+    {
+      "say": "Savings gets the last twenty percent. That's twenty cents set aside.",
+      "do": [
+        {"at": "Savings", "duration": 0.7, "add": {"id": "savings", "type": "slice", "center": [339,337], "radius": 219, "start": 30, "share": 20, "label": "Savings\n20%", "fontSize": 28, "strokeColor": "#805021", "backgroundColor": "#f6d399"}},
+        {"at": "twenty cents", "add": {"id": "savings-cents", "type": "text", "x": 688, "y": 331, "text": "20¢   Savings", "fontSize": 31, "fontFamily": "normal", "strokeColor": "#805021"}}
+      ]
+    },
+    {
+      "say": "Compare the two halves. Food and savings together fill the same area as housing. Thirty percent plus twenty percent is fifty percent.",
+      "pause": 1.5,
+      "do": [
+        {"at": "Compare", "add": {"id": "comparison-rule", "type": "line", "points": [[682,402],[1168,402]], "strokeColor": "#a1afb1", "roughness": 0, "strokeWidth": 2}},
+        {"at": "Food and savings", "add": {"id": "comparison", "type": "text", "x": 680, "y": 429, "text": "Housing = food + savings", "fontSize": 34, "strokeColor": "#19313d"}},
+        {"at": "Thirty percent", "add": {"id": "equation", "type": "text", "x": 680, "y": 494, "text": "50% = 30% + 20%", "fontSize": 40, "fontFamily": "normal", "strokeColor": "#19313d"}}
+      ]
+    }
+  ]
+}

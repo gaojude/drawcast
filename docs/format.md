@@ -202,7 +202,7 @@ Every element needs an `id`, unique in the script, and a `type`. Property names 
 | Type | Needs | Also takes |
 | --- | --- | --- |
 | `rectangle`, `ellipse`, `diamond` | `x`, `y`, `width`, `height` | `label`, `rounded` (rectangle and diamond; default true) |
-| `slice` | `center`, `radius`, `share` (percent) | `start` (percent), `label`, `color`. See Pie. |
+| `slice` | `share`, plus `center` and `radius` or `after` | `start` (percent, for explicit placement), `label`, `color`. See Pie. |
 | `text` | `x`, `y`, `text` (`\n` breaks lines) | `fontSize`, `fontFamily`, `textAlign` |
 | `math` | `x`, `y`, `tex` (a formula in LaTeX; see Math) | `fontSize`, `textAlign` |
 | `arrow` | `from`, `to`: each an element id or a point `[x, y]` | `via`, `rounded`, `label`, `startArrowhead`, `endArrowhead` |
@@ -254,19 +254,19 @@ its shape's stroke colour.
 
 ## Pie
 
-Give each slice the same `center` and `radius`. Its `share` is a percentage of the whole.
-`start` counts clockwise in percent from twelve o'clock (default 0). For adjoining slices,
-use the sum of the previous shares. A 100 percent slice makes a whole disk.
+Place the first slice with a `center` and `radius`. Give each following slice `after` with
+the previous slice's id. It uses that circle and begins where its neighbor ends.
+Each `share` is a percentage of the whole. This complete example reveals two labeled slices:
 
 ```json
-{"say":"Sales make up three quarters. Support accounts for one quarter.","do":[
+{"drawcast":1,"voice":"maple","steps":[{"say":"Sales make up three quarters. Support accounts for one quarter.","do":[
   {"at":"Sales","add":{"id":"sales","type":"slice","center":[540,320],"radius":205,"share":75,"color":"blue","label":"Sales\n75%"}},
-  {"at":"Support","add":{"id":"support","type":"slice","center":[540,320],"radius":205,"start":75,"share":25,"color":"teal","label":"Support\n25%"}}
-]}
+  {"at":"Support","add":{"id":"support","type":"slice","after":"sales","share":25,"color":"teal","label":"Support\n25%"}}
+]}]}
 ```
 
-Each slice sweeps into place at its cue. Its label sits inside the wedge. For a thin slice,
-put the name in a separate legend. Use `enter:"none"` on the add action for an instant reveal.
+With explicit placement, `start` counts clockwise in percent from twelve o'clock (default 0).
+A share of 100 makes a whole disk. A thin slice can use a separate text label or legend.
 
 ## Plots
 
