@@ -20,6 +20,36 @@ and ffmpeg.
 headings for its subsections. `drawcast guide plots math` prints those topics in order.
 Keep the workflow and reference in the CLI so installed skills can pick up changes.
 
+## Publish to npm
+
+### Add the npm token to GitHub
+
+1. Sign in to npm with an account that can publish `drawcast`. Open your profile menu,
+   choose **Access Tokens**, and generate a **Granular Access Token**.
+2. Give the token a name and expiration date. Under **Packages and scopes**, grant
+   **Read and write** access to the `drawcast` package. Enable **Bypass two-factor
+   authentication (2FA)** so GitHub Actions can publish unattended. Generate and copy the token.
+3. In the GitHub repository, open **Settings > Secrets and variables > Actions**.
+   Choose **New repository secret**, name it `NPM_TOKEN`, paste the token as the value,
+   and select **Add secret**. [Open this repository's Actions secrets](https://github.com/gaojude/drawcast/settings/secrets/actions).
+4. Before the token expires, generate a replacement, update the same GitHub secret,
+   and revoke the old token in npm.
+
+### Release a stable version
+
+1. Choose an unpublished version. Run `npm version patch --no-git-tag-version`
+   (or use `minor` or `major`) to update `package.json` and `package-lock.json`.
+   Set the same version in `.claude-plugin/plugin.json`. Commit and merge the version
+   changes into `main`.
+2. From the updated `main` checkout, create and push the matching tag. For example,
+   for version `0.6.1`, run `git tag v0.6.1` followed by `git push origin v0.6.1`.
+3. Open the tag's **Verify** run in GitHub Actions. Once Linux, macOS, and Windows pass,
+   **Publish to npm** checks the tag against the package version, builds the tarball,
+   and publishes it with the `latest` dist-tag. Confirm with `npm view drawcast dist-tags.latest`.
+
+If publishing fails because the token expired, replace the secret and use **Re-run failed jobs**
+on the tag's workflow run.
+
 ## How a script becomes a video
 
 1. **Check.** The script is validated, with layout estimated from the element sizes. A `math`
