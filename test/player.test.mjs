@@ -29,6 +29,47 @@ test("the browser timeline", async (t) => {
   const arrow = (from, to) => ({ type: "arrow", id: "edge", from, to });
   const at = (frame, id) => frame.elements.find((el) => el.id === id);
 
+  await t.test("update entries share their spoken cue and explicit duration", async () => {
+    const steps = [{ say: "Ready, move.", do: [
+      { enter: "none", add: [box("left", 0), box("right", 300)] },
+      { at: "move", duration: 2, update: [{ id: "left", dx: 120 }, { id: "right", dy: 200 }] },
+    ] }];
+    const voice = { duration: 4, tokens: [{ token: "ready", t: 0 }, { token: "move", t: 1 }], captions: [] };
+    const { frames } = await run(steps, [1.49, 2.5, 3.5], [], [voice]);
+    assert.deepEqual(frames.map((frame) => [at(frame, "left").x, at(frame, "right").y]),
+      [[0, 0], [60, 100], [120, 200]]);
+  });
+
+  await t.test("implicit actions wait for the longest member of an update", async () => {
+    const steps = [{ do: [
+      { enter: "none", add: [box("traveler", 0), box("station", 300)] },
+      { duration: 0.5, update: { id: "station", dx: 40 } },
+      { update: [{ id: "traveler", along: [[50, 50], [170, 50]] }, { id: "station", dy: 80 }] },
+      { enter: "none", add: box("done", 600) },
+    ] }];
+    const { frames: [before, moving, shorterDone, longestDone] } = await run(steps, [0.99, 1.2, 1.6, 2.21]);
+    assert.deepEqual([at(before, "traveler").x, at(before, "station").y], [0, 0]);
+    assert.ok(at(moving, "traveler").x > 0 && at(moving, "station").y > 0);
+    assert.ok(Math.abs(at(shorterDone, "traveler").x - 60) < 1e-6);
+    assert.equal(at(shorterDone, "station").y, 80);
+    assert.equal(at(shorterDone, "done"), undefined);
+    assert.equal(at(longestDone, "traveler").x, 120);
+    assert.ok(at(longestDone, "done"));
+  });
+
+  await t.test("an instant update replaces text and a bound label together on the cue frame", async () => {
+    const steps = [{ do: [
+      { enter: "none", add: [box("entry", 0, { label: "First" }), { id: "address", type: "text", x: 300, y: 0, text: "Home" }] },
+      { at: 1, duration: 0, update: [{ id: "address", text: "Shop" }, { id: "entry", label: "Second" }] },
+    ] }];
+    const { frames } = await run(steps, [1.49, 1.5, 1.51]);
+    const displayed = frames.map((frame) => {
+      const text = at(frame, "address"), label = frame.elements.find((el) => el.containerId === "entry");
+      return [text.text, label.text, text.opacity, label.opacity];
+    });
+    assert.deepEqual(displayed, [["Home", "First", 100, 100], ["Shop", "Second", 100, 100], ["Shop", "Second", 100, 100]]);
+  });
+
   await t.test("axes keep their chart and label margins together when moving, fitting and removing", async () => {
     const axes = { id: "scale", type: "axes", x: 30, y: 40, width: 400, height: 200, domain: [-2, 2], range: [0, 1], xTicks: [0, 1], yTicks: [0.5], xLabel: "input" };
     const layout = axesLayout(axes);

@@ -93,6 +93,44 @@ test("a plot parameter updates references at the new value and keeps the same ax
   assert.match((await report({ do: [{ add: wave }, { update: { id: "wave", p: "pi" } }] })).errors.join("\n"), /must be a number/);
 });
 
+test("update entries use earlier members' plot positions and prepare their formulas and colours", async () => {
+  const plot = { id: "plot", type: "line", fn: "x+p", p: 0, domain: [0, 1], range: [0, 2], x: 100, y: 100, width: 200, height: 100 };
+  const marker = { id: "marker", type: "ellipse", on: ["plot", 0], width: 12, height: 12 };
+  const formula = { id: "formula", type: "math", x: 500, y: 100, tex: "y=x" };
+  const input = { drawcast: 1, steps: [{ do: [
+    { add: [plot, marker, formula] },
+    { update: [
+      { id: "plot", p: 1, dx: 40 },
+      { id: "marker", along: [["marker"], ["plot", 0]], color: "blue" },
+      { id: "formula", tex: "y=x+1" },
+    ] },
+    { point: ["marker"] },
+  ] }] };
+  const points = new WeakMap();
+  assert.deepEqual((await check(input, examples, points)).errors, []);
+  const script = expand(input, points);
+  const move = script.steps[0].do.flatMap((action) => action.update ?? []).find((u) => u.id === "marker");
+  assert.deepEqual(move.along, [[100, 200], [140, 150]]);
+  assert.equal(move.backgroundColor, "#a5d8ff");
+  assert.deepEqual(script.steps[0].do.at(-1).point, [140, 150]);
+  const { math } = await playerRequest({ script, baseDir: examples }, 640, true);
+  assert.deepEqual(Object.keys(math).sort(), ["y=x", "y=x+1"]);
+});
+
+test("the checker rejects empty, malformed and conflicting update entries", async () => {
+  for (const [update, issue] of [
+    [[], /at least one|non.empty/i],
+    [[{ id: "a", dx: 1 }, null], /object|id/i],
+    [[{ id: "a", dx: 1 }, { id: "b", duration: 2 }], /duration.*belongs on the action/i],
+    [[{ id: "a", dx: 1 }, { id: "missing", dy: 3 }], /missing/],
+    [[{ id: "a", dx: 1 }, { id: "b", text: "Hello" }], /text.*text element/],
+    [[{ id: ["a", "b"], dx: 1 }, { id: "b", dy: 1 }], /"b" is updated twice/],
+  ]) {
+    const { errors } = await report({ do: [{ add: [box("a", 0), box("b", 300)] }, { update }] });
+    assert.match(errors.join("\n"), issue, JSON.stringify(update));
+  }
+});
+
 test("shape centers resolve at each action after moving and resizing the referenced slot", async () => {
   const actions = [
     { add: box("slot", 100) },

@@ -56,7 +56,8 @@ export async function loadScript(file: string, signal?: AbortSignal): Promise<Lo
 /** Every formula the script draws, typeset and keyed by its LaTeX. */
 export async function typesetFormulas(script: Script): Promise<Record<string, Formula>> {
   const actions = script.steps.flatMap((s) => s.do ?? []);
-  const sources = [...actions.flatMap((a) => (a.add ? [a.add].flat() : [])), ...actions.flatMap((a) => (a.update ? [a.update] : []))].map((spec) => spec.tex).filter((tex): tex is string => !!tex);
+  const specs = [...actions.flatMap((a) => a.add ?? []), ...actions.flatMap((a) => a.update ?? [])];
+  const sources = specs.map((spec) => spec.tex).filter((tex): tex is string => !!tex);
   if (!sources.length) return {};
   const { typeset } = await import("../math/typeset.ts");
   return Object.fromEntries(sources.map((tex) => [tex, typeset(tex)]));
