@@ -68,9 +68,7 @@ on the tag's workflow run.
    voice, numbers and acronyms are written out, then English words are turned into phonemes and
    Chinese into syllables with the model's two pronunciation dictionaries. A word the English one
    lacks is built from words it has or read by spelling rules, and Chinese gets the tone changes of
-   connected speech. An `edge:` voice, the default, hands the sentence to the `edge-tts` program
-   instead; if that fails and the script named no voice, the whole script is spoken again by the
-   built-in voice, and whatever of the video was made to the first voice is made again. A
+   connected speech. The default voice uses this local engine. A
    `minimax:` voice posts the sentence to MiniMax's HTTP API with the user's own key, from
    `MINIMAX_API_KEY` or the file `drawcast key minimax` saves, and gets raw PCM back; it is paid, so
    it never stands in for another voice. `--speed` changes the tempo of the finished audio, not the

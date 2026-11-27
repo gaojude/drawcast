@@ -6,7 +6,7 @@ Use the same CLI invocation that printed this guide for the commands below.
 2. Run `drawcast render lesson.drawcast.json` to speak the narration and write the MP4. For a layout preview, use `drawcast snapshot lesson.drawcast.json --sheet`. Both commands include the script check.
 3. Review the MP4 and return it. For reveals or movement, `drawcast inspect lesson.mp4 --motion` samples movement, step arrivals and the ending in one sheet. For completed layouts, use `--step all`. Use `--at 2,2.5,3` for known times.
 
-Video defaults to 1080p at 30 fps. Set `--width` and `--fps` on render. On an inspection sheet, `--width` sets each tile's width. Inspect prints encoded dimensions, duration, frame count, average fps and audio codec. Speech is cached. For offline English use `"voice":"maple"`.
+Video defaults to 1080p at 30 fps. Set `--width` and `--fps` on render. On an inspection sheet, `--width` sets each tile's width. Inspect prints encoded dimensions, duration, frame count, average fps and audio codec. Speech is cached. Built-in narration runs locally. Use an external speech service only when requested.
 
 ```json
 {

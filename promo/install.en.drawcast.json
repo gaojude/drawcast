@@ -1,7 +1,6 @@
 {
   "drawcast": 1,
   "title": "How to use drawcast",
-  "voice": "edge:en-US-EmmaMultilingualNeural",
   "steps": [
     {
       "say": "How do you use drawcast? You don't. Your coding agent does. Install the skill, ask for a video, and watch it.",
