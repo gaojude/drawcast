@@ -27,7 +27,12 @@ interface Label { x: number; y: number; w: number; h: number; text: string }
 export function axesLayout(spec: ElementSpec) {
   const w = spec.width!, h = spec.height!, size = spec.fontSize ?? 18;
   const lineHeight = size * 1.25, tick = 5, gap = 5;
+  const halfStroke = (spec.strokeWidth ?? 2) / 2;
   const paths = [`M0 0V${h}H${w}`];
+  const strokes = [
+    { x: -halfStroke, y: 0, w: 2 * halfStroke, h: h + halfStroke },
+    { x: 0, y: h - halfStroke, w, h: 2 * halfStroke },
+  ];
   const labels: Label[] = [];
   const xTickTop = h + gap + Math.max(tick, spec.yTicks?.includes(spec.range![0]) ? lineHeight / 2 : 0);
   function label(text: string, anchorX: number, top: number, align: number) {
@@ -38,11 +43,13 @@ export function axesLayout(spec: ElementSpec) {
   for (const value of spec.xTicks ?? []) {
     const x = position(value, spec.domain!, w);
     paths.push(`M${x} ${h}v${tick}`);
+    strokes.push({ x: x - halfStroke, y: h, w: 2 * halfStroke, h: tick });
     label(String(value), x, xTickTop, 0.5);
   }
   for (const value of spec.yTicks ?? []) {
     const y = h - position(value, spec.range!, h);
     paths.push(`M0 ${y}h${-tick}`);
+    strokes.push({ x: -tick, y: y - halfStroke, w: tick, h: 2 * halfStroke });
     label(String(value), -tick - gap, y - lineHeight / 2, 1);
   }
   if (spec.xLabel) label(spec.xLabel, w / 2, (spec.xTicks?.length ? xTickTop + lineHeight : h) + gap, 0.5);
@@ -56,7 +63,7 @@ export function axesLayout(spec: ElementSpec) {
     top = Math.min(top, box.y - pad);
     bottom = Math.max(bottom, box.y + box.h + pad);
   }
-  return { left, top, width: right - left, height: bottom - top, size, labels, paths };
+  return { left, top, width: right - left, height: bottom - top, size, labels, paths, strokes };
 }
 
 const escapeText = (s: string) => s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");

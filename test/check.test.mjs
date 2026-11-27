@@ -87,6 +87,38 @@ test("layout problems are warnings", async () => {
   assert.match(warnings[2], /\(add "wordy"\): the label .* will not fit/);
 });
 
+test("normal-font advances keep narrow text in bounds and flag genuinely wide text", async () => {
+  const text = { id: "formula", type: "text", x: 838, y: 557, fontFamily: "normal", fontSize: 19,
+    text: "Current = resistor voltage / resistance" };
+  assert.deepEqual(await report({ do: [{ add: text }] }), { errors: [], warnings: [] });
+  const outside = await report({ do: [{ add: { ...text, x: 1185, text: "WWWWW" } }] });
+  assert.match(outside.warnings[0], /extends past the canvas.*x 1185 to 1290/);
+});
+
+test("axes check the strokes and labels in either drawing order", async () => {
+  const axes = { id: "scale", type: "axes", x: 200, y: 100, width: 300, height: 200,
+    domain: [0, 4], range: [0, 2], xTicks: [0, 2, 4], xLabel: "Time" };
+  const note = { id: "value", type: "text", x: 485, y: 150, fontSize: 20, text: "4.9" };
+  for (const parts of [[axes, note], [note, axes]]) {
+    assert.deepEqual(await report({ do: [{ add: parts }] }), { errors: [], warnings: [] });
+  }
+  for (const [x, y] of [[190, 180], [341, 329]]) {
+    const overlap = await report({ do: [{ add: [axes, { ...note, x, y }] }] });
+    assert.match(overlap.warnings[0], /"value" overlaps a stroke or label of axes "scale"/);
+  }
+  const origin = { id: "dot", type: "ellipse", on: ["scale", 0, 0], width: 8, height: 8 };
+  assert.deepEqual(await report({ do: [{ add: [axes, origin] }] }), { errors: [], warnings: [] });
+});
+
+test("tilted axis rules leave the corners around their diagonals available", async () => {
+  const axes = { id: "scale", type: "axes", x: 400, y: 200, width: 200, height: 200,
+    domain: [0, 1], range: [0, 1], angle: Math.PI / 4 };
+  const note = { id: "value", type: "text", x: 405, y: 277, text: "x", fontSize: 12 };
+  assert.deepEqual(await report({ do: [{ add: [axes, note] }] }), { errors: [], warnings: [] });
+  const hit = await report({ do: [{ add: [axes, { ...note, x: 424, y: 222 }] }] });
+  assert.match(hit.warnings[0], /stroke or label/);
+});
+
 test("captions claim the bottom of the canvas only when something is said", async () => {
   const low = { add: box("low", 100, { y: 560 }) };
   assert.equal((await report({ do: [low] })).warnings.length, 0);

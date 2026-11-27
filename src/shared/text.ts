@@ -93,8 +93,26 @@ export function joinText(a: string, b: string): string {
   return wide(a.slice(-1)) || wide(b.slice(0, 1)) ? a + b : `${a} ${b}`;
 }
 
-/** Width of a line of text in em, for layout estimates: Chinese is full width, handwritten Latin about 0.6. */
-export function widthEm(line: string): number {
+// Printable ASCII advances from the player's Nunito Regular Latin WOFF2, measured at 1000 px.
+// Summing advances is an estimate: kerning and fallback glyphs depend on the browser.
+const NUNITO_ADVANCES = [
+  261, 233, 405, 600, 600, 933, 701, 226, 326, 326, 451, 600, 233, 427, 233, 290,
+  600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 233, 233, 600, 600, 600, 447,
+  947, 733, 679, 675, 747, 586, 551, 729, 764, 262, 331, 634, 548, 858, 741, 771,
+  637, 771, 673, 618, 607, 731, 694, 1104, 655, 601, 593, 324, 290, 324, 600, 500,
+  361, 533, 587, 465, 587, 534, 340, 590, 572, 237, 241, 508, 301, 861, 572, 560,
+  587, 587, 365, 483, 358, 565, 518, 844, 530, 517, 466, 361, 270, 361, 600,
+];
+
+/** Estimated line width in em; Chinese is full width and handwritten Latin averages about 0.6. */
+export function widthEm(line: string, fontFamily?: string): number {
   const wide = line.match(WIDE_RE)?.length ?? 0;
-  return wide + (line.length - wide) * 0.6;
+  let width = wide + (line.length - wide) * 0.6;
+  if (fontFamily === "normal") {
+    for (const char of line) {
+      const advance = NUNITO_ADVANCES[char.charCodeAt(0) - 32];
+      if (advance !== undefined) width += advance / 1000 - 0.6;
+    }
+  }
+  return width;
 }

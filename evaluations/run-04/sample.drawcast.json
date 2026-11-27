@@ -1,0 +1,639 @@
+{
+  "drawcast": 1,
+  "cover": 6,
+  "voice": "maple",
+  "steps": [
+    {
+      "say": "We connect an uncharged capacitor to a five-volt source through a resistor.",
+      "do": [
+        {
+          "at": 0,
+          "add": {
+            "id": "title",
+            "type": "text",
+            "x": 60,
+            "y": 44,
+            "text": "Charging a capacitor",
+            "fontSize": 50,
+            "fontFamily": "normal",
+            "strokeColor": "#263847"
+          },
+          "duration": 0.34
+        },
+        {
+          "at": 0,
+          "add": {
+            "id": "plot",
+            "type": "axes",
+            "x": 115,
+            "y": 202,
+            "width": 629,
+            "height": 302,
+            "domain": [
+              0,
+              4.1
+            ],
+            "range": [
+              0,
+              5.5
+            ],
+            "xTicks": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "yTicks": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "xLabel": "Time (s)",
+            "yLabel": "Capacitor voltage (V)",
+            "fontSize": 22,
+            "strokeColor": "#263847"
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "uncharged",
+          "add": {
+            "id": "p0",
+            "type": "ellipse",
+            "on": [
+              "plot",
+              0,
+              0
+            ],
+            "width": 13,
+            "height": 13,
+            "strokeColor": "#bb481b",
+            "backgroundColor": "#bb481b",
+            "roughness": 0
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "five-volt source",
+          "add": {
+            "id": "supply",
+            "type": "line",
+            "points": [
+              [
+                "plot",
+                0,
+                5
+              ],
+              [
+                "plot",
+                4.1,
+                5
+              ]
+            ],
+            "strokeColor": "#5b6d79",
+            "strokeWidth": 2,
+            "roughness": 0,
+            "strokeStyle": "dashed"
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "five-volt source",
+          "add": {
+            "id": "supplyname",
+            "type": "text",
+            "x": 272,
+            "y": 194,
+            "text": "5 V source",
+            "fontSize": 20,
+            "fontFamily": "normal",
+            "strokeColor": "#5b6d79"
+          },
+          "duration": 0.34
+        }
+      ]
+    },
+    {
+      "say": "At switch-on, the full five volts is across the resistor. That produces the largest current.",
+      "do": [
+        {
+          "at": 0,
+          "add": {
+            "id": "rightTitle",
+            "type": "text",
+            "x": 838,
+            "y": 171,
+            "text": "Across the resistor",
+            "fontSize": 32,
+            "fontFamily": "normal",
+            "strokeColor": "#263847"
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "full five volts",
+          "add": {
+            "id": "row0",
+            "type": "text",
+            "x": 838,
+            "y": 238,
+            "text": "At switch-on",
+            "fontSize": 21,
+            "fontFamily": "normal",
+            "strokeColor": "#5b6d79"
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "full five volts",
+          "add": {
+            "id": "v0",
+            "type": "text",
+            "x": 1212,
+            "y": 236,
+            "text": "5.0 V",
+            "fontSize": 26,
+            "fontFamily": "normal",
+            "strokeColor": "#263847",
+            "textAlign": "right"
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "full five volts",
+          "add": {
+            "id": "track0",
+            "type": "line",
+            "points": [
+              [
+                840,
+                280
+              ],
+              [
+                1208,
+                280
+              ]
+            ],
+            "strokeColor": "#d6dee0",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "full five volts",
+          "add": {
+            "id": "bar0",
+            "type": "line",
+            "points": [
+              [
+                840,
+                280
+              ],
+              [
+                1208,
+                280
+              ]
+            ],
+            "strokeColor": "#00796f",
+            "strokeWidth": 7,
+            "roughness": 0
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "largest current",
+          "pulse": "bar0"
+        }
+      ]
+    },
+    {
+      "say": "In the first second, the capacitor gains three point two volts. This is the steepest interval on the graph.",
+      "do": [
+        {
+          "at": "first second",
+          "add": {
+            "id": "s1",
+            "type": "line",
+            "points": [
+              [
+                "plot",
+                0,
+                0
+              ],
+              [
+                "plot",
+                1,
+                3.2
+              ]
+            ],
+            "strokeColor": "#bb481b",
+            "strokeWidth": 5,
+            "roughness": 0
+          },
+          "duration": 0.8
+        },
+        {
+          "at": "three point two",
+          "add": {
+            "id": "p1",
+            "type": "ellipse",
+            "on": [
+              "plot",
+              1,
+              3.2
+            ],
+            "width": 13,
+            "height": 13,
+            "strokeColor": "#bb481b",
+            "backgroundColor": "#bb481b",
+            "roughness": 0
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "three point two",
+          "add": {
+            "id": "l1",
+            "type": "text",
+            "x": 251,
+            "y": 291,
+            "text": "3.2",
+            "fontSize": 23,
+            "fontFamily": "normal",
+            "strokeColor": "#bb481b"
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "steepest interval",
+          "add": {
+            "id": "gain",
+            "type": "text",
+            "x": 274,
+            "y": 379,
+            "text": "Largest gain\n0–1 s   +3.2 V",
+            "fontSize": 24,
+            "fontFamily": "normal",
+            "strokeColor": "#bb481b"
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "steepest interval",
+          "pulse": "s1"
+        }
+      ]
+    },
+    {
+      "say": "Subtract that capacitor voltage from five volts. Just one point eight volts remains across the resistor, so the current drops.",
+      "do": [
+        {
+          "at": "one point eight",
+          "add": {
+            "id": "row1",
+            "type": "text",
+            "x": 838,
+            "y": 333,
+            "text": "After 1 second",
+            "fontSize": 21,
+            "fontFamily": "normal",
+            "strokeColor": "#5b6d79"
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "one point eight",
+          "add": {
+            "id": "v1",
+            "type": "text",
+            "x": 1212,
+            "y": 331,
+            "text": "1.8 V",
+            "fontSize": 26,
+            "fontFamily": "normal",
+            "strokeColor": "#263847",
+            "textAlign": "right"
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "one point eight",
+          "add": {
+            "id": "track1",
+            "type": "line",
+            "points": [
+              [
+                840,
+                375
+              ],
+              [
+                1208,
+                375
+              ]
+            ],
+            "strokeColor": "#d6dee0",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "one point eight",
+          "add": {
+            "id": "bar1",
+            "type": "line",
+            "points": [
+              [
+                840,
+                375
+              ],
+              [
+                972.5,
+                375
+              ]
+            ],
+            "strokeColor": "#00796f",
+            "strokeWidth": 7,
+            "roughness": 0
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "current drops",
+          "add": {
+            "id": "ohm",
+            "type": "text",
+            "x": 838,
+            "y": 557,
+            "text": "Current = voltage / resistance",
+            "fontSize": 22,
+            "fontFamily": "normal",
+            "strokeColor": "#00796f"
+          },
+          "duration": 0.34
+        }
+      ]
+    },
+    {
+      "say": "At two seconds, the capacitor reads four point three volts. At three seconds, four point seven five. At four seconds, four point nine.",
+      "do": [
+        {
+          "at": "two seconds",
+          "add": {
+            "id": "s2",
+            "type": "line",
+            "points": [
+              [
+                "plot",
+                1,
+                3.2
+              ],
+              [
+                "plot",
+                2,
+                4.3
+              ]
+            ],
+            "strokeColor": "#00796f",
+            "strokeWidth": 3,
+            "roughness": 0
+          },
+          "duration": 0.65
+        },
+        {
+          "at": "four point three",
+          "add": {
+            "id": "p2",
+            "type": "ellipse",
+            "on": [
+              "plot",
+              2,
+              4.3
+            ],
+            "width": 13,
+            "height": 13,
+            "strokeColor": "#00796f",
+            "backgroundColor": "#00796f",
+            "roughness": 0
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "four point three",
+          "add": {
+            "id": "l2",
+            "type": "text",
+            "x": 423,
+            "y": 278,
+            "text": "4.3",
+            "fontSize": 23,
+            "fontFamily": "normal",
+            "strokeColor": "#00796f",
+            "textAlign": "center"
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "three seconds",
+          "add": {
+            "id": "s3",
+            "type": "line",
+            "points": [
+              [
+                "plot",
+                2,
+                4.3
+              ],
+              [
+                "plot",
+                3,
+                4.75
+              ]
+            ],
+            "strokeColor": "#00796f",
+            "strokeWidth": 3,
+            "roughness": 0
+          },
+          "duration": 0.65
+        },
+        {
+          "at": "four point seven five",
+          "add": {
+            "id": "p3",
+            "type": "ellipse",
+            "on": [
+              "plot",
+              3,
+              4.75
+            ],
+            "width": 13,
+            "height": 13,
+            "strokeColor": "#00796f",
+            "backgroundColor": "#00796f",
+            "roughness": 0
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "four point seven five",
+          "add": {
+            "id": "l3",
+            "type": "text",
+            "x": 575,
+            "y": 254,
+            "text": "4.75",
+            "fontSize": 23,
+            "fontFamily": "normal",
+            "strokeColor": "#00796f",
+            "textAlign": "center"
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "four seconds",
+          "add": {
+            "id": "s4",
+            "type": "line",
+            "points": [
+              [
+                "plot",
+                3,
+                4.75
+              ],
+              [
+                "plot",
+                4,
+                4.9
+              ]
+            ],
+            "strokeColor": "#00796f",
+            "strokeWidth": 3,
+            "roughness": 0
+          },
+          "duration": 0.65
+        },
+        {
+          "at": "four point nine",
+          "add": {
+            "id": "p4",
+            "type": "ellipse",
+            "on": [
+              "plot",
+              4,
+              4.9
+            ],
+            "width": 13,
+            "height": 13,
+            "strokeColor": "#00796f",
+            "backgroundColor": "#00796f",
+            "roughness": 0
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "four point nine",
+          "add": {
+            "id": "l4",
+            "type": "text",
+            "x": 724,
+            "y": 248,
+            "text": "4.9",
+            "fontSize": 23,
+            "fontFamily": "normal",
+            "strokeColor": "#00796f",
+            "textAlign": "center"
+          },
+          "duration": 0.34
+        }
+      ]
+    },
+    {
+      "say": "Now only a tenth of a volt drives the current. Less charge arrives each second, so the capacitor voltage levels off toward five volts.",
+      "do": [
+        {
+          "at": "a tenth of a volt",
+          "add": {
+            "id": "row4",
+            "type": "text",
+            "x": 838,
+            "y": 428,
+            "text": "After 4 seconds",
+            "fontSize": 21,
+            "fontFamily": "normal",
+            "strokeColor": "#5b6d79"
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "a tenth of a volt",
+          "add": {
+            "id": "v4",
+            "type": "text",
+            "x": 1212,
+            "y": 426,
+            "text": "0.1 V",
+            "fontSize": 26,
+            "fontFamily": "normal",
+            "strokeColor": "#263847",
+            "textAlign": "right"
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "a tenth of a volt",
+          "add": {
+            "id": "track4",
+            "type": "line",
+            "points": [
+              [
+                840,
+                470
+              ],
+              [
+                1208,
+                470
+              ]
+            ],
+            "strokeColor": "#d6dee0",
+            "strokeWidth": 4,
+            "roughness": 0
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "a tenth of a volt",
+          "add": {
+            "id": "bar4",
+            "type": "line",
+            "points": [
+              [
+                840,
+                470
+              ],
+              [
+                847.36,
+                470
+              ]
+            ],
+            "strokeColor": "#00796f",
+            "strokeWidth": 7,
+            "roughness": 0
+          },
+          "duration": 0.34
+        },
+        {
+          "at": "levels off",
+          "pulse": [
+            "s3",
+            "s4"
+          ]
+        }
+      ]
+    }
+  ]
+}

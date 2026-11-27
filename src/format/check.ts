@@ -36,11 +36,12 @@ interface Live {
   /** text, math: which point of the box `x` is */
   align?: TextAlign;
   fontSize?: number;
+  fontFamily?: ElementSpec["fontFamily"];
   /** added with a label, which `update` may then change */
   labelled?: boolean;
   /** A line or pen stroke, in canvas coordinates, for moves along its path. */
   points?: Pt[];
-  axes?: { spec: ElementSpec; offset: Point };
+  axes?: { spec: ElementSpec; offset: Point; strokes: Box[]; labels: Box[] };
   /** an arrow: what it runs between, to tell where it goes as the things at its ends move */
   arrow?: { from: string | [number, number]; to: string | [number, number]; via: Pt[]; rounded?: boolean };
 }
@@ -86,6 +87,40 @@ function rotatedBox(b: Box, type: string, angle = 0): Box {
   return { x: b.x + (b.w - w) / 2, y: b.y + (b.h - h) / 2, w, h };
 }
 
+const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+const inside = (p: Box, q: Box) => p.x >= q.x && p.y >= q.y && p.x + p.w <= q.x + q.w && p.y + p.h <= q.y + q.h;
+
+type Mark = Box & { angle?: number };
+
+/** Project onto each rectangle's two edges. A gap on any of those axes separates the marks. */
+function marksOverlap(a: Mark, b: Mark) {
+  if (!a.angle && !b.angle) return overlaps(a, b);
+  const dx = b.x + b.w / 2 - a.x - a.w / 2, dy = b.y + b.h / 2 - a.y - a.h / 2;
+  const radius = (r: Mark, direction: number) => {
+    const relative = direction - (r.angle ?? 0);
+    return (Math.abs(Math.cos(relative)) * r.w + Math.abs(Math.sin(relative)) * r.h) / 2;
+  };
+  for (const angle of [a.angle ?? 0, b.angle ?? 0]) {
+    for (const direction of [angle, angle + Math.PI / 2]) {
+      if (Math.abs(dx * Math.cos(direction) + dy * Math.sin(direction)) >= radius(a, direction) + radius(b, direction)) return false;
+    }
+  }
+  return true;
+}
+
+/** The axes image is transparent around its rules, ticks, and labels. */
+function axesMarks(axes: NonNullable<Live["axes"]>, box: Box, angle = 0, labelsOnly = false): Mark[] {
+  const origin = { x: box.x - axes.offset[0], y: box.y - axes.offset[1] };
+  const center = { x: box.x + box.w / 2, y: box.y + box.h / 2 };
+  const marks = labelsOnly ? axes.labels : [...axes.labels, ...axes.strokes];
+  return marks.map((mark) => {
+    const world = { ...mark, x: origin.x + mark.x, y: origin.y + mark.y };
+    if (!angle) return world;
+    const [mid] = rotatePath([{ x: world.x + world.w / 2, y: world.y + world.h / 2 }], angle, center);
+    return { ...world, x: mid.x - world.w / 2, y: mid.y - world.h / 2, angle };
+  });
+}
+
 const SHAPES = ["rectangle", "ellipse", "diamond"];
 const TYPES = [...SHAPES, "text", "math", "arrow", "line", "freedraw", "image", "axes"];
 const STYLE = ["strokeColor", "backgroundColor", "fillStyle", "strokeWidth", "strokeStyle", "roughness", "opacity", "angle", "color"];
@@ -126,9 +161,9 @@ const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "obj
 const quote = (v: unknown) => JSON.stringify(v);
 const span = (b: Box) => `x ${Math.round(b.x)} to ${Math.round(b.x + b.w)}, y ${Math.round(b.y)} to ${Math.round(b.y + b.h)}`;
 
-function textBox(text: string, fontSize: number): { w: number; h: number } {
+function textBox(text: string, fontSize: number, family?: ElementSpec["fontFamily"]): { w: number; h: number } {
   const lines = text.split("\n");
-  return { w: lines.reduce((width, line) => Math.max(width, widthEm(line)), 0) * fontSize, h: lines.length * fontSize * LINE_HEIGHT };
+  return { w: lines.reduce((width, line) => Math.max(width, widthEm(line, family)), 0) * fontSize, h: lines.length * fontSize * LINE_HEIGHT };
 }
 
 /** How much of a shape's width a label can use before it wraps. */
@@ -265,7 +300,7 @@ export async function check(input: unknown, baseDir: string, axisPoints?: WeakMa
     return true;
   };
 
-  const place = (where: string, id: string, type: string, base: Box | null, anchor: Omit<Live, "type" | "box"> = {}) => {
+  const place = (where: string, id: string, type: string, base: Box | null, anchor: Omit<Live, "type" | "box"> = {}, onAxes?: string) => {
     const box = base && rotatedBox(base, type, anchor.angle);
     if (box && !movesCamera) {
       if (box.x < 0 || box.y < 0 || box.x + box.w > canvas.width || box.y + box.h > canvas.height) {
@@ -280,9 +315,16 @@ export async function check(input: unknown, baseDir: string, axisPoints?: WeakMa
         if (!other.box || other.type === "line") continue;
         const a = box;
         const o = rotatedBox(other.box, other.type, other.angle);
-        const overlaps = a.x < o.x + o.w && o.x < a.x + a.w && a.y < o.y + o.h && o.y < a.y + a.h;
-        const inside = (p: Box, q: Box) => p.x >= q.x && p.y >= q.y && p.x + p.w <= q.x + q.w && p.y + p.h <= q.y + q.h;
-        if (overlaps && !inside(a, o) && !inside(o, a)) warn(where, `partly overlaps ${quote(otherId)} (${span(o)}); this one spans ${span(a)}. Separate them, or put one fully inside the other.`);
+        if (!overlaps(a, o)) continue;
+        if (anchor.axes || other.axes) {
+          if (anchor.axes && !other.axes && SHAPES.includes(other.type) && inside(a, o)) continue;
+          if (other.axes && !anchor.axes && SHAPES.includes(type) && inside(o, a)) continue;
+          const left = anchor.axes ? axesMarks(anchor.axes, base!, anchor.angle) : [a];
+          const right = other.axes ? axesMarks(other.axes, other.box, other.angle, otherId === onAxes) : [o];
+          if (left.some((mark) => right.some((item) => marksOverlap(mark, item)))) {
+            warn(where, `${quote(anchor.axes ? otherId : id)} overlaps a stroke or label of axes ${quote(anchor.axes ? id : otherId)}. Move it clear of the scale.`);
+          }
+        } else if (!inside(a, o) && !inside(o, a)) warn(where, `partly overlaps ${quote(otherId)} (${span(o)}); this one spans ${span(a)}. Separate them, or put one fully inside the other.`);
       }
     }
     live.set(id, { type, box: base, ...anchor });
@@ -311,7 +353,7 @@ export async function check(input: unknown, baseDir: string, axisPoints?: WeakMa
       return !missing.length;
     };
     let box: Box | null = null;
-    let anchor: Pick<Live, "align" | "fontSize" | "points" | "axes"> = {};
+    let anchor: Pick<Live, "align" | "fontSize" | "fontFamily" | "points" | "axes"> = {};
     plainText(where, "label", el.label);
 
     if (el.on !== undefined) {
@@ -328,7 +370,7 @@ export async function check(input: unknown, baseDir: string, axisPoints?: WeakMa
       if (typeof el.label === "string" && el.label) {
         const fontSize = isNumber(el.fontSize) ? el.fontSize : 20;
         const room = Math.max(10, el.width! * LABEL_ROOM[type] - 20);
-        const lines = el.label.split("\n").reduce((n, line) => n + Math.max(1, Math.ceil((widthEm(line) * fontSize) / room)), 0);
+        const lines = el.label.split("\n").reduce((n, line) => n + Math.max(1, Math.ceil((widthEm(line, el.fontFamily) * fontSize) / room)), 0);
         if (lines * fontSize * LINE_HEIGHT + 12 > el.height! * (type === "rectangle" ? 1 : 0.75)) {
           warn(where, `the label ${quote(el.label)} needs about ${lines} line(s) and will not fit; make the shape wider or taller, or shorten the label.`);
         }
@@ -349,7 +391,7 @@ export async function check(input: unknown, baseDir: string, axisPoints?: WeakMa
         plainText(where, field, text);
       }
       const layout = axesLayout(el as ElementSpec);
-      anchor.axes = { spec: el as ElementSpec, offset: [layout.left, layout.top] };
+      anchor.axes = { spec: el as ElementSpec, offset: [layout.left, layout.top], strokes: layout.strokes, labels: layout.labels };
       const nx = el.xTicks?.length ?? 0, ny = el.yTicks?.length ?? 0;
       const xLabels = layout.labels.slice(0, nx).sort((a, b) => a.x - b.x);
       const yLabels = layout.labels.slice(nx, nx + ny).sort((a, b) => a.y - b.y);
@@ -361,8 +403,8 @@ export async function check(input: unknown, baseDir: string, axisPoints?: WeakMa
       if (!need(["x", "y"])) return;
       plainText(where, "text", el.text);
       const fontSize = isNumber(el.fontSize) ? el.fontSize : 20;
-      const size = textBox(el.text, fontSize);
-      anchor = { align: el.textAlign, fontSize };
+      const size = textBox(el.text, fontSize, el.fontFamily);
+      anchor = { align: el.textAlign, fontSize, fontFamily: el.fontFamily };
       box = { x: el.x! - alignOffset(size.w, el.textAlign), y: el.y!, ...size };
     } else if (type === "math") {
       const fontSize = isNumber(el.fontSize) ? el.fontSize : 20;
@@ -397,7 +439,7 @@ export async function check(input: unknown, baseDir: string, axisPoints?: WeakMa
         const path = course(arrow);
         if (path && typeof el.label === "string" && el.label) {
           const center = arrowLabelCenter(path);
-          const { w, h } = textBox(el.label, isNumber(el.fontSize) ? el.fontSize : 16);
+          const { w, h } = textBox(el.label, isNumber(el.fontSize) ? el.fontSize : 16, el.fontFamily);
           const label = { x: center.x - w / 2, y: center.y - h / 2, w, h };
           let length = 0, covered = 0;
           for (let i = 1; i < path.length; i++) {
@@ -436,7 +478,7 @@ export async function check(input: unknown, baseDir: string, axisPoints?: WeakMa
       anchor.points = pathPoints(where, "a point", el.points);
       if (el.closed && anchor.points.length) anchor.points.push(anchor.points[0]);
     }
-    place(where, id, type, box, { ...anchor, angle: isNumber(el.angle) ? el.angle : 0, labelled: typeof el.label === "string" && !!el.label });
+    place(where, id, type, box, { ...anchor, angle: isNumber(el.angle) ? el.angle : 0, labelled: typeof el.label === "string" && !!el.label }, isAxisRef(el.on) ? el.on[0] : undefined);
   };
 
   const pathPoints = (where: string, name: string, refs: unknown[]): Pt[] => {
@@ -613,7 +655,7 @@ export async function check(input: unknown, baseDir: string, axisPoints?: WeakMa
           const formula = el.type === "math" && u.tex !== undefined ? formulaBox(where, u.tex, fontSize ?? 20) : null;
           if (el.box) {
             const b = el.box;
-            const text = el.type === "text" && typeof u.text === "string" ? textBox(u.text, fontSize ?? 20) : null;
+            const text = el.type === "text" && typeof u.text === "string" ? textBox(u.text, fontSize ?? 20, el.fontFamily) : null;
             const scale = el.fontSize && fontSize ? fontSize / el.fontSize : 1;
             const w = formula?.w ?? text?.w ?? (isNumber(u.width) ? u.width : b.w * scale);
             const h = formula?.h ?? text?.h ?? (isNumber(u.height) ? u.height : b.h * scale);
