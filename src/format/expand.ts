@@ -9,7 +9,7 @@
  */
 import { type PlotRef, Plots, isPlotRef } from "../shared/expr.ts";
 import { type AxisRef, isAxisRef } from "../shared/axes.ts";
-import { type Action, type ElementSpec, PALETTE, type Point, type Script, type Style, type UpdateSpec } from "../shared/types.ts";
+import { type Action, type ElementSpec, PALETTE, type Point, type Script, type ShapeCenter, type Style, type UpdateSpec, isShapeCenter } from "../shared/types.ts";
 
 const FILLED = new Set(["rectangle", "ellipse", "diamond"]);
 
@@ -20,23 +20,23 @@ function colored<T extends Style>(spec: T, fillable: boolean): T {
   return { ...rest, strokeColor: spec.strokeColor ?? stroke, ...(fillable ? { backgroundColor: spec.backgroundColor ?? fill } : {}) } as T;
 }
 
-export function expand(script: Script, axisPoints?: WeakMap<AxisRef, Point>): Script {
+export function expand(script: Script, resolvedPoints?: WeakMap<AxisRef | ShapeCenter, Point>): Script {
   const fillable = new Set<string>();
   const plots = new Plots();
-  // The checker knows each axes image's final placement, even after travel along another element.
-  const axisPoint = (p: AxisRef): Point => {
-    const value = axisPoints?.get(p);
-    if (!value) throw new Error(`Unresolved axes reading ${JSON.stringify(p)}.`);
+  // Positions captured by the checker include moves and resizes preceding this action.
+  const resolved = (p: AxisRef | ShapeCenter): Point => {
+    const value = resolvedPoints?.get(p);
+    if (!value) throw new Error(`Unresolved point ${JSON.stringify(p)}.`);
     return value;
   };
-  const point = (p: Point | PlotRef | AxisRef): Point => isAxisRef(p) ? axisPoint(p) : isPlotRef(p) ? plots.point(p)! : p;
+  const point = (p: Point | PlotRef | AxisRef | ShapeCenter): Point => isAxisRef(p) || isShapeCenter(p) ? resolved(p) : isPlotRef(p) ? plots.point(p)! : p;
   /** A list of points, where two points of one plot in a row become the curve between them. */
-  const points = (refs: (Point | PlotRef | AxisRef)[]) => {
-    const path = plots.path(refs.map((p) => isAxisRef(p) ? axisPoint(p) : p));
+  const points = (refs: (Point | PlotRef | AxisRef | ShapeCenter)[]) => {
+    const path = plots.path(refs.map((p) => isAxisRef(p) || isShapeCenter(p) ? resolved(p) : p));
     const breaks = path.flatMap((p, i) => p.move ? [i] : []);
     return { points: path.map(({ x, y }): Point => [x, y]), ...(breaks.length ? { breaks } : {}) };
   };
-  const ref = <T>(r: T): T => (isPlotRef(r) || isAxisRef(r) ? (point(r) as T) : r);
+  const ref = <T>(r: T): T => (isPlotRef(r) || isAxisRef(r) || isShapeCenter(r) ? (point(r) as T) : r);
 
   const element = (spec: ElementSpec): ElementSpec => {
     let out = colored(spec, FILLED.has(spec.type) || (spec.type === "line" && !!spec.closed));

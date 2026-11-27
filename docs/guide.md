@@ -9,7 +9,6 @@ Use the same CLI invocation that printed this guide for the commands below.
 ```json
 {
   "drawcast": 1,
-  "cover": 2,
   "steps": [
     {"say": "A sender prepares a message for the receiver.", "do": [
       {"at": "sender", "add": {"id": "a", "type": "rectangle", "x": 170, "y": 255, "width": 220, "height": 100, "label": "Sender", "color": "blue"}},
@@ -23,7 +22,9 @@ Use the same CLI invocation that printed this guide for the commands below.
 }
 ```
 
-Place elements in canvas coordinates (1280 by 720 by default). Keep content above y=620 for captions. A shape's x,y is its top left. Give every element a unique id and add it before referring to it. Choose the step that best shows the whole idea for the 1-based `cover`.
+Place elements on the 1280 by 720 canvas above y=620 for captions. A shape's x,y is its top left. Give it a unique id. Use `"on":["slot"]` to center it on an existing shape. Put static scenery in one `add` list with `"enter":"none"`.
+
+The MP4 opens with the finished picture from step 1, marked **first frame** on the sheet. Set `cover` to another step number to open on that picture, or `false` to start directly with the animation.
 
 Copy `at` phrases from the step's `say` in spoken order. Repeat a phrase to start actions together. With no `at`, an action follows the preceding one. Put `duration` (seconds) beside the action verb. Use `update` to change an existing object's position, colour or label, `pulse` for emphasis, `point` for a pointer and `remove` to clear space.
 

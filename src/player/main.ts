@@ -363,7 +363,8 @@ async function sheet(steps: number[], columns: number, tileWidth: number): Promi
     g.fillStyle = "#1e1e1e";
     g.font = `600 17px ${CAPTION_FONT}`;
     g.textBaseline = "middle";
-    g.fillText(`step ${step}  ·  ${stepDone(step).toFixed(1)} s`, x + 4, y + head / 2);
+    const cover = step === (request.script.cover ?? 1) ? "  ·  first frame" : "";
+    g.fillText(`step ${step}  ·  ${stepDone(step).toFixed(1)} s${cover}`, x + 4, y + head / 2, Math.max(1, tileWidth - 8));
   }
   return c.toDataURL("image/png");
 }

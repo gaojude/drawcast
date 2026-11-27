@@ -93,6 +93,29 @@ test("a plot parameter updates references at the new value and keeps the same ax
   assert.match((await report({ do: [{ add: wave }, { update: { id: "wave", p: "pi" } }] })).errors.join("\n"), /must be a number/);
 });
 
+test("shape centers resolve at each action after moving and resizing the referenced slot", async () => {
+  const actions = [
+    { add: box("slot", 100) },
+    { add: { id: "key", type: "ellipse", on: ["slot"], width: 40, height: 20 } },
+    { update: { id: "slot", dx: 100, width: 200 } },
+    { update: { id: "key", along: [["key"], ["slot"]] } },
+    { point: ["key"] },
+    { add: { id: "trail", type: "line", points: [[0, 0], ["key"]] } },
+  ];
+  const script = { drawcast: 1, steps: [{ do: actions }] };
+  const points = new WeakMap();
+  assert.deepEqual((await check(script, examples, points)).errors, []);
+  const result = expand(script, points).steps[0].do;
+  assert.deepEqual([result[1].add.x, result[1].add.y], [160, 130]);
+  assert.deepEqual(result[3].update.along, [[180, 140], [300, 140]]);
+  assert.deepEqual(result[4].point, [300, 140]);
+  assert.deepEqual(result[5].add.points, [[0, 0], [300, 140]]);
+  for (const id of ["missing", "trail", "slot"]) {
+    const invalid = await report({ do: [...actions, { remove: "slot" }, { point: [id] }] });
+    assert.match(invalid.errors.join("\n"), /needs a rectangle, ellipse or diamond/);
+  }
+});
+
 test("the script loader resolves axes readings in strokes, markers, leaders, pointers and travel", async (t) => {
   const dir = await mkdtemp(path.join(tmpdir(), "drawcast-axis-refs-"));
   t.after(() => rm(dir, { recursive: true, force: true }));

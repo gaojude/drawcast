@@ -34,9 +34,9 @@ A snapshot needs no narration, so it is quick. Its timing is estimated until a r
 narration, and exact after that; it says which. `--at 12.5` shows the video at that moment, with the
 pointer and the captions.
 
-Leave `voice` unset unless the user asks for one (see Narration). Set `cover` to the step whose
-finished canvas best shows what the video is about, often the one where the whole picture is first
-there; the sheet shows them side by side. Speech is cached, so rendering again after changing
+Leave `voice` unset unless the user asks for one (see Narration). The sheet marks the finished step
+that appears as the MP4's first frame. Choose the opening you want with `cover`.
+Speech is cached, so rendering again after changing
 only the drawing is quicker. When a command fails, its message says what is missing.
 
 ## The script
@@ -204,6 +204,11 @@ Every element needs an `id`, unique in the script, and a `type`. Property names 
 `x`, `y` is the top left corner. Points are in canvas coordinates. On a `text` or `math` element,
 `"textAlign": "center"` makes `x` its middle and `"right"` its right edge, which places it without
 knowing how wide it will be.
+
+Use `["slot"]` as a point to refer to the center of a rectangle, ellipse or diamond already on the
+canvas. For example, `"on":["slot"]` centers a new tile there. Move an existing tile between centers
+with `{"update":{"id":"tile","along":[["tile"],["slot"]]}}`. Each point uses the position and size
+set by preceding actions. An arrow with a string endpoint such as `"to":"slot"` follows its outline.
 
 An arrow whose `from` or `to` is an id attaches to that element: it starts at the element's outline,
 facing the other end, and follows when the element moves. `via` lists points the arrow passes through,

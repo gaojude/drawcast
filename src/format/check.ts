@@ -13,7 +13,7 @@ import { Plots, isPlotRef, type PlotRef } from "../shared/expr.ts";
 import { type AxisRef, axesLayout, axesPoint, isAxisRef } from "../shared/axes.ts";
 import { partialPolyline, rotatePath, type Pt } from "../player/motion.ts";
 import { arrowCourse, arrowLabelCenter, type ArrowEnd } from "../shared/arrows.ts";
-import { DEFAULT_CANVAS, type ElementSpec, type Formula, PALETTE, type Point, type Script, type TextAlign, alignOffset } from "../shared/types.ts";
+import { DEFAULT_CANVAS, type ElementSpec, type Formula, PALETTE, type Point, type Script, type ShapeCenter, type TextAlign, alignOffset, isShapeCenter } from "../shared/types.ts";
 
 export interface Report {
   errors: string[];
@@ -155,7 +155,7 @@ const LINE_HEIGHT = 1.25;
 const isNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const isColor = (v: unknown): v is string => typeof v === "string" && COLOR.test(v);
 const isPoint = (v: unknown): v is [number, number] => Array.isArray(v) && v.length === 2 && v.every(isNumber);
-const isCoordinate = (v: unknown) => isPoint(v) || isPlotRef(v) || isAxisRef(v);
+const isCoordinate = (v: unknown) => isPoint(v) || isPlotRef(v) || isAxisRef(v) || isShapeCenter(v);
 const increasing = (v: unknown): v is [number, number] => isPoint(v) && v[0] < v[1] && Number.isFinite(v[1] - v[0]);
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const quote = (v: unknown) => JSON.stringify(v);
@@ -182,7 +182,7 @@ const LATEX = new RegExp(`\\\\(?:${TEX_COMMANDS})(?![a-zA-Z])|[\\^_]\\{|\\$(?![\
 /** A tab, line break or other control character: what JSON makes of `\t`, `\n`, `\f`, `\b` and `\r`. */
 const CONTROL = /[\u0000-\u001f]/;
 
-export async function check(input: unknown, baseDir: string, axisPoints?: WeakMap<AxisRef, Point>): Promise<Report> {
+export async function check(input: unknown, baseDir: string, resolvedPoints?: WeakMap<AxisRef | ShapeCenter, Point>): Promise<Report> {
   // MathJax is large and most scripts have no formulas, so it is loaded only for those that do
   const typeset: ((tex: string) => Formula) | null = JSON.stringify(input ?? null).includes('"type":"math"') ? (await import("../math/typeset.ts")).typeset : null;
   const errors: string[] = [];
@@ -259,6 +259,14 @@ export async function check(input: unknown, baseDir: string, axisPoints?: WeakMa
   const anyPoint = (where: string, name: string, v: unknown): Point | null => {
     if (isPoint(v)) return v;
     if (isPlotRef(v)) return plotPoint(where, name, v);
+    if (isShapeCenter(v)) {
+      const target = live.get(v[0]);
+      if (!target?.box || !SHAPES.includes(target.type)) return fail(where, `${name} ${quote(v)} needs a rectangle, ellipse or diamond already on the canvas.`), null;
+      const { x, y, w, h } = target.box;
+      const center: Point = [x + w / 2, y + h / 2];
+      resolvedPoints?.set(v, center);
+      return center;
+    }
     if (!isAxisRef(v)) return null;
     const [id, x, y] = v, el = live.get(id);
     if (!el?.axes || !el.box) return fail(where, `${name} ${quote(v)} needs an axes element named ${quote(id)} already on the canvas.`), null;
@@ -267,7 +275,7 @@ export async function check(input: unknown, baseDir: string, axisPoints?: WeakMa
       return fail(where, `${name} ${quote(v)} is outside the axes domain ${quote(spec.domain)} or range ${quote(spec.range)}.`), null;
     }
     const value = axesPoint(spec, offset, el.box, el.angle ?? 0, x, y);
-    axisPoints?.set(v, value);
+    resolvedPoints?.set(v, value);
     return value;
   };
   const used = new Set<string>();
@@ -357,7 +365,7 @@ export async function check(input: unknown, baseDir: string, axisPoints?: WeakMa
     plainText(where, "label", el.label);
 
     if (el.on !== undefined) {
-      const at = isPlotRef(el.on) || isAxisRef(el.on) ? anyPoint(where, "on", el.on) : (fail(where, `"on" needs a plot point ["plot", x] or an axes reading ["axes", x, y].`), null);
+      const at = isShapeCenter(el.on) || isPlotRef(el.on) || isAxisRef(el.on) ? anyPoint(where, "on", el.on) : (fail(where, `"on" needs a shape center ["id"], plot point ["plot", x] or axes reading ["axes", x, y].`), null);
       if (!at) return;
       if (!isNumber(el.width) || !isNumber(el.height)) return fail(where, `"on" puts the element's middle on the point, so it needs width and height.`);
       if (el.x !== undefined || el.y !== undefined) fail(where, `"on" says where the element goes; leave out x and y.`);
@@ -429,7 +437,7 @@ export async function check(input: unknown, baseDir: string, axisPoints?: WeakMa
     } else if (type === "arrow") {
       const ok = [checkRef(where, "from", el.from, true), checkRef(where, "to", el.to, true)];
       if (ok.every(Boolean) && typeof el.from === "string" && el.from === el.to) fail(where, "an arrow cannot start and end on the same element.");
-      if (el.via !== undefined && !(Array.isArray(el.via) && el.via.every(isCoordinate))) fail(where, `"via" needs a list of canvas, plot or axes points.`);
+      if (el.via !== undefined && !(Array.isArray(el.via) && el.via.every(isCoordinate))) fail(where, `"via" needs a list of canvas points, shape centers, plot points or axes readings.`);
       else if (ok.every(Boolean)) {
         const end = (r: unknown) => (typeof r === "string" ? r : anyPoint(where, "an end", r) ?? [0, 0]);
         const arrow = { from: end(el.from), to: end(el.to), via: pathPoints(where, "via", el.via ?? []), rounded: el.rounded === true };
@@ -474,7 +482,7 @@ export async function check(input: unknown, baseDir: string, axisPoints?: WeakMa
       const plotOnly = ["x", "y", "width", "height", "domain", "range", "p"].filter((k) => el[k] !== undefined);
       if (plotOnly.length) fail(where, `${plotOnly.join(", ")} are for a plot, a line with "fn". A line is placed by its "points".`);
       const min = el.closed ? 3 : 2;
-      if (!Array.isArray(el.points) || el.points.length < min || !el.points.every(isCoordinate)) return fail(where, `needs "points": at least ${min} canvas points [x, y], plot points [id, x] or axes points [id, x, y].`);
+      if (!Array.isArray(el.points) || el.points.length < min || !el.points.every(isCoordinate)) return fail(where, `needs "points": at least ${min} canvas points [x, y], shape centers [id], plot points [id, x] or axes points [id, x, y].`);
       anchor.points = pathPoints(where, "a point", el.points);
       if (el.closed && anchor.points.length) anchor.points.push(anchor.points[0]);
     }
