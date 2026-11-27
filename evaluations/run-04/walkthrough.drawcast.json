@@ -1,0 +1,426 @@
+{
+  "drawcast": 1,
+  "cover": 2,
+  "voice": "maple",
+  "steps": [
+    {
+      "say": "This formula triggered a warning about running off the canvas. It starts at eight hundred thirty-eight in size nineteen normal type.",
+      "do": [
+        {
+          "at": 0,
+          "add": {
+            "id": "formulaTitle",
+            "type": "text",
+            "x": 62,
+            "y": 42,
+            "text": "Where does the formula end?",
+            "fontSize": 46,
+            "fontFamily": "normal",
+            "strokeColor": "#243544"
+          },
+          "duration": 0.28
+        },
+        {
+          "at": 0,
+          "add": {
+            "id": "formulaSpec",
+            "type": "text",
+            "x": 66,
+            "y": 113,
+            "text": "Normal font, size 19   /   Original image enlarged 2×",
+            "fontSize": 23,
+            "fontFamily": "normal",
+            "strokeColor": "#526775"
+          },
+          "duration": 0.28
+        },
+        {
+          "at": "formula",
+          "add": {
+            "id": "formulaInk",
+            "type": "image",
+            "x": 136,
+            "y": 208,
+            "width": 656,
+            "height": 74,
+            "src": "formula-ink.png"
+          },
+          "duration": 0.45,
+          "enter": "fade"
+        },
+        {
+          "at": "starts",
+          "add": {
+            "id": "startTick",
+            "type": "line",
+            "points": [
+              [
+                140,
+                279
+              ],
+              [
+                140,
+                436
+              ]
+            ],
+            "roughness": 0,
+            "strokeColor": "#6a7986",
+            "strokeWidth": 2,
+            "strokeStyle": "dashed"
+          },
+          "duration": 0.28
+        },
+        {
+          "at": "starts",
+          "add": {
+            "id": "startLabel",
+            "type": "text",
+            "x": 140,
+            "y": 447,
+            "text": "Start   838",
+            "fontSize": 22,
+            "fontFamily": "normal",
+            "strokeColor": "#526775"
+          },
+          "duration": 0.28
+        }
+      ]
+    },
+    {
+      "say": "The rendered letters end here. The old check estimated an endpoint three pixels beyond the canvas.",
+      "do": [
+        {
+          "at": "rendered letters",
+          "add": {
+            "id": "actualMeasure",
+            "type": "line",
+            "points": [
+              [
+                140,
+                311
+              ],
+              [
+                779,
+                311
+              ]
+            ],
+            "roughness": 0,
+            "strokeColor": "#007a70",
+            "strokeWidth": 4
+          },
+          "duration": 0.6
+        },
+        {
+          "at": "end here",
+          "add": {
+            "id": "actualTick",
+            "type": "line",
+            "points": [
+              [
+                779,
+                263
+              ],
+              [
+                779,
+                322
+              ]
+            ],
+            "roughness": 0,
+            "strokeColor": "#007a70",
+            "strokeWidth": 2
+          },
+          "duration": 0.28
+        },
+        {
+          "at": "end here",
+          "add": {
+            "id": "actualLabel",
+            "type": "text",
+            "x": 779,
+            "y": 325,
+            "text": "Rendered edge   1157.5",
+            "fontSize": 25,
+            "fontFamily": "normal",
+            "strokeColor": "#007a70",
+            "textAlign": "right"
+          },
+          "duration": 0.28
+        },
+        {
+          "at": "old check",
+          "add": {
+            "id": "estimateMeasure",
+            "type": "line",
+            "points": [
+              [
+                140,
+                404
+              ],
+              [
+                1030,
+                404
+              ]
+            ],
+            "roughness": 0,
+            "strokeColor": "#a9401d",
+            "strokeWidth": 4
+          },
+          "duration": 0.6
+        },
+        {
+          "at": "old check",
+          "add": {
+            "id": "estimateTick",
+            "type": "line",
+            "points": [
+              [
+                1030,
+                389
+              ],
+              [
+                1030,
+                421
+              ]
+            ],
+            "roughness": 0,
+            "strokeColor": "#a9401d",
+            "strokeWidth": 2
+          },
+          "duration": 0.28
+        },
+        {
+          "at": "old check",
+          "add": {
+            "id": "estimateLabel",
+            "type": "text",
+            "x": 1030,
+            "y": 429,
+            "text": "Estimated edge   1283",
+            "fontSize": 25,
+            "fontFamily": "normal",
+            "strokeColor": "#a9401d",
+            "textAlign": "right"
+          },
+          "duration": 0.28
+        },
+        {
+          "at": "beyond the canvas",
+          "add": {
+            "id": "canvasEdge",
+            "type": "line",
+            "points": [
+              [
+                1024,
+                201
+              ],
+              [
+                1024,
+                409
+              ]
+            ],
+            "roughness": 0,
+            "strokeColor": "#6a7986",
+            "strokeWidth": 2,
+            "strokeStyle": "dashed"
+          },
+          "duration": 0.28
+        },
+        {
+          "at": "beyond the canvas",
+          "add": {
+            "id": "edgeLabel",
+            "type": "text",
+            "x": 1024,
+            "y": 165,
+            "text": "Canvas edge   1280",
+            "fontSize": 23,
+            "fontFamily": "normal",
+            "strokeColor": "#526775",
+            "textAlign": "center"
+          },
+          "duration": 0.28
+        }
+      ]
+    },
+    {
+      "say": "Measuring Latin letters with the normal font's own widths avoids this false alarm.",
+      "do": [
+        {
+          "at": "own widths",
+          "add": {
+            "id": "formulaFix",
+            "type": "text",
+            "x": 136,
+            "y": 536,
+            "text": "Use the normal font’s actual Latin letter widths.",
+            "fontSize": 30,
+            "fontFamily": "normal",
+            "strokeColor": "#243544"
+          },
+          "duration": 0.28
+        }
+      ]
+    },
+    {
+      "say": "A second warning involved the last voltage reading. Its estimated label bounds crossed the box that encloses the axes.",
+      "do": [
+        {
+          "at": 0,
+          "duration": 0.12,
+          "remove": [
+            "formulaTitle",
+            "formulaSpec",
+            "formulaInk",
+            "startTick",
+            "startLabel",
+            "actualMeasure",
+            "actualTick",
+            "actualLabel",
+            "estimateMeasure",
+            "estimateTick",
+            "estimateLabel",
+            "canvasEdge",
+            "edgeLabel",
+            "formulaFix"
+          ]
+        },
+        {
+          "at": 0,
+          "add": {
+            "id": "chartTitle",
+            "type": "text",
+            "x": 62,
+            "y": 42,
+            "text": "Which part of the plot does the label touch?",
+            "fontSize": 41,
+            "fontFamily": "normal",
+            "strokeColor": "#243544"
+          },
+          "duration": 0.28
+        },
+        {
+          "at": "second warning",
+          "add": {
+            "id": "chart",
+            "type": "image",
+            "x": 64,
+            "y": 170,
+            "width": 693,
+            "height": 404,
+            "src": "chart-ink.png"
+          },
+          "duration": 0.4,
+          "enter": "fade"
+        },
+        {
+          "at": "last voltage reading",
+          "add": {
+            "id": "region",
+            "type": "rectangle",
+            "x": 678,
+            "y": 247,
+            "width": 67,
+            "height": 64,
+            "strokeColor": "#a9401d",
+            "backgroundColor": "transparent",
+            "rounded": false,
+            "roughness": 0,
+            "strokeWidth": 2
+          },
+          "duration": 0.28
+        },
+        {
+          "at": "estimated label bounds",
+          "add": {
+            "id": "zoomTitle",
+            "type": "text",
+            "x": 852,
+            "y": 130,
+            "text": "Final reading, enlarged 3×",
+            "fontSize": 23,
+            "fontFamily": "normal",
+            "strokeColor": "#526775"
+          },
+          "duration": 0.28
+        },
+        {
+          "at": "estimated label bounds",
+          "add": {
+            "id": "zoom",
+            "type": "image",
+            "x": 852,
+            "y": 183,
+            "width": 336,
+            "height": 282,
+            "src": "chart-zoom.png"
+          },
+          "duration": 0.35,
+          "enter": "fade"
+        },
+        {
+          "at": "box",
+          "add": {
+            "id": "boxEdge",
+            "type": "line",
+            "points": [
+              [
+                1140,
+                187
+              ],
+              [
+                1140,
+                462
+              ]
+            ],
+            "roughness": 0,
+            "strokeColor": "#a9401d",
+            "strokeWidth": 2,
+            "strokeStyle": "dashed"
+          },
+          "duration": 0.28
+        },
+        {
+          "at": "box",
+          "add": {
+            "id": "boxEdgeLabel",
+            "type": "text",
+            "x": 829,
+            "y": 476,
+            "text": "Axes box ends at x = 746\nLabel estimate spans x = 709–751",
+            "fontSize": 22,
+            "fontFamily": "normal",
+            "strokeColor": "#a9401d"
+          },
+          "duration": 0.28
+        }
+      ]
+    },
+    {
+      "say": "The label sits in white space below the data point. A collision check should follow the visible axis strokes, ticks, and text.",
+      "do": [
+        {
+          "at": "white space",
+          "duration": 1,
+          "point": [
+            1074,
+            419
+          ]
+        },
+        {
+          "at": "visible axis strokes",
+          "add": {
+            "id": "inkFix",
+            "type": "text",
+            "x": 64,
+            "y": 576,
+            "text": "Check where axes, ticks and labels leave ink.",
+            "fontSize": 29,
+            "fontFamily": "normal",
+            "strokeColor": "#243544"
+          },
+          "duration": 0.28
+        }
+      ]
+    }
+  ]
+}
