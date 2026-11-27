@@ -28,7 +28,7 @@ Options
   --no-captions           render, snapshot: leave the captions out
   --fps <n>               render: frames per second (default 30)
   --width <px>            output width (default 1.5 x the canvas for video, canvas width for a still,
-                          or 512 per tile for a sheet)
+                          encoded width for an inspected frame, or 512 per tile for a sheet)
   --tts-command <cmd>     render: speak with your own program. It gets one sentence on stdin
                           and must write a WAV file to the path in $DRAWCAST_OUT. With snapshot,
                           use cached timing from that command.
@@ -88,7 +88,7 @@ async function main(signal: AbortSignal): Promise<number> {
   if (command !== "guide" && positionals.length > maxArgs) throw new Error(`Unexpected argument for ${command}: ${positionals[maxArgs]}.`);
   const allowed = command === "render" || command === "snapshot"
     ? ["output", "width", "voice", "speed", "no-captions", "tts-command", ...(command === "snapshot" ? ["sheet", "at", "step"] : ["fps"])]
-    : command === "inspect" ? ["output", "at", "motion"] : [];
+    : command === "inspect" ? ["output", "at", "motion", "width"] : [];
   for (const [option, value] of Object.entries(values)) {
     if (!allowed.includes(option)) throw new Error(`--${option} does not apply to ${command}.`);
     if (typeof value === "string" && !value.trim()) throw new Error(`--${option} needs a nonempty value.`);
@@ -96,7 +96,7 @@ async function main(signal: AbortSignal): Promise<number> {
 
   switch (command) {
     case "guide": {
-      const topics = ["plots", "math", "elements", "actions", "layout", "narration", "full"];
+      const topics = ["script", "pie", "plots", "math", "elements", "actions", "layout", "narration", "full"];
       const requested = new Set(positionals.slice(1));
       for (const topic of requested) {
         if (!topics.includes(topic)) throw new Error(`Unknown guide topic "${topic}". Choose from ${topics.join(", ")}.`);
@@ -145,7 +145,8 @@ async function main(signal: AbortSignal): Promise<number> {
       const stem = path.join(path.dirname(file), path.parse(file).name);
       const kind = values.motion ? ".motion" : Array.isArray(at) ? ".times" : at === undefined ? "" : `.at${at}`;
       const output = values.output ?? `${stem}.inspect${kind}.png`;
-      const times = await inspectVideo(file, output, at, signal, values.motion);
+      const { times, duration, frames, dimensions, audioCodec } = await inspectVideo(file, output, at, signal, values.motion, number(values.width, "width"));
+      console.log([`${Number(duration.toFixed(3))} s`, dimensions, `${frames} frames`, `${Number((frames / duration).toFixed(3))} fps average`, audioCodec ? `${audioCodec} audio` : "no audio track"].filter(Boolean).join(", "));
       console.log(`${output} (encoded frames at ${times.map((s) => Number(s.toFixed(3))).join(", ")} s)`);
       return 0;
     }

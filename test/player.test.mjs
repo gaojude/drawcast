@@ -70,6 +70,46 @@ test("the browser timeline", async (t) => {
     assert.deepEqual(displayed, [["Home", "First", 100, 100], ["Shop", "Second", 100, 100], ["Shop", "Second", 100, 100]]);
   });
 
+  await t.test("a clockwise slice sweeps with its fill from the spoken cue and closes a full disk", async () => {
+    const { steps } = expand({ drawcast: 1, steps: [{ say: "Ready, draw.", do: [
+      { at: "draw", duration: 2, add: { id: "disk", type: "slice", center: [150, 200], radius: 100, share: 100, color: "teal" } },
+    ] }] });
+    const voice = { duration: 4, tokens: [{ token: "ready", t: 0 }, { token: "draw", t: 1 }], captions: [] };
+    const { frames: [before, zero, half, full] } = await run(steps, [1.49, 1.5, 2.5, 3.5], [], [voice]);
+    assert.equal(at(before, "disk"), undefined);
+    assert.equal(at(zero, "disk").opacity, 0);
+    const wedge = at(half, "disk");
+    assert.equal(wedge.backgroundColor, "#96f2d7");
+    assert.deepEqual([wedge.x, wedge.y, wedge.width, wedge.height], [150, 200, 100, 200]);
+    assert.deepEqual(wedge.points.slice(0, 2), [[0, 0], [0, -100]]);
+    assert.deepEqual(wedge.points.at(-1), [0, 0]);
+    const disk = at(full, "disk");
+    assert.deepEqual([disk.width, disk.height], [200, 200]);
+    assert.deepEqual(disk.points[0], disk.points.at(-1));
+    assert.ok(disk.points.every(([x, y]) => Math.abs(Math.hypot(disk.x + x - 150, disk.y + y - 200) - 100) < 1e-8));
+  });
+
+  await t.test("slice labels stay inside on fade, palette change, move, rotation, pulse and remove", async () => {
+    const { steps } = expand({ drawcast: 1, steps: [{ do: [
+      { duration: 1, enter: "fade", add: { id: "w", type: "slice", center: [220, 260], radius: 100, start: 25, share: 50, color: "teal", label: "Food\n50%" } },
+      { enter: "none", add: { id: "t", type: "text", x: 0, y: 0, text: "Total" } },
+      { at: 2, duration: 0, update: { id: ["w", "t"], color: "blue", dx: 50 } },
+      { at: 2, duration: 0, update: { id: "w", label: "Rent", angle: Math.PI / 2 } },
+      { at: 3, duration: 1, pulse: "w" },
+      { at: 5, duration: 0, remove: "w" },
+    ] }] });
+    const { frames: [fade, moved, pulsed, gone] } = await run(steps, [1, 2.5, 4, 5.5]);
+    const label = (frame) => frame.elements.find((el) => el.sliceId === "w");
+    const center = (el) => [el.x + el.width / 2, el.y + el.height / 2].map(Math.round);
+    assert.deepEqual([label(fade).text, label(fade).opacity, at(fade, "w").opacity], ["Food\n50%", 50, 50]);
+    assert.deepEqual(center(label(fade)), [220, 320]);
+    assert.deepEqual([label(moved).text, label(moved).strokeColor, at(moved, "w").backgroundColor], ["Rent", "#1971c2", "#a5d8ff"]);
+    assert.deepEqual(center(label(moved)), [210, 260]);
+    assert.deepEqual(center(label(pulsed)), [202, 260]);
+    assert.ok(at(pulsed, "w").height > at(moved, "w").height);
+    assert.deepEqual(gone.elements.map((el) => el.id), ["t"]);
+  });
+
   await t.test("axes keep their chart and label margins together when moving, fitting and removing", async () => {
     const axes = { id: "scale", type: "axes", x: 30, y: 40, width: 400, height: 200, domain: [-2, 2], range: [0, 1], xTicks: [0, 1], yTicks: [0.5], xLabel: "input" };
     const layout = axesLayout(axes);

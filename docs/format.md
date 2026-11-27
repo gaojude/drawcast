@@ -44,7 +44,7 @@ that appears as the MP4's first frame. Choose the opening you want with `cover`.
 Speech is cached, so rendering again after changing
 only the drawing is quicker. When a command fails, its message says what is missing.
 
-## The script
+## Script
 
 | Property | |
 | --- | --- |
@@ -202,6 +202,7 @@ Every element needs an `id`, unique in the script, and a `type`. Property names 
 | Type | Needs | Also takes |
 | --- | --- | --- |
 | `rectangle`, `ellipse`, `diamond` | `x`, `y`, `width`, `height` | `label`, `rounded` (rectangle and diamond; default true) |
+| `slice` | `center`, `radius`, `share` (percent) | `start` (percent), `label`, `color`. See Pie. |
 | `text` | `x`, `y`, `text` (`\n` breaks lines) | `fontSize`, `fontFamily`, `textAlign` |
 | `math` | `x`, `y`, `tex` (a formula in LaTeX; see Math) | `fontSize`, `textAlign` |
 | `arrow` | `from`, `to`: each an element id or a point `[x, y]` | `via`, `rounded`, `label`, `startArrowhead`, `endArrowhead` |
@@ -250,6 +251,22 @@ Excalidraw's palette, which looks right together, by name for `color`: `red`, `o
 `green`, `teal`, `blue`, `violet`, `pink`, `gray`, `black`. `"color": "blue"` is stroke `#1971c2` and
 fill `#a5d8ff`; give `strokeColor` or `backgroundColor` as well to override either. A label is drawn in
 its shape's stroke colour.
+
+## Pie
+
+Give each slice the same `center` and `radius`. Its `share` is a percentage of the whole.
+`start` counts clockwise in percent from twelve o'clock (default 0). For adjoining slices,
+use the sum of the previous shares. A 100 percent slice makes a whole disk.
+
+```json
+{"say":"Sales make up three quarters. Support accounts for one quarter.","do":[
+  {"at":"Sales","add":{"id":"sales","type":"slice","center":[540,320],"radius":205,"share":75,"color":"blue","label":"Sales\n75%"}},
+  {"at":"Support","add":{"id":"support","type":"slice","center":[540,320],"radius":205,"start":75,"share":25,"color":"teal","label":"Support\n25%"}}
+]}
+```
+
+Each slice sweeps into place at its cue. Its label sits inside the wedge. For a thin slice,
+put the name in a separate legend. Use `enter:"none"` on the add action for an instant reveal.
 
 ## Plots
 

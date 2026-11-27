@@ -11,7 +11,7 @@ import { type PlotRef, Plots, isPlotRef } from "../shared/expr.ts";
 import { type AxisRef, isAxisRef } from "../shared/axes.ts";
 import { type Action, type ElementSpec, PALETTE, type Point, type Script, type ShapeCenter, type Style, type UpdateSpec, isShapeCenter } from "../shared/types.ts";
 
-const FILLED = new Set(["rectangle", "ellipse", "diamond"]);
+const FILLED = new Set(["rectangle", "ellipse", "diamond", "slice"]);
 
 function colored<T extends Style>(spec: T, fillable: boolean): T {
   if (!spec.color) return spec;
