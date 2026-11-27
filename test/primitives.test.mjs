@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { check } from "../src/format/check.ts";
 import { expand } from "../src/format/expand.ts";
 import { parseFunction, plotPoints } from "../src/shared/expr.ts";
-import { subPath } from "../src/player/motion.ts";
+import { partialPolyline, polylineLength, reversePath, subPath } from "../src/player/motion.ts";
 
 const examples = path.join(import.meta.dirname, "../examples");
 const box = (id, x, y = 100, extra = {}) => ({ id, type: "rectangle", x, y, width: 160, height: 80, ...extra });
@@ -19,7 +19,8 @@ test("functions are read the way they are written on paper", () => {
   assert.ok(Math.abs(at("2 sin(pi x / 2)", 1) - 2) < 1e-12);
   assert.equal(at("sigmoid(0)", 0), 0.5);
   assert.equal(at("relu(x - 1)", 0), 0);
-  for (const bad of ["x +", "foo(x)", "sin x", "(x", "x $ 2"]) assert.throws(() => parseFunction(bad), undefined, bad);
+  assert.equal(at("1. + .5", 0), 1.5);
+  for (const bad of ["x +", "foo(x)", "sin x", "(x", "x $ 2", "1.2.3x", "constructor(x)", "__proto__", "."]) assert.throws(() => parseFunction(bad), undefined, bad);
 });
 
 test("a plot fills its box, y up, and leaves out what is out of range", () => {
@@ -29,6 +30,11 @@ test("a plot fills its box, y up, and leaves out what is out of range", () => {
   const clipped = plotPoints(parseFunction("x^2"), { x: 0, y: 0, width: 100, height: 100 }, [-2, 2], [0, 1], 40);
   assert.ok(clipped.every(([, y]) => y >= -1e-6 && y <= 100 + 1e-6));
   assert.ok(clipped.length < 41);
+  const steep = plotPoints(parseFunction("10000x"), { x: 0, y: 0, width: 100, height: 100 }, [-2, 2], [1, 2], 4);
+  assert.equal(steep.length, 2);
+  assert.ok(Math.abs(steep[0][0] - 50.0025) < 1e-8);
+  assert.equal(steep[0][1], 100);
+  assert.equal(steep[1][1], 0);
 });
 
 test("a colour by name is a stroke and, on a shape, a fill", () => {
@@ -48,6 +54,22 @@ test("a line with fn becomes the points of the plot", () => {
   assert.ok(c.points.length > 50);
   assert.equal(c.fn, undefined);
   assert.equal(c.roughness, 0);
+});
+
+test("plots lift the pen at clipped and undefined stretches, including when travelling in reverse", () => {
+  const spec = { id: "p", type: "line", fn: "1 / x", domain: [-2, 2], range: [-2, 2], x: 0, y: 0, width: 300, height: 200 };
+  const plot = expand({ drawcast: 1, steps: [{ do: [{ add: spec }] }] }).steps[0].do[0].add;
+  assert.equal(plot.breaks.length, 1);
+  const split = plot.breaks[0];
+  assert.ok(plot.points.slice(0, split).every(([x]) => x < 150));
+  assert.ok(plot.points.slice(split).every(([x]) => x > 150));
+  const path = [{ x: 0, y: 0 }, { x: 5, y: 0 }, { x: 20, y: 0, move: true }, { x: 25, y: 0 }];
+  assert.equal(polylineLength(path), 10);
+  assert.equal(partialPolyline(path, 0.6).at(-1).x, 21);
+  assert.equal(partialPolyline(reversePath(path), 0.6).at(-1).x, 4);
+  const middle = subPath(path, 0.2, 0.8);
+  assert.equal(polylineLength(middle), 6);
+  assert.equal(middle[2].move, true);
 });
 
 test("check accepts the new primitives and explains their mistakes", async () => {
@@ -131,6 +153,16 @@ test("a label too long for its arrow is warned about", async () => {
   assert.match(warnings[0], /will cover the arrow/);
 });
 
+test("arrow label warnings measure the shaft underneath horizontal text", async () => {
+  const warnings = async (to, label) => (await report({ do: [{ add: { id: "a", type: "arrow", from: [100, 100], to, label } }] })).warnings;
+  assert.deepEqual(await warnings([100, 185], "npx, on first use"), []);
+  assert.deepEqual(await warnings([160, 160], "npx, on first use"), []);
+  assert.match((await warnings([185, 100], "npx, on first use"))[0], /will cover the arrow/);
+  for (const to of [[100, 185], [160, 160]]) {
+    assert.match((await warnings(to, "first line\nsecond line\nthird line\nfourth line"))[0], /will cover the arrow/);
+  }
+});
+
 test("--step takes numbers, lists, ranges and all, with commas or spaces", async () => {
   const { parseSteps } = await import("../src/render/render.ts");
   assert.deepEqual(parseSteps("3", 9), [3]);
@@ -176,4 +208,56 @@ test("part of a path runs from one fraction of its length to another", () => {
   const near = (a, b) => assert.ok(Math.hypot(a.x - b.x, a.y - b.y) < 1e-9, JSON.stringify([a, b]));
   near(p[0], { x: 5, y: 0 });
   near(p.at(-1), { x: 10, y: 5 });
+});
+
+test("plot points follow a translated line and become unavailable after removal", async () => {
+  const plot = { id: "p", type: "line", fn: "x", domain: [0, 1], x: 0, y: 0, width: 100, height: 100 };
+  const actions = [{ add: plot }, { update: { id: "p", dx: 50, dy: 25 } }, { point: ["p", 1] }];
+  assert.deepEqual((await report({ do: actions })).errors, []);
+  assert.deepEqual(expand({ drawcast: 1, steps: [{ do: actions }] }).steps[0].do[2].point, [150, 25]);
+  const { errors } = await report({ do: [
+    ...actions,
+    { add: box("a", 300) },
+    { update: { id: "a", along: [["missing", 1], [0, 1]] } },
+    { add: { id: "arrow", type: "arrow", from: "a", to: "p" } },
+    { update: { id: "p", width: 20 } },
+    { remove: "p" },
+    { point: ["p", 0.5] },
+  ] });
+  assert.equal(errors.length, 4, errors.join("\n"));
+  assert.match(errors[0], /"missing".*not a plot/);
+  assert.match(errors[1], /arrows attach to shapes/);
+  assert.match(errors[2], /move it with dx and dy/);
+  assert.match(errors[3], /"p".*not a plot/);
+});
+
+test("palette updates fill closed polygons and keep mixed targets together", () => {
+  const polygon = { id: "p", type: "line", closed: true, points: [[0, 0], [1, 0], [0, 1]] };
+  const text = { id: "t", type: "text", x: 50, y: 0, text: "Hi" };
+  const out = expand({ drawcast: 1, steps: [{ do: [
+    { add: [polygon, text] },
+    { update: { id: "p", color: "red" } },
+    { update: { id: ["p", "t"], color: "blue" } },
+  ] }] });
+  assert.equal(out.steps[0].do[1].update.backgroundColor, "#ffc9c9");
+  assert.deepEqual(out.steps[0].do[2].update, { id: ["p", "t"], color: "blue", strokeColor: "#1971c2" });
+});
+
+test("explicit strokes and routes follow the visible parts of a rotated plot", async () => {
+  const spec = { id: "p", type: "line", fn: "1/x", domain: [-2, 2], range: [-2, 2], x: 0, y: 0, width: 300, height: 200, angle: Math.PI / 2 };
+  const refs = [["p", -2], ["p", 2]];
+  const actions = [
+    { add: spec }, { point: refs[0] }, { add: { type: "freedraw", id: "trace", points: refs } },
+    { add: box("ball", 520) }, { update: { id: "ball", along: refs.toReversed() } },
+    { update: { id: "p", dx: 10, angle: 0 } }, { point: refs[0] },
+  ];
+  assert.deepEqual((await report({ do: actions })).errors, []);
+  const list = expand({ drawcast: 1, steps: [{ do: actions }] }).steps[0].do;
+  assert.ok(Math.abs(list[1].point[0] - 125) < 1e-9);
+  assert.ok(Math.abs(list[1].point[1] + 50) < 1e-9);
+  assert.deepEqual(list[6].point, [10, 125]);
+  const trace = list[2].add, move = list[4].update;
+  assert.equal(trace.breaks.length, 1);
+  assert.deepEqual(move.along, trace.points.toReversed());
+  assert.deepEqual(move.breaks, [trace.points.length - trace.breaks[0]]);
 });

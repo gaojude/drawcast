@@ -1,0 +1,34 @@
+name: Verify
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.18.0'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Render a CLI snapshot
+        run: node dist/cli.js snapshot examples/cache.drawcast.json --step 1 --width 640 -o smoke.png
+      - name: Verify the PNG and its dimensions
+        run: >-
+          node -e "const png = require('node:fs').readFileSync('smoke.png');
+          require('node:assert/strict').deepEqual(
+          [png.subarray(0, 8).toString('hex'), png.readUInt32BE(16), png.readUInt32BE(20)],
+          ['89504e470d0a1a0a', 640, 360]);"
+      - run: npm test

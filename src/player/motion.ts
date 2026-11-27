@@ -3,6 +3,8 @@
 export interface Pt {
   x: number;
   y: number;
+  /** Starts a new visible stretch after a gap in a plot. */
+  move?: boolean;
 }
 
 export const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -23,7 +25,7 @@ export const dragEase = (u: number, overshoot = 0.06) => {
 
 export const polylineLength = (pts: Pt[]) => {
   let total = 0;
-  for (let i = 1; i < pts.length; i++) total += dist(pts[i - 1], pts[i]);
+  for (let i = 1; i < pts.length; i++) if (!pts[i].move) total += dist(pts[i - 1], pts[i]);
   return total;
 };
 
@@ -33,6 +35,10 @@ export function partialPolyline(pts: Pt[], u: number): Pt[] {
   let left = clamp(u, 0, 1) * polylineLength(pts);
   const out = [pts[0]];
   for (let i = 1; i < pts.length; i++) {
+    if (pts[i].move) {
+      out.push(pts[i]);
+      continue;
+    }
     const d = dist(pts[i - 1], pts[i]);
     if (left >= d && i < pts.length - 1) {
       out.push(pts[i]);
@@ -46,6 +52,10 @@ export function partialPolyline(pts: Pt[], u: number): Pt[] {
   return out;
 }
 
+export function reversePath(pts: Pt[]): Pt[] {
+  return pts.map(({ x, y }, i) => (pts[i + 1]?.move ? { x, y, move: true } : { x, y })).reverse();
+}
+
 /** The part of a polyline from fraction `a` to fraction `b` of its length. */
 export function subPath(pts: Pt[], a: number, b: number): Pt[] {
   const upTo = partialPolyline(pts, b);
@@ -53,8 +63,11 @@ export function subPath(pts: Pt[], a: number, b: number): Pt[] {
   const total = polylineLength(upTo);
   if (skip <= 0 || total <= 0) return upTo;
   // the same path backwards, cut short, and turned round again
-  return partialPolyline([...upTo].reverse(), 1 - skip / total).reverse();
+  return reversePath(partialPolyline(reversePath(upTo), 1 - skip / total));
 }
+
+/** Distant off-canvas control points should not allocate millions of invisible subdivisions. */
+export const curveSamples = (length: number, step: number) => Math.min(4096, Math.ceil(length / step));
 
 /** A smooth curve through the points (Catmull-Rom), sampled about every `step` units. */
 export function smooth(points: Pt[], step = 8): Pt[] {
@@ -65,7 +78,7 @@ export function smooth(points: Pt[], step = 8): Pt[] {
     const p1 = points[i];
     const p2 = points[i + 1];
     const p3 = points[Math.min(points.length - 1, i + 2)];
-    const n = Math.max(2, Math.ceil(dist(p1, p2) / step));
+    const n = Math.max(2, curveSamples(dist(p1, p2), step));
     for (let k = 1; k <= n; k++) {
       const t = k / n;
       const t2 = t * t;

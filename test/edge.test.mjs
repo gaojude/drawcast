@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { edgeTtsStatus } from "../src/voice/edge.ts";
 import { resolveVoice } from "../src/voice/voice.ts";
 
 const resolve = (spec) => resolveVoice({ spec, narration: "hello", log: () => {} });
@@ -19,6 +20,7 @@ test("without the edge-tts program, the error says how to get it", async () => {
   process.env.DRAWCAST_EDGE_TTS = "no-such-program-for-drawcast-tests";
   try {
     const voice = await resolve("edge:en-US-EmmaMultilingualNeural");
+    assert.match(edgeTtsStatus().description, /DRAWCAST_EDGE_TTS "no-such-program-for-drawcast-tests" failed its version check/);
     await assert.rejects(voice.open(), /pipx install edge-tts/);
   } finally {
     delete process.env.DRAWCAST_EDGE_TTS;

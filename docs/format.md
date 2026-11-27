@@ -29,7 +29,7 @@ earlier run.
 **Which command to run.** The first line `drawcast guide` prints is the version it belongs to. If
 `drawcast --version` prints that same version, run `drawcast` as written below. If it prints another
 one, or `drawcast` is not found, run `npx -y drawcast@latest` in place of `drawcast` every time, and
-tell the user that `npm install -g drawcast@latest` updates their own copy. It needs Node.js 20 or
+tell the user that `npm install -g drawcast@latest` updates their own copy. It needs Node.js 22.12 or
 newer. The first render downloads a speech model of about 365 MB, which can take a few minutes;
 `drawcast setup` downloads everything ahead of time and reports what is missing.
 

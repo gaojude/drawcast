@@ -10,7 +10,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { encode } from "gpt-tokenizer/encoding/o200k_base";
 import { openPlayer } from "../src/render/player.ts";
-import { loadScript, typesetFormulas } from "../src/render/render.ts";
+import { loadScript, playerRequest } from "../src/render/render.ts";
 import { estimateNarration } from "../src/voice/narrate.ts";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -19,21 +19,24 @@ const row = (name, tokens, note = "") => console.log(`  ${name.padEnd(46)} ${Str
 
 for (const file of process.argv.slice(2)) {
   const text = readFileSync(file, "utf8");
-  const { script } = await loadScript(file);
+  const loaded = await loadScript(file);
+  const { script } = loaded;
   const narration = script.steps.map((s) => s.say ?? "").join(" ");
 
-  const player = await openPlayer({ script, images: {}, math: await typesetFormulas(script), output: { width: 1920, height: 1080 } }, () => {});
-  const { duration } = await player.load(estimateNarration(script).steps);
-  const elements = await player.elements(duration);
-  await player.close();
-  // minified, which is the cheapest way to write it
-  const scene = JSON.stringify({ type: "excalidraw", version: 2, source: "https://excalidraw.com", elements, appState: { viewBackgroundColor: "#ffffff" }, files: {} });
+  const player = await openPlayer(await playerRequest(loaded, undefined, script.captions ?? true), () => {});
+  let scene;
+  try {
+    const { duration } = await player.load(estimateNarration(script).steps);
+    scene = await player.scene(duration);
+  } finally {
+    await player.close();
+  }
 
-  console.log(`${file}  (${script.steps.length} steps, ${elements.length} elements, ${Buffer.byteLength(text)} bytes)`);
+  console.log(`${file}  (${script.steps.length} steps, ${scene.elements.length} elements, ${Buffer.byteLength(text)} bytes)`);
   row("the script, as written", count(text), "what it says, what it draws, and when");
-  row("the script, minified", count(JSON.stringify(script)));
+  row("the script, minified", count(JSON.stringify(JSON.parse(text.replace(/^\uFEFF/, "")))));
   row("its narration alone", count(narration));
-  row("the finished canvas as an Excalidraw scene", count(scene), "minified; no narration, no timing");
+  row("the finished canvas as an Excalidraw scene", count(JSON.stringify(scene)), "minified; no narration, no timing");
   console.log();
 }
 

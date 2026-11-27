@@ -30,16 +30,25 @@ export const EDGE_VOICES: { name: string; language: "zh" | "en"; description: st
 const SAMPLE_RATE = 24000;
 
 /** `edge-tts` from DRAWCAST_EDGE_TTS, the PATH, or ~/.local/bin, where pipx and uv put it. */
-export function findEdgeTts(): string | null {
+export function edgeTtsStatus(): { program: string | null; description: string } {
   const local = path.join(os.homedir(), ".local", "bin", process.platform === "win32" ? "edge-tts.exe" : "edge-tts");
   const candidates = process.env.DRAWCAST_EDGE_TTS ? [process.env.DRAWCAST_EDGE_TTS] : ["edge-tts", ...(existsSync(local) ? [local] : [])];
-  return candidates.find((program) => spawnSync(program, ["--version"], { stdio: "ignore" }).status === 0) ?? null;
+  let issue = "edge-tts was not found";
+  for (const program of candidates) {
+    const result = spawnSync(program, ["--version"], { stdio: ["ignore", "ignore", "pipe"], encoding: "utf8", timeout: 5000, windowsHide: true });
+    if (result.status === 0) return { program, description: `installed (${program})` };
+    const error = result.error as NodeJS.ErrnoException | undefined;
+    if (!process.env.DRAWCAST_EDGE_TTS && error?.code === "ENOENT") continue;
+    const reason = result.stderr?.trim().split(/\r?\n/)[0]?.slice(0, 300) || error?.code || `exit ${result.status}`;
+    issue = `${process.env.DRAWCAST_EDGE_TTS ? "DRAWCAST_EDGE_TTS " : ""}"${program}" failed its version check (${reason})`;
+  }
+  return { program: null, description: `${issue}. Install it with "pipx install edge-tts" or "uv tool install edge-tts", or set DRAWCAST_EDGE_TTS to a working executable.` };
 }
 
 /** Runs a program with `input` on its stdin and returns what it writes to stdout. */
-function run(program: string, args: string[], input: string | Buffer, env?: NodeJS.ProcessEnv): Promise<Buffer> {
+function run(program: string, args: string[], input: string | Buffer, signal?: AbortSignal, env?: NodeJS.ProcessEnv): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const child = spawn(program, args, { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, ...env } });
+    const child = spawn(program, args, { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, ...env }, signal, windowsHide: true });
     const out: Buffer[] = [];
     let stderr = "";
     child.stdout.on("data", (d) => out.push(d));
@@ -53,22 +62,22 @@ function run(program: string, args: string[], input: string | Buffer, env?: Node
 }
 
 /** Gets ready to speak with the online voice `name`. Returns the function that says one sentence. */
-export async function openEdgeVoice(name: string): Promise<(sentence: string) => Promise<Audio>> {
-  const edgeTts = findEdgeTts();
+export async function openEdgeVoice(name: string, signal?: AbortSignal): Promise<(sentence: string) => Promise<Audio>> {
+  signal?.throwIfAborted();
+  const { program: edgeTts, description } = edgeTtsStatus();
   if (!edgeTts) {
-    throw new Error(
-      `The voice "${EDGE_PREFIX}${name}" is spoken by the edge-tts program, which was not found. Install it with "pipx install edge-tts" or "uv tool install edge-tts", or set DRAWCAST_EDGE_TTS to where it is.`,
-    );
+    throw new Error(`The voice "${EDGE_PREFIX}${name}" needs edge-tts. ${description}`);
   }
   const ffmpeg = findFfmpeg();
   if (!ffmpeg) throw new Error("ffmpeg was not found. Reinstall drawcast with install scripts allowed, install ffmpeg, or set DRAWCAST_FFMPEG to one.");
 
   return async (sentence) => {
     // edge-tts reads the text from stdin and writes an MP3 to stdout; PYTHONUTF8 makes it read UTF-8 on Windows too
-    const mp3 = await run(edgeTts, ["--voice", name, "--file", "-"], sentence, { PYTHONUTF8: "1" }).catch((e: Error) => {
+    const mp3 = await run(edgeTts, ["--voice", name, "--file", "-"], sentence, signal, { PYTHONUTF8: "1" }).catch((e: Error) => {
+      signal?.throwIfAborted();
       throw new Error(`edge-tts could not say "${sentence}" in the voice ${name}. It needs a connection, and a name from "edge-tts --list-voices".\n${e.message}`);
     });
-    const pcm = await run(ffmpeg, ["-loglevel", "error", "-i", "pipe:0", "-f", "f32le", "-ac", "1", "-ar", String(SAMPLE_RATE), "pipe:1"], mp3);
+    const pcm = await run(ffmpeg, ["-loglevel", "error", "-i", "pipe:0", "-f", "f32le", "-ac", "1", "-ar", String(SAMPLE_RATE), "pipe:1"], mp3, signal);
     if (pcm.length < 4) throw new Error(`The voice ${name} returned no audio for "${sentence}".`);
     const samples = new Float32Array(pcm.length >> 2);
     for (let i = 0; i < samples.length; i++) samples[i] = pcm.readFloatLE(i * 4);

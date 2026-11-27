@@ -1,7 +1,8 @@
 /** Building Excalidraw elements from the specs in a script. */
-import { convertToExcalidrawElements } from "@excalidraw/excalidraw";
+import { convertToExcalidrawElements, getCommonBounds } from "@excalidraw/excalidraw";
 import { type ElementSpec, MATH_PIXELS_PER_EM, type Point, type Style, alignOffset } from "../shared/types.ts";
 import { type Pt, smooth } from "./motion.ts";
+import { ARROW_GAP, type ArrowEnd, arrowCourse as connection, arrowLabelCenter } from "../shared/arrows.ts";
 
 /** An Excalidraw element. Its shape is Excalidraw's business; we only touch the fields we set. */
 export type El = Record<string, any>;
@@ -19,8 +20,6 @@ const FONT_FAMILY = { hand: 5, normal: 6, code: 3 } as const;
 export const fontName = (family: number) => (Object.keys(FONT_FAMILY) as (keyof typeof FONT_FAMILY)[]).find((k) => FONT_FAMILY[k] === family) ?? "hand";
 const LABEL_FONT_SIZE = 20;
 const ARROW_LABEL_FONT_SIZE = 16;
-/** Gap between an attached arrow and the outline it points at. */
-const ARROW_GAP = 8;
 
 export const STYLE_KEYS = ["strokeColor", "backgroundColor", "fillStyle", "strokeWidth", "strokeStyle", "roughness", "opacity", "angle"] as const;
 
@@ -87,30 +86,87 @@ export function makeText(spec: ElementSpec): El {
 /** Position and relative points of a path, as Excalidraw stores a line. */
 function pathGeometry(pts: Pt[]) {
   const p0 = pts[0];
+  let left = 0, right = 0, top = 0, bottom = 0;
   const rel = pts.map((p) => [p.x - p0.x, p.y - p0.y]);
-  const xs = rel.map((p) => p[0]);
-  const ys = rel.map((p) => p[1]);
-  return { x: p0.x, y: p0.y, points: rel, width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) };
+  for (const [x, y] of rel) {
+    left = Math.min(left, x);
+    right = Math.max(right, x);
+    top = Math.min(top, y);
+    bottom = Math.max(bottom, y);
+  }
+  return { x: p0.x, y: p0.y, points: rel, width: right - left, height: bottom - top };
 }
 
-export const withPath = (el: El, pts: Pt[]): El => ({ ...el, ...pathGeometry(pts) });
+export const withPath = (el: El, pts: Pt[]): El => ({
+  ...el, ...pathGeometry(pts),
+  ...(el.breaks ? { breaks: pts.flatMap((p, i) => p.move ? [i] : []) } : {}),
+});
 
-export const absolutePoints = (el: El): Pt[] => (el.points as number[][]).map((p) => ({ x: el.x + p[0], y: el.y + p[1] }));
+export const absolutePoints = (el: El): Pt[] => {
+  const breaks = el.breaks && new Set<number>(el.breaks);
+  return (el.points as number[][]).map((p, i) => ({ x: el.x + p[0], y: el.y + p[1], ...(breaks?.has(i) ? { move: true } : {}) }));
+};
+
+/** The path as it appears on the board, after Excalidraw rotates it around its unrotated bounds. */
+export function scenePoints(el: El): Pt[] {
+  const pts = absolutePoints(el);
+  if (!el.angle) return pts;
+  const box = bbox({ ...el, angle: 0 });
+  const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+  const cos = Math.cos(el.angle), sin = Math.sin(el.angle);
+  for (const p of pts) {
+    const dx = p.x - cx, dy = p.y - cy;
+    p.x = cx + dx * cos - dy * sin;
+    p.y = cy + dx * sin + dy * cos;
+  }
+  return pts;
+}
 
 export function makeLine(spec: ElementSpec): El {
   const given = (spec.points ?? []).map(pt);
-  const pts = spec.closed ? [...given, given[0]] : given;
-  return convert({
+  const pts = spec.closed && !spec.breaks?.length ? [...given, given[0]] : given;
+  const [line] = convert({
     type: "line",
     id: spec.id,
     ...pathGeometry(pts),
     ...style(spec.closed ? spec : { ...spec, backgroundColor: "transparent" }),
     roundness: spec.rounded ? { type: 2 } : null,
-  })[0];
+  });
+  return spec.breaks?.length ? { ...line, breaks: spec.breaks, closeSegments: spec.closed } : line;
+}
+
+/** Excalidraw lines are continuous. Each visible stretch of a clipped plot needs its own stroke. */
+export function visibleSegments(elements: El[]): El[] {
+  if (!elements.some((el) => el.breaks?.length)) return elements;
+  const ids = new Set(elements.map((el) => el.id));
+  const expanded = elements.flatMap((el) => {
+    if (!el.breaks?.length) return [el];
+    const pts = scenePoints(el);
+    const starts: number[] = [0, ...el.breaks];
+    return starts.flatMap((start, i) => {
+      const part = pts.slice(start, starts[i + 1]);
+      if (part.length < 2) return [];
+      if (el.closeSegments) part.push(part[0]);
+      let id = el.id;
+      if (i) {
+        id = `${id}/segment-${i}`;
+        while (ids.has(id)) id += "_";
+        ids.add(id);
+      }
+      return [{ ...el, ...pathGeometry(part), id, angle: 0, breaks: undefined }];
+    });
+  });
+  return expanded.map((el, i) => ({ ...el, index: fractionalIndex(i) }));
 }
 
 export function makeFreedraw(spec: ElementSpec): El {
-  const pts = smooth((spec.points ?? []).map(pt));
+  const given = (spec.points ?? []).map(pt);
+  const starts = [0, ...(spec.breaks ?? [])];
+  const pts = starts.flatMap((start, i) => {
+    const part = smooth(given.slice(start, starts[i + 1]));
+    if (i && part.length) part[0] = { ...part[0], move: true };
+    return part;
+  });
   const base = makeLine({ ...spec, points: [spec.points![0], spec.points![1]], closed: false, rounded: false });
   const { startArrowhead: _s, endArrowhead: _e, startBinding: _sb, endBinding: _eb, ...rest } = base;
   return withPath({ ...rest, type: "freedraw", roundness: null, pressures: [], simulatePressure: true, lastCommittedPoint: null }, pts);
@@ -122,58 +178,9 @@ export const isPoint = (e: End): e is Pt => (e as El).type === undefined;
 
 export const center = (el: El): Pt => ({ x: el.x + el.width / 2, y: el.y + el.height / 2 });
 
-/** Point on an element's outline in the direction of `toward`, pushed out by `gap`. */
-function edgePoint(el: El, toward: Pt, gap: number): Pt {
-  const c = center(el);
-  const dx = toward.x - c.x;
-  const dy = toward.y - c.y;
-  const len = Math.hypot(dx, dy) || 1;
-  const a = Math.max(1, el.width / 2);
-  const b = Math.max(1, el.height / 2);
-  let k: number;
-  if (el.type === "ellipse") k = 1 / Math.sqrt((dx * dx) / (a * a) + (dy * dy) / (b * b));
-  else if (el.type === "diamond") k = 1 / (Math.abs(dx) / a + Math.abs(dy) / b);
-  else k = Math.min(a / Math.max(Math.abs(dx), 1e-6), b / Math.max(Math.abs(dy), 1e-6));
-  const g = gap / len;
-  return { x: c.x + dx * (k + g), y: c.y + dy * (k + g) };
+export function arrowCourse(from: End, to: End, via: Pt[] = [], rounded?: boolean): Pt[] {
+  return connection(from as ArrowEnd, to as ArrowEnd, via, rounded);
 }
-
-/** The path of an arrow. An attached end starts on the element's outline, facing the next point of the path. */
-export function arrowPath(from: End, to: End, via: Pt[] = []): Pt[] {
-  const aim = (e: End) => (isPoint(e) ? e : center(e));
-  const start = isPoint(from) ? from : edgePoint(from, via[0] ?? aim(to), ARROW_GAP);
-  const end = isPoint(to) ? to : edgePoint(to, via[via.length - 1] ?? aim(from), ARROW_GAP);
-  return [start, ...via, end];
-}
-
-/**
- * An arrow's course: its path, and when it is `rounded` with `via` points, a smooth curve through them.
- * Excalidraw's own rounding pulls a curve through few points into a hook at each one, so the curve is
- * drawn here, as many short straight pieces.
- */
-export function arrowCourse(from: End, to: End, via: Pt[], rounded?: boolean): Pt[] {
-  const path = arrowPath(from, to, via);
-  if (!rounded || !via.length) return path;
-  let pts: Pt[];
-  if (path.length === 3) {
-    // one point to pass through: a single even arc, the curve whose middle is that point
-    const [a, v, b] = path;
-    const c = { x: 2 * v.x - (a.x + b.x) / 2, y: 2 * v.y - (a.y + b.y) / 2 };
-    const n = Math.max(8, Math.ceil((Math.hypot(v.x - a.x, v.y - a.y) + Math.hypot(b.x - v.x, b.y - v.y)) / 12));
-    pts = Array.from({ length: n + 1 }, (_, k) => {
-      const t = k / n;
-      const u = 1 - t;
-      return { x: u * u * a.x + 2 * u * t * c.x + t * t * b.x, y: u * u * a.y + 2 * u * t * c.y + t * t * b.y };
-    });
-  } else pts = smooth(path, 12);
-  // Excalidraw sizes an arrowhead by the piece of line it sits on: keep the end pieces long enough to carry one
-  const [first, last] = [pts[0], pts[pts.length - 1]];
-  const far = (p: Pt, q: Pt) => Math.hypot(p.x - q.x, p.y - q.y) >= HEAD_ROOM;
-  return pts.filter((p, i) => i === 0 || i === pts.length - 1 || (far(p, first) && far(p, last)));
-}
-
-/** How long the end pieces of a curved arrow are kept, so its heads are drawn full size. */
-const HEAD_ROOM = 30;
 
 export function makeArrow(spec: ElementSpec, from: End, to: End): El[] {
   const path = arrowCourse(from, to, (spec.via ?? []).map(pt), spec.rounded);
@@ -233,33 +240,32 @@ export function makeMath(spec: ElementSpec, file: { fileId: string; width: numbe
 
 /** Halfway along a path, where an arrow's label sits. */
 export function pathMiddle(el: El): Pt {
-  const pts = absolutePoints(el);
-  if (pts.length % 2) return pts[(pts.length - 1) / 2];
-  const a = pts[pts.length / 2 - 1];
-  const b = pts[pts.length / 2];
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  return arrowLabelCenter(scenePoints(el));
 }
 
 export const centerOn = (el: El, c: Pt): El => ({ ...el, x: c.x - el.width / 2, y: c.y - el.height / 2 });
 
 export const translate = <T extends End>(e: T, dx: number, dy: number): T => ({ ...e, x: e.x + dx, y: e.y + dy });
 
-const isPath = (el: El) => el.type === "arrow" || el.type === "line" || el.type === "freedraw";
-
 export function bbox(el: El): Rect {
-  if (!isPath(el)) return { x: el.x, y: el.y, w: el.width, h: el.height };
-  const pts = absolutePoints(el);
-  const x = Math.min(...pts.map((p) => p.x));
-  const y = Math.min(...pts.map((p) => p.y));
-  return { x, y, w: Math.max(...pts.map((p) => p.x)) - x, h: Math.max(...pts.map((p) => p.y)) - y };
+  const [x, y, right, bottom] = getCommonBounds([el as any]);
+  return { x, y, w: right - x, h: bottom - y };
 }
 
 /** Fractional indices in creation order (a0..az, then b00..bzz), so Excalidraw keeps our stacking. */
 const DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 export function fractionalIndex(i: number): string {
-  if (i < 62) return `a${DIGITS[i]}`;
-  const j = i - 62;
-  return `b${DIGITS[Math.floor(j / 62) % 62]}${DIGITS[j % 62]}`;
+  let width = 1;
+  while (i >= DIGITS.length ** width) {
+    i -= DIGITS.length ** width;
+    width++;
+  }
+  let digits = "";
+  for (let j = 0; j < width; j++) {
+    digits = DIGITS[i % DIGITS.length] + digits;
+    i = Math.floor(i / DIGITS.length);
+  }
+  return String.fromCharCode(96 + width) + digits;
 }
 
 /**
@@ -277,7 +283,7 @@ export function withBindings(els: El[]): El[] {
     if (e.type === "text") add(e.containerId, e.id, "text");
     if (e.type === "arrow") {
       add(e.startBinding?.elementId, e.id, "arrow");
-      add(e.endBinding?.elementId, e.id, "arrow");
+      if (e.endBinding?.elementId !== e.startBinding?.elementId) add(e.endBinding?.elementId, e.id, "arrow");
     }
   }
   return els.map((e) => {

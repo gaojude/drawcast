@@ -6,10 +6,12 @@
  * half on top of each other, a label too long for its shape). Whoever wrote the script usually cannot see
  * the picture, so every message says where the problem is and what would fix it.
  */
-import { existsSync } from "node:fs";
+import { statSync } from "node:fs";
 import path from "node:path";
 import { findPhrase, tokens, widthEm } from "../shared/text.ts";
-import { Plots, isPlotRef, parseFunction, plotPoints } from "../shared/expr.ts";
+import { Plots, isPlotRef, type PlotRef } from "../shared/expr.ts";
+import { partialPolyline, type Pt } from "../player/motion.ts";
+import { arrowCourse, arrowLabelCenter, type ArrowEnd } from "../shared/arrows.ts";
 import { DEFAULT_CANVAS, type ElementSpec, type Formula, PALETTE, type Script, type TextAlign, alignOffset } from "../shared/types.ts";
 
 export interface Report {
@@ -29,13 +31,16 @@ interface Live {
   type: string;
   /** null for paths, whose extent is their points */
   box: Box | null;
+  angle?: number;
   /** text, math: which point of the box `x` is */
   align?: TextAlign;
   fontSize?: number;
   /** added with a label, which `update` may then change */
   labelled?: boolean;
+  /** A line or pen stroke, in canvas coordinates, for moves along its path. */
+  points?: Pt[];
   /** an arrow: what it runs between, to tell where it goes as the things at its ends move */
-  arrow?: { from: string | [number, number]; to: string | [number, number]; via: [number, number][] };
+  arrow?: { from: string | [number, number]; to: string | [number, number]; via: Pt[]; rounded?: boolean };
 }
 
 type P = { x: number; y: number };
@@ -70,7 +75,14 @@ function insideLength(a: P, b: P, box: Box): number {
 }
 
 const contains = (box: Box, p: P) => p.x >= box.x && p.x <= box.x + box.w && p.y >= box.y && p.y <= box.y + box.h;
-const middleOf = (b: Box): P => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
+
+function rotatedBox(b: Box, type: string, angle = 0): Box {
+  if (!angle) return b;
+  const c = Math.abs(Math.cos(angle)), s = Math.abs(Math.sin(angle));
+  const extent = type === "ellipse" ? Math.hypot : type === "diamond" ? Math.max : (a: number, b: number) => a + b;
+  const w = extent(c * b.w, s * b.h), h = extent(s * b.w, c * b.h);
+  return { x: b.x + (b.w - w) / 2, y: b.y + (b.h - h) / 2, w, h };
+}
 
 const SHAPES = ["rectangle", "ellipse", "diamond"];
 const TYPES = [...SHAPES, "text", "math", "arrow", "line", "freedraw", "image"];
@@ -103,6 +115,7 @@ const COLOR = /^(transparent|#[0-9a-f]{3}|#[0-9a-f]{6}|#[0-9a-f]{8})$/i;
 const LINE_HEIGHT = 1.25;
 
 const isNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+const isColor = (v: unknown): v is string => typeof v === "string" && COLOR.test(v);
 const isPoint = (v: unknown): v is [number, number] => Array.isArray(v) && v.length === 2 && v.every(isNumber);
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const quote = (v: unknown) => JSON.stringify(v);
@@ -110,7 +123,7 @@ const span = (b: Box) => `x ${Math.round(b.x)} to ${Math.round(b.x + b.w)}, y ${
 
 function textBox(text: string, fontSize: number): { w: number; h: number } {
   const lines = text.split("\n");
-  return { w: Math.max(...lines.map(widthEm)) * fontSize, h: lines.length * fontSize * LINE_HEIGHT };
+  return { w: lines.reduce((width, line) => Math.max(width, widthEm(line)), 0) * fontSize, h: lines.length * fontSize * LINE_HEIGHT };
 }
 
 /** How much of a shape's width a label can use before it wraps. */
@@ -173,16 +186,21 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
   const script = input as Partial<Script> & Record<string, unknown>;
   unknownKeys("script", script, ["drawcast", "title", "canvas", "voice", "speed", "captions", "cover", "steps"]);
   if (script.drawcast !== 1) fail("script", `"drawcast" must be 1, the version of the format (got ${quote(script.drawcast)}).`);
+  if (script.title !== undefined && typeof script.title !== "string") fail("script", `"title" must be text.`);
   if (script.speed !== undefined && !(isNumber(script.speed) && script.speed >= 0.5 && script.speed <= 2)) fail("script", `"speed" must be between 0.5 and 2.`);
   if (script.captions !== undefined && typeof script.captions !== "boolean") fail("script", `"captions" must be true or false.`);
-  if (script.voice !== undefined && typeof script.voice !== "string") fail("voice", `must be a voice name from "drawcast voices". A voice made from a recording is no longer supported.`);
+  if (script.voice !== undefined && (typeof script.voice !== "string" || !script.voice.trim())) fail("voice", `must be a voice name from "drawcast voices". A voice made from a recording is no longer supported.`);
 
   const canvas = { ...DEFAULT_CANVAS, ...(isObject(script.canvas) ? script.canvas : {}) };
   if (script.canvas !== undefined) {
     if (!isObject(script.canvas)) fail("canvas", "must be an object.");
     else unknownKeys("canvas", script.canvas, ["width", "height", "background"]);
-    if (![canvas.width, canvas.height].every((n) => isNumber(n) && n >= 100 && n <= 8000)) fail("canvas", "width and height must be numbers between 100 and 8000.");
-    if (!COLOR.test(String(canvas.background))) fail("canvas", `background must be a hex colour like "#ffffff".`);
+    if (![canvas.width, canvas.height].every((n) => isNumber(n) && n >= 100 && n <= 8000)) {
+      fail("canvas", "width and height must be numbers between 100 and 8000.");
+      canvas.width = DEFAULT_CANVAS.width;
+      canvas.height = DEFAULT_CANVAS.height;
+    }
+    if (!isColor(canvas.background)) fail("canvas", `background must be a hex colour like "#ffffff".`);
   }
   if (!Array.isArray(script.steps) || !script.steps.length) return { errors: [...errors, `script: "steps" must be a list with at least one step.`], warnings };
 
@@ -208,7 +226,7 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
 
   const checkStyle = (where: string, el: Record<string, unknown>) => {
     for (const key of ["strokeColor", "backgroundColor"]) {
-      if (el[key] !== undefined && !COLOR.test(String(el[key]))) fail(where, `${key} must be a hex colour like "#1971c2" or "transparent" (got ${quote(el[key])}).`);
+      if (el[key] !== undefined && !isColor(el[key])) fail(where, `${key} must be a hex colour like "#1971c2" or "transparent" (got ${quote(el[key])}).`);
     }
     for (const [key, allowed] of Object.entries(ENUMS)) {
       if (el[key] !== undefined && !allowed.includes(el[key])) fail(where, `${key} must be one of ${allowed.map(quote).join(", ")} (got ${quote(el[key])}).`);
@@ -226,11 +244,12 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
     if (typeof ref !== "string") return fail(where, `${name} must be an element id or a point [x, y].`), false;
     const target = live.get(ref);
     if (!target) return fail(where, `${name} refers to ${quote(ref)}, which is not on the canvas at this point (never added, or already removed).`), false;
-    if (attachable && !target.box) return fail(where, `${name} refers to ${quote(ref)}, a ${target.type}; arrows attach to shapes, text and images. Give a point [x, y] instead.`), false;
+    if (attachable && PATHS.includes(target.type)) return fail(where, `${name} refers to ${quote(ref)}, a ${target.type}; arrows attach to shapes, text, math and images. Give a point [x, y] instead.`), false;
     return true;
   };
 
-  const place = (where: string, id: string, type: string, box: Box | null, anchor: Omit<Live, "type" | "box"> = {}) => {
+  const place = (where: string, id: string, type: string, base: Box | null, anchor: Omit<Live, "type" | "box"> = {}) => {
+    const box = base && rotatedBox(base, type, anchor.angle);
     if (box && !movesCamera) {
       if (box.x < 0 || box.y < 0 || box.x + box.w > canvas.width || box.y + box.h > canvas.height) {
         warn(where, `extends past the canvas (${canvas.width} x ${canvas.height}); it spans ${span(box)}.`);
@@ -243,22 +262,26 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
       for (const [otherId, other] of live) {
         if (!other.box || other.type === "line") continue;
         const a = box;
-        const o = other.box;
+        const o = rotatedBox(other.box, other.type, other.angle);
         const overlaps = a.x < o.x + o.w && o.x < a.x + a.w && a.y < o.y + o.h && o.y < a.y + a.h;
         const inside = (p: Box, q: Box) => p.x >= q.x && p.y >= q.y && p.x + p.w <= q.x + q.w && p.y + p.h <= q.y + q.h;
         if (overlaps && !inside(a, o) && !inside(o, a)) warn(where, `partly overlaps ${quote(otherId)} (${span(o)}); this one spans ${span(a)}. Separate them, or put one fully inside the other.`);
       }
     }
-    live.set(id, { type, box, ...anchor });
+    live.set(id, { type, box: base, ...anchor });
   };
 
   const addElement = (where: string, value: unknown) => {
     if (!isObject(value)) return fail(where, "an element must be an object.");
     let el = value as Record<string, unknown> & Partial<ElementSpec>;
-    const type = String(el.type);
-    if (!TYPES.includes(type)) return fail(where, `"type" must be one of ${TYPES.join(", ")} (got ${quote(el.type)}).`);
+    const type = el.type;
+    if (typeof type !== "string" || !TYPES.includes(type)) return fail(where, `"type" must be one of ${TYPES.join(", ")} (got ${quote(el.type)}).`);
     unknownKeys(where, el, ["id", "type", ...ELEMENT_KEYS[type], ...STYLE, "enter"]);
     checkStyle(where, el);
+    for (const key of ["rounded", "closed"]) {
+      if (el[key] !== undefined && typeof el[key] !== "boolean") fail(where, `${key} must be true or false.`);
+    }
+    if (el.label !== undefined && typeof el.label !== "string") fail(where, `"label" must be text.`);
     if (typeof el.id !== "string" || !el.id) return fail(where, `needs an "id".`);
     if (used.has(el.id)) fail(where, `the id ${quote(el.id)} is already used; every element needs its own.`);
     used.add(el.id);
@@ -270,7 +293,7 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
       return !missing.length;
     };
     let box: Box | null = null;
-    let anchor: Pick<Live, "align" | "fontSize"> = {};
+    let anchor: Pick<Live, "align" | "fontSize" | "points"> = {};
     plainText(where, "label", el.label);
 
     if (el.on !== undefined) {
@@ -285,7 +308,7 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
       if (el.width! <= 0 || el.height! <= 0) return fail(where, "width and height must be positive.");
       box = { x: el.x!, y: el.y!, w: el.width!, h: el.height! };
       if (typeof el.label === "string" && el.label) {
-        const fontSize = el.fontSize ?? 20;
+        const fontSize = isNumber(el.fontSize) ? el.fontSize : 20;
         const room = Math.max(10, el.width! * LABEL_ROOM[type] - 20);
         const lines = el.label.split("\n").reduce((n, line) => n + Math.max(1, Math.ceil((widthEm(line) * fontSize) / room)), 0);
         if (lines * fontSize * LINE_HEIGHT + 12 > el.height! * (type === "rectangle" ? 1 : 0.75)) {
@@ -296,8 +319,9 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
       if (typeof el.text !== "string" || !el.text.trim()) return fail(where, `needs "text".`);
       if (!need(["x", "y"])) return;
       plainText(where, "text", el.text);
-      const size = textBox(el.text, el.fontSize ?? 20);
-      anchor = { align: el.textAlign, fontSize: el.fontSize ?? 20 };
+      const fontSize = isNumber(el.fontSize) ? el.fontSize : 20;
+      const size = textBox(el.text, fontSize);
+      anchor = { align: el.textAlign, fontSize };
       box = { x: el.x! - alignOffset(size.w, el.textAlign), y: el.y!, ...size };
     } else if (type === "math") {
       const fontSize = isNumber(el.fontSize) ? el.fontSize : 20;
@@ -308,7 +332,14 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
     } else if (type === "image") {
       if (typeof el.src !== "string") return fail(where, `needs "src", the path of an image file.`);
       if (!IMAGE_TYPES.includes(path.extname(el.src).toLowerCase())) return fail(where, `src must be one of ${IMAGE_TYPES.join(", ")}.`);
-      if (!existsSync(path.resolve(baseDir, el.src))) return fail(where, `the image ${quote(el.src)} was not found (paths are relative to the script).`);
+      try {
+        if (!statSync(path.resolve(baseDir, el.src)).isFile()) return fail(where, `the image ${quote(el.src)} must be a file.`);
+      } catch {
+        return fail(where, `the image ${quote(el.src)} was not found or could not be accessed (paths are relative to the script).`);
+      }
+      for (const key of ["width", "height"] as const) {
+        if (el[key] !== undefined && !(isNumber(el[key]) && el[key] > 0)) fail(where, `${key} must be a positive number.`);
+      }
       if (!need(["x", "y"])) return;
       // without the file's proportions the height is unknown; overlap checks need both
       if (isNumber(el.width) && isNumber(el.height)) box = { x: el.x!, y: el.y!, w: el.width, h: el.height };
@@ -318,21 +349,22 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
       if (el.via !== undefined && !(Array.isArray(el.via) && el.via.every((p) => isPoint(p) || isPlotRef(p)))) fail(where, `"via" must be a list of points [[x, y], ...].`);
       else if (ok.every(Boolean)) {
         const end = (r: unknown) => (typeof r === "string" ? r : anyPoint(where, "an end", r) ?? [0, 0]);
-        const arrow = { from: end(el.from), to: end(el.to), via: ((el.via ?? []) as unknown[]).map((p) => anyPoint(where, "via", p) ?? [0, 0]) as [number, number][] };
+        const arrow = { from: end(el.from), to: end(el.to), via: pathPoints(where, "via", el.via ?? []), rounded: el.rounded === true };
         place(where, id, type, null, { labelled: typeof el.label === "string" && !!el.label, arrow });
         crossings(where, id);
         // a label sits on the middle of the arrow: on a short one it covers the shaft and the head
         const path = course(arrow);
         if (path && typeof el.label === "string" && el.label) {
-          const insideEnds = [arrow.from, arrow.to].reduce((n, ref, i) => {
-            const b = typeof ref === "string" ? live.get(ref)?.box : null;
-            const seg = i === 0 ? [path[0], path[1]] : [path[path.length - 2], path[path.length - 1]];
-            return n + (b ? insideLength(seg[0], seg[1], b) : 0);
-          }, 0);
-          const visible = path.slice(1).reduce((n, p, i) => n + Math.hypot(p.x - path[i].x, p.y - path[i].y), 0) - insideEnds;
-          const labelWidth = Math.max(...el.label.split("\n").map(widthEm)) * (el.fontSize ?? 16);
-          if (visible < labelWidth + 50) {
-            warn(where, `the label ${quote(el.label)} is about ${Math.round(labelWidth)} units wide, on an arrow about ${Math.round(visible)} long: it will cover the arrow. Move the ends apart, or drop the label and put a text element beside the arrow.`);
+          const center = arrowLabelCenter(path);
+          const { w, h } = textBox(el.label, isNumber(el.fontSize) ? el.fontSize : 16);
+          const label = { x: center.x - w / 2, y: center.y - h / 2, w, h };
+          let length = 0, covered = 0;
+          for (let i = 1; i < path.length; i++) {
+            length += Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y);
+            covered += insideLength(path[i - 1], path[i], label);
+          }
+          if (length - covered < 50) {
+            warn(where, `the label ${quote(el.label)} spans about ${Math.round(covered)} of the arrow's ${Math.round(length)} units: it will cover the arrow. Move the ends apart, or put the label beside the arrow.`);
           }
         }
         return;
@@ -340,33 +372,46 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
     } else if (type === "line" && el.fn !== undefined) {
       if (typeof el.fn !== "string") return fail(where, `"fn" must be a function of x, such as "x^2 / 4".`);
       if (!need(["x", "y", "width", "height"])) return;
+      if (el.width! <= 0 || el.height! <= 0) return fail(where, "width and height must be positive.");
+      if (el.points !== undefined) fail(where, `a plot uses "fn" to generate its points. Give either "fn" or "points".`);
       const pair = (v: unknown) => Array.isArray(v) && v.length === 2 && v.every(isNumber) && v[0] < v[1];
       if (!pair(el.domain)) return fail(where, `a plot needs "domain": [from, to], the x values its box spans, smaller first.`);
       if (el.range !== undefined && !pair(el.range)) return fail(where, `"range" must be [bottom, top], the y values its box spans, smaller first.`);
       try {
-        const points = plotPoints(parseFunction(el.fn), { x: el.x!, y: el.y!, width: el.width!, height: el.height! }, el.domain!, el.range);
-        if (points.length < 2) return fail(where, `"${el.fn}" has no values to draw across ${quote(el.domain)}${el.range ? ` within ${quote(el.range)}` : ""}.`);
+        const segments = plots.add({ ...el, angle: isNumber(el.angle) ? el.angle : 0 } as ElementSpec);
+        if (!segments.length) return fail(where, `"${el.fn}" has no values to draw across ${quote(el.domain)}${el.range ? ` within ${quote(el.range)}` : ""}.`);
+        anchor.points = segments.flatMap((segment, i) => segment.map(([x, y], j) => ({ x, y, move: i > 0 && j === 0 })));
       } catch (e) {
         return fail(where, `"fn" could not be read: ${(e as Error).message}. Write it as on paper: x^2 / 4, 2 sin(x), exp(-x^2), sqrt(x) + 1.`);
       }
-      plots.add(el as ElementSpec);
       box = { x: el.x!, y: el.y!, w: el.width!, h: el.height! };
     } else {
       const plotOnly = ["x", "y", "width", "height", "domain", "range"].filter((k) => el[k] !== undefined);
       if (plotOnly.length) fail(where, `${plotOnly.join(", ")} are for a plot, a line with "fn". A line is placed by its "points".`);
       const min = el.closed ? 3 : 2;
       if (!Array.isArray(el.points) || el.points.length < min || !el.points.every((p) => isPoint(p) || isPlotRef(p))) return fail(where, `needs "points": at least ${min} points [[x, y], ...] in canvas coordinates.`);
-      for (const p of el.points) if (isPlotRef(p)) plotPoint(where, "a point", p);
+      anchor.points = pathPoints(where, "a point", el.points);
+      if (el.closed && anchor.points.length) anchor.points.push(anchor.points[0]);
     }
-    place(where, id, type, box, { ...anchor, labelled: typeof el.label === "string" && !!el.label });
+    place(where, id, type, box, { ...anchor, angle: isNumber(el.angle) ? el.angle : 0, labelled: typeof el.label === "string" && !!el.label });
   };
 
-  /** An arrow's course as it stands: from the middle of what it starts at, through its `via` points, to the middle of what it ends at. */
+  const pathPoints = (where: string, name: string, refs: unknown[]): Pt[] => {
+    const valid = refs.map((ref) => anyPoint(where, name, ref));
+    return valid.every(Boolean) ? plots.path(refs as ([number, number] | PlotRef)[]) : [];
+  };
+
+  /** Resolve the arrow using the same outline and curve geometry the player draws. */
   const course = (arrow: NonNullable<Live["arrow"]>): P[] | null => {
-    const end = (ref: string | [number, number]) => (Array.isArray(ref) ? { x: ref[0], y: ref[1] } : live.get(ref)?.box ? middleOf(live.get(ref)!.box!) : null);
+    const end = (ref: string | [number, number]): ArrowEnd | null => {
+      if (Array.isArray(ref)) return { x: ref[0], y: ref[1] };
+      const el = live.get(ref);
+      if (!el?.box) return null;
+      return { type: el.type, angle: el.angle, x: el.box.x, y: el.box.y, width: el.box.w, height: el.box.h };
+    };
     const from = end(arrow.from);
     const to = end(arrow.to);
-    return from && to ? [from, ...arrow.via.map(([x, y]) => ({ x, y })), to] : null;
+    return from && to ? arrowCourse(from, to, arrow.via, arrow.rounded) : null;
   };
 
   /** Warns when a new arrow crosses an arrow already there, or runs through something that is not one of its ends. */
@@ -450,6 +495,7 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
       } else if (raw.at !== undefined) fail(where, `"at" must be a phrase from "say" or a number of seconds.`);
 
       if (raw.add !== undefined) {
+        if (Array.isArray(raw.add) && !raw.add.length) fail(where, `"add" needs at least one element.`);
         for (const el of Array.isArray(raw.add) ? raw.add : [raw.add]) addElement(where, el);
       } else if (raw.update !== undefined) {
         const u = raw.update;
@@ -458,29 +504,33 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
         checkStyle(where, u);
         plainText(where, "text", u.text);
         const ids = Array.isArray(u.id) ? u.id : [u.id];
-        for (const key of ["x", "y", "dx", "dy", "width", "height"]) if (u[key] !== undefined && !isNumber(u[key])) fail(where, `${key} must be a number.`);
+        if (!ids.length) fail(where, `"update" needs at least one element id.`);
+        for (const key of ["x", "y", "dx", "dy"]) if (u[key] !== undefined && !isNumber(u[key])) fail(where, `${key} must be a number.`);
+        for (const key of ["width", "height"]) if (u[key] !== undefined && !(isNumber(u[key]) && u[key] > 0)) fail(where, `${key} must be a positive number.`);
+        for (const key of ["text", "label"]) if (u[key] !== undefined && typeof u[key] !== "string") fail(where, `"${key}" must be text.`);
         if (u.label !== undefined) plainText(where, "label", u.label);
         /** with `along`: where the travel ends, which is where each element's middle is afterwards */
         let arrival: P | null = null;
         if (u.along !== undefined) {
+          let route: Pt[] | null = null;
           if (Array.isArray(u.along) && u.along.length >= 2 && u.along.every((p) => isPoint(p) || isPlotRef(p))) {
-            const last = anyPoint(where, "along", u.along.at(-1));
-            arrival = last && { x: last[0], y: last[1] };
+            route = pathPoints(where, "along", u.along);
           }
           else if (typeof u.along === "string" && checkRef(where, "along", u.along)) {
             const path = live.get(u.along)!;
             if (!PATHS.includes(path.type)) fail(where, `"along" names ${quote(u.along)}, a ${path.type}; it must be an arrow or a line to travel along, or points [[x, y], ...].`);
-            else if (path.arrow) arrival = course(path.arrow)?.at(-1) ?? null;
+            else route = path.arrow ? course(path.arrow) : path.points ?? null;
           } else if (typeof u.along !== "string") fail(where, `"along" must be the id of an arrow or line, or at least two points [[x, y], ...].`);
           if (u.span !== undefined && !(Array.isArray(u.span) && u.span.length === 2 && u.span.every(isNumber) && 0 <= u.span[0] && u.span[0] < u.span[1] && u.span[1] <= 1)) {
             fail(where, `"span" must be [from, to], fractions of the path between 0 and 1, smaller first.`);
           }
+          if (route?.length) arrival = partialPolyline(route, Array.isArray(u.span) && isNumber(u.span[1]) ? u.span[1] : 1).at(-1)!;
           if (["x", "y", "dx", "dy"].some((k) => u[k] !== undefined)) fail(where, `"along" says where the element ends up; leave out x, y, dx and dy.`);
         } else if (u.span !== undefined) fail(where, `"span" only goes with "along".`);
         for (const target of ids) {
           if (!checkRef(where, "id", typeof target === "string" ? target : undefined)) continue;
           const el = live.get(target as string)!;
-          if (!el.box && ["x", "y", "width", "height"].some((k) => u[k] !== undefined) && !["text", "image"].includes(el.type)) {
+          if (PATHS.includes(el.type) && ["x", "y", "width", "height"].some((k) => u[k] !== undefined)) {
             fail(where, `${quote(target)} is a ${el.type}; move it with dx and dy (x, y, width and height are for shapes, text and images).`);
           }
           if (u.text !== undefined && el.type !== "text") {
@@ -494,39 +544,57 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
           if (u.fontSize !== undefined && !["text", "math"].includes(el.type)) {
             fail(where, `"fontSize" changes the size of a text or math element; ${quote(target)} is a ${el.type}${SHAPES.includes(el.type) ? ", which changes size with width and height" : ""}.`);
           }
-          // text and formulas scale with their size, about the point they were placed by
-          if (isNumber(u.fontSize) && el.box && el.fontSize && u.tex === undefined && u.text === undefined) {
-            const k = u.fontSize / el.fontSize;
-            const ax = el.box.x + alignOffset(el.box.w, el.align);
-            el.box = { x: ax - alignOffset(el.box.w * k, el.align), y: el.box.y, w: el.box.w * k, h: el.box.h * k };
-            el.fontSize = u.fontSize;
-          }
           if (u.along !== undefined && PATHS.includes(el.type)) fail(where, `${quote(target)} is a ${el.type}, which cannot travel; use a shape, text or image. To send something along an arrow, use "send".`);
-          const formula = el.type === "math" && u.tex !== undefined ? formulaBox(where, u.tex, el.fontSize ?? 20) : null;
-          if (el.box && arrival) {
-            el.box = { ...el.box, x: arrival.x - el.box.w / 2, y: arrival.y - el.box.h / 2 };
-          } else if (el.box) {
+          const dx = isNumber(u.dx) ? u.dx : 0;
+          const dy = isNumber(u.dy) ? u.dy : 0;
+          if (isNumber(u.angle)) el.angle = u.angle;
+          plots.move(target as string, dx, dy, isNumber(u.angle) ? u.angle : undefined);
+          if (el.arrow && (dx || dy)) {
+            const path = course(el.arrow);
+            if (path) el.arrow = { from: [path[0].x + dx, path[0].y + dy], to: [path.at(-1)!.x + dx, path.at(-1)!.y + dy], via: path.slice(1, -1).map((p) => ({ x: p.x + dx, y: p.y + dy })) };
+          }
+          if (el.points && (dx || dy)) el.points = el.points.map((p) => ({ ...p, x: p.x + dx, y: p.y + dy }));
+          const fontSize = isNumber(u.fontSize) ? u.fontSize : el.fontSize;
+          const formula = el.type === "math" && u.tex !== undefined ? formulaBox(where, u.tex, fontSize ?? 20) : null;
+          if (el.box) {
             const b = el.box;
-            const w = formula?.w ?? (isNumber(u.width) ? u.width : b.w);
+            const text = el.type === "text" && typeof u.text === "string" ? textBox(u.text, fontSize ?? 20) : null;
+            const scale = el.fontSize && fontSize ? fontSize / el.fontSize : 1;
+            const w = formula?.w ?? text?.w ?? (isNumber(u.width) ? u.width : b.w * scale);
+            const h = formula?.h ?? text?.h ?? (isNumber(u.height) ? u.height : b.h * scale);
             // `x` is the point the element was placed by, which for centred text is its middle
             const x = isNumber(u.x) ? u.x : b.x + alignOffset(b.w, el.align);
             el.box = {
-              x: x - alignOffset(w, el.align) + (isNumber(u.dx) ? u.dx : 0),
-              y: (isNumber(u.y) ? u.y : b.y) + (isNumber(u.dy) ? u.dy : 0),
-              w,
-              h: formula?.h ?? (isNumber(u.height) ? u.height : b.h),
+              x: arrival ? arrival.x - w / 2 : x - alignOffset(w, el.align) + dx,
+              y: arrival ? arrival.y - h / 2 : (isNumber(u.y) ? u.y : b.y) + dy,
+              w, h,
             };
+            if (el.fontSize !== undefined) el.fontSize = fontSize;
           }
         }
       } else if (raw.remove !== undefined) {
         const ids = Array.isArray(raw.remove) ? raw.remove : [raw.remove];
-        for (const target of ids) if (checkRef(where, "remove", typeof target === "string" ? target : undefined)) live.delete(target as string);
+        if (!ids.length) fail(where, `"remove" needs at least one element id.`);
+        for (const target of ids) {
+          if (typeof target === "string" && checkRef(where, "remove", target)) {
+            for (const { arrow } of live.values()) {
+              if (!arrow || (arrow.from !== target && arrow.to !== target)) continue;
+              const path = course(arrow);
+              if (!path) continue;
+              if (arrow.from === target) arrow.from = [path[0].x, path[0].y];
+              if (arrow.to === target) arrow.to = [path.at(-1)!.x, path.at(-1)!.y];
+            }
+            live.delete(target);
+            plots.remove(target);
+          } else if (typeof target !== "string") fail(where, `"remove" needs an element id.`);
+        }
       } else if (raw.camera !== undefined) {
         const c = raw.camera;
         if (c === "reset") return;
         if (!isObject(c)) return fail(where, `"camera" must be "reset", { x, y, width } or { fit }.`);
         if (c.fit !== undefined) {
           unknownKeys(where, c, ["fit", "padding"]);
+          if (c.padding !== undefined && !(isNumber(c.padding) && c.padding >= 0)) fail(where, `"padding" must be a nonnegative number.`);
           if (c.fit !== "all" && !(Array.isArray(c.fit) && c.fit.length)) return fail(where, `"fit" must be "all" or a list of element ids.`);
           if (Array.isArray(c.fit)) for (const target of c.fit) checkRef(where, "fit", typeof target === "string" ? target : undefined);
         } else {
@@ -539,7 +607,7 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
         if (isObject(s)) {
           unknownKeys(where, s, ["along", "color", "reverse"]);
           if (s.reverse !== undefined && typeof s.reverse !== "boolean") fail(where, `"reverse" must be true or false.`);
-          if (s.color !== undefined && !(Object.keys(PALETTE).includes(String(s.color)) || COLOR.test(String(s.color)))) fail(where, `"color" must be a colour name (${Object.keys(PALETTE).join(", ")}) or a hex colour.`);
+          if (s.color !== undefined && !(typeof s.color === "string" && (Object.hasOwn(PALETTE, s.color) || isColor(s.color)))) fail(where, `"color" must be a colour name (${Object.keys(PALETTE).join(", ")}) or a hex colour.`);
         }
         const ids = Array.isArray(spec.along) ? spec.along : [spec.along];
         if (!ids.length) fail(where, `"send" needs the id of an arrow or line, or a list of them.`);
@@ -550,6 +618,7 @@ export async function check(input: unknown, baseDir: string): Promise<Report> {
         }
       } else if (raw.pulse !== undefined) {
         const ids = Array.isArray(raw.pulse) ? raw.pulse : [raw.pulse];
+        if (!ids.length) fail(where, `"pulse" needs at least one element id.`);
         for (const target of ids) checkRef(where, "pulse", typeof target === "string" ? target : undefined);
       } else checkRef(where, "point", raw.point);
     });

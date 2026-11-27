@@ -7,14 +7,15 @@
  * program that turns text into a WAV file.
  */
 import { spawn } from "node:child_process";
-import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { existsSync, statSync } from "node:fs";
+import { mkdir, readFile, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { cacheDir } from "../paths.ts";
 import { isCjk } from "../shared/text.ts";
+import { writeFileAtomic } from "../shared/files.ts";
 import { EDGE_PREFIX, EDGE_VOICES, openEdgeVoice } from "./edge.ts";
 import { type ModelFiles, ensureModels } from "./models.ts";
 import { normalize } from "./normalize.ts";
@@ -27,7 +28,7 @@ export interface Voice {
   /** Identifies the voice and its settings; audio is cached under it. */
   key: string;
   /** Gets ready to speak (loads the model). Returns the function that says one sentence. */
-  open(): Promise<(sentence: string) => Promise<Audio>>;
+  open(signal?: AbortSignal): Promise<(sentence: string) => Promise<Audio>>;
   /** How many sentences it can be asked for at once. Left out, one. */
   parallel?: number;
   /** The voice that says the whole script instead if this one cannot (no edge-tts, no connection). */
@@ -73,9 +74,27 @@ const sha = (...parts: string[]) => parts.reduce((h, p) => h.update(p).update("\
 /** The model's own speed is quick for narration, in English most of all. */
 const PACE = { zh: 1, en: 0.9 };
 /** Changed whenever the text is turned into tokens differently, so that cached speech is made again. */
-const TOKENS = "tokens-1";
+const TOKENS = "tokens-2";
 /** The model takes about 510 tokens at a time. A sentence is far shorter unless it has no commas at all. */
 const MAX_TOKENS = 480;
+
+/** Direct-token input bypasses the engine's text splitter, and oversized input exits the process. */
+export function tokenBatches(tokens: string[]): string[][] {
+  const batches: string[][] = [];
+  for (let start = 0; start < tokens.length; ) {
+    let end = Math.min(start + MAX_TOKENS, tokens.length);
+    if (end < tokens.length) {
+      // Spaces separate English words, and a tone number ends each Chinese syllable.
+      let boundary = end;
+      while (boundary > start && !/^[ ,.;?!1-5]$/.test(tokens[boundary - 1])) boundary--;
+      if (boundary > start) end = boundary;
+    }
+    const batch = tokens.slice(start, end);
+    if (batch.some((token) => /[^,.;?! ]/.test(token))) batches.push(batch);
+    start = end;
+  }
+  return batches;
+}
 
 async function dictionaries(model: ModelFiles): Promise<Dictionaries> {
   const english = parseDictionary(await readFile(model.english, "utf8"));
@@ -85,6 +104,15 @@ async function dictionaries(model: ModelFiles): Promise<Dictionaries> {
   english.set("a", ["ɐ"]);
   english.set("the", ["ð", "ə"]);
   return { english, chinese: parseDictionary(await readFile(model.chinese, "utf8")) };
+}
+
+/** An inferred pronunciation belongs to this sentence, so other cached sentences cannot affect it. */
+export function speechTokens(text: string, dict: Dictionaries): string[] {
+  const normalized = normalize(text, { get: (word) => dict.english.get(word)?.join(" ") });
+  return toTokens(normalized.text, {
+    chinese: dict.chinese,
+    english: { get: (word) => normalized.entries.get(word)?.split(" ") ?? dict.english.get(word) },
+  });
 }
 
 /**
@@ -105,9 +133,7 @@ export async function mixSpeakers(source: string, target: string, speakers: stri
     return [speaker, of(speaker).map((v, i) => v * (1 - share) + added[i] * share)] as const;
   });
   for (const [speaker, table] of mixed) of(speaker).set(table);
-  // write beside the target and rename, so an interrupted write is never mistaken for the finished file
-  await writeFile(`${target}.part`, Buffer.from(floats.buffer));
-  await rename(`${target}.part`, target);
+  await writeFileAtomic(target, Buffer.from(floats.buffer));
 }
 
 const MIXES: Record<string, [speaker: string, share: number]> = Object.fromEntries(Object.values(BUILT_IN).flatMap((v) => (v.mix ? [[v.speaker, v.mix]] : [])));
@@ -115,7 +141,7 @@ const MIXES: Record<string, [speaker: string, share: number]> = Object.fromEntri
 /** The speakers file with the built-in mixes in it, made the first time it is needed. */
 async function mixedSpeakers(model: ModelFiles): Promise<string> {
   const target = path.join(path.dirname(model.voices), `voices-${sha(JSON.stringify(MIXES))}.bin`);
-  if (!existsSync(target)) await mixSpeakers(model.voices, target, SPEAKERS, MIXES);
+  if (statSync(target, { throwIfNoEntry: false })?.size !== statSync(model.voices).size) await mixSpeakers(model.voices, target, SPEAKERS, MIXES);
   return target;
 }
 
@@ -127,16 +153,10 @@ function kokoro(name: string, speaker: string, mix: BuiltIn["mix"], log: (line: 
     // by the one model. On a 22-thread laptop that halves the time (28 s to 13 s for 74 s of speech).
     // Past four there is nothing more to gain, and each sentence in flight has its own working memory.
     parallel: Math.max(1, Math.min(4, Math.floor(os.availableParallelism() / 4))),
-    async open() {
-      const model = await ensureModels(log);
+    async open(signal) {
+      const model = await ensureModels(log, signal);
       const dict = await dictionaries(model);
-      const lexicon = { get: (word: string) => dict.english.get(word)?.join(" ") };
-      const tokensOf = (text: string) => {
-        const normalized = normalize(text, lexicon);
-        // pronunciations made up for this text's words (`refactoring` from `refactor`)
-        for (const [word, phones] of normalized.entries) dict.english.set(word, phones.split(" "));
-        return toTokens(normalized.text, dict);
-      };
+      signal?.throwIfAborted();
 
       const sherpa = createRequire(import.meta.url)("sherpa-onnx-node");
       const tts = new sherpa.OfflineTts({
@@ -151,26 +171,35 @@ function kokoro(name: string, speaker: string, mix: BuiltIn["mix"], log: (line: 
       const sid = SPEAKERS.indexOf(speaker);
 
       return async (sentence) => {
-        const tokens = tokensOf(sentence);
-        if (!tokens.some((t) => /[^,.;?! ]/.test(t))) throw new Error(`There is nothing the voice can say in: "${sentence}"`);
+        const batches = tokenBatches(speechTokens(sentence, dict));
+        if (!batches.length) throw new Error(`There is nothing the voice can say in: "${sentence}"`);
         const speed = PACE[isCjk(sentence) ? "zh" : "en"];
-        const out = await tts.generateAsync({
-          text: "",
-          sid,
-          speed,
-          enableExternalBuffer: false,
-          generationConfig: new sherpa.GenerationConfig({
+        const parts: Float32Array[] = [];
+        for (const tokens of batches) {
+          signal?.throwIfAborted();
+          const out = await tts.generateAsync({
+            text: "",
             sid,
             speed,
-            tokens: [tokens],
-            // left alone, the engine shortens every pause to a fifth
-            silenceScale: 1,
-            // and says each clause on its own; a sentence sounds better said whole
-            extra: { min_words_in_sentence: tokens.length <= MAX_TOKENS ? MAX_TOKENS : 5 },
-          }),
-        });
-        if (!out.samples?.length) throw new Error(`The voice could not say: "${sentence}"`);
-        return { samples: Float32Array.from(out.samples), sampleRate: out.sampleRate };
+            enableExternalBuffer: false,
+            ...(signal && { onProgress: () => signal.aborted ? 0 : 1 }),
+            generationConfig: new sherpa.GenerationConfig({
+              sid, speed, tokens: [tokens],
+              silenceScale: 1,
+              extra: { min_words_in_sentence: MAX_TOKENS },
+            }),
+          });
+          signal?.throwIfAborted();
+          if (!out.samples?.length) throw new Error(`The voice could not say: "${sentence}"`);
+          parts.push(out.samples);
+        }
+        const samples = new Float32Array(parts.reduce((count, part) => count + part.length, 0));
+        let at = 0;
+        for (const part of parts) {
+          samples.set(part, at);
+          at += part.length;
+        }
+        return { samples, sampleRate: tts.sampleRate };
       };
     },
   };
@@ -180,27 +209,45 @@ function kokoro(name: string, speaker: string, mix: BuiltIn["mix"], log: (line: 
 function commandVoice(command: string): Voice {
   return {
     name: "--tts-command",
-    key: sha("command", command),
-    async open() {
+    key: sha("command", process.cwd(), command),
+    async open(signal) {
       const dir = path.join(cacheDir(), "tmp");
       await mkdir(dir, { recursive: true });
-      let n = 0;
-      return (sentence) =>
-        new Promise<Audio>((resolve, reject) => {
-          const out = path.join(dir, `say-${process.pid}-${n++}.wav`);
-          const child = spawn(command, { shell: true, stdio: ["pipe", "ignore", "pipe"], env: { ...process.env, DRAWCAST_OUT: out, DRAWCAST_TEXT: sentence } });
-          let stderr = "";
-          child.stderr.on("data", (d) => (stderr += d));
-          child.on("error", reject);
-          child.on("close", (code) => {
-            if (code !== 0 || !existsSync(out)) return reject(new Error(`The --tts-command failed (exit ${code}) for "${sentence}".\n${stderr.trim()}`));
-            readWav(out).then(async (audio) => {
-              await rm(out, { force: true });
-              resolve(audio);
-            }, reject);
+      return async (sentence) => {
+        signal?.throwIfAborted();
+        const out = path.join(dir, `say-${randomUUID()}.wav`);
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const child = spawn(command, { shell: true, detached: !!signal && process.platform !== "win32", windowsHide: true, stdio: ["pipe", "ignore", "pipe"], env: { ...process.env, DRAWCAST_OUT: out, DRAWCAST_TEXT: sentence } });
+            let stderr = "";
+            // The command runs under a shell. Terminate its descendants before removing their WAV.
+            const stop = () => {
+              if (!child.pid || child.exitCode !== null) return;
+              if (process.platform === "win32") {
+                const killer = spawn("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+                killer.on("error", () => child.kill());
+              } else {
+                try { process.kill(-child.pid, "SIGKILL"); } catch { child.kill(); }
+              }
+            };
+            signal?.addEventListener("abort", stop, { once: true });
+            child.stderr.on("data", (d) => (stderr += d));
+            child.on("error", reject);
+            child.on("close", (code) => {
+              signal?.removeEventListener("abort", stop);
+              if (signal?.aborted) return reject(signal.reason);
+              if (code !== 0 || !existsSync(out)) return reject(new Error(`The --tts-command failed (exit ${code}) for "${sentence}".\n${stderr.trim()}`));
+              resolve();
+            });
+            // Commands may read DRAWCAST_TEXT instead of stdin and close the pipe early.
+            child.stdin.on("error", () => {});
+            child.stdin.end(sentence);
           });
-          child.stdin.end(sentence);
-        });
+          return await readWav(out);
+        } finally {
+          await rm(out, { force: true });
+        }
+      };
     },
   };
 }
@@ -215,7 +262,7 @@ export interface VoiceOptions {
 }
 
 // each sentence is a request of its own to the service, and nearly all of its second is spent waiting
-const edgeVoice = (name: string): Voice => ({ name: EDGE_PREFIX + name, key: sha("edge", name), open: () => openEdgeVoice(name), parallel: 6 });
+const edgeVoice = (name: string): Voice => ({ name: EDGE_PREFIX + name, key: sha("edge", name), open: (signal) => openEdgeVoice(name, signal), parallel: 6 });
 
 /**
  * Left unset, a script gets the first online voice of its language, and the first built-in one if the
@@ -236,7 +283,10 @@ export async function resolveVoice(o: VoiceOptions): Promise<Voice> {
   }
   const name = o.spec;
   // a built-in voice, or one of the model's speakers by its own name
-  const voice = BUILT_IN[name] ?? (SPEAKERS.includes(name) ? { speaker: name } : undefined);
-  if (!voice) throw new Error(`There is no voice called "${name}". Built-in voices: ${Object.keys(BUILT_IN).join(", ")}. Online voices start with "${EDGE_PREFIX}".`);
-  return kokoro(name, voice.speaker, voice.mix, o.log);
+  if (Object.hasOwn(BUILT_IN, name)) {
+    const voice = BUILT_IN[name];
+    return kokoro(name, voice.speaker, voice.mix, o.log);
+  }
+  if (SPEAKERS.includes(name)) return kokoro(name, name, undefined, o.log);
+  throw new Error(`There is no voice called "${name}". Built-in voices: ${Object.keys(BUILT_IN).join(", ")}. Online voices start with "${EDGE_PREFIX}".`);
 }

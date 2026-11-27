@@ -1,17 +1,17 @@
 /** The two things a script can be turned into: a video, and a still picture of one moment. */
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, open, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { check, type Report } from "../format/check.ts";
 import { expand } from "../format/expand.ts";
-import { cacheDir } from "../paths.ts";
 import type { PrepareRequest } from "../player/main.ts";
 import { segmentFrames } from "../shared/h264.ts";
+import { publishFile } from "../shared/files.ts";
 import { DEFAULT_CANVAS, type Formula, OUTPUT_SCALE, type Script, type StepAudio } from "../shared/types.ts";
 import { type Listener, SAMPLE_RATE, cachedNarration, estimateNarration, narrate } from "../voice/narrate.ts";
 import { resolveVoice } from "../voice/voice.ts";
-import { type Audio, pcm16, writeWav } from "../voice/wav.ts";
-import { type Output, startEncoder, startMuxer } from "./encode.ts";
+import { type Audio, pcm16 } from "../voice/wav.ts";
+import { type Output, requireFfmpeg, startEncoder, startMuxer } from "./encode.ts";
 import { type Player, openPlayer } from "./player.ts";
 
 type Log = (line: string) => void;
@@ -28,24 +28,27 @@ export class ScriptError extends Error {
 
 export interface Loaded {
   script: Script;
+  sourceFile: string;
   baseDir: string;
   report: Report;
 }
 
-export async function loadScript(file: string): Promise<Loaded> {
+export async function loadScript(file: string, signal?: AbortSignal): Promise<Loaded> {
   const baseDir = path.dirname(path.resolve(file));
   let parsed: unknown;
   try {
-    parsed = JSON.parse(await readFile(file, "utf8"));
+    parsed = JSON.parse((await readFile(file, { encoding: "utf8", signal })).replace(/^\uFEFF/, ""));
   } catch (e) {
+    signal?.throwIfAborted();
     const { message } = e as Error;
     // LaTeX is full of backslashes, and JSON takes one as the start of an escape
     const hint = /escape/i.test(message) ? `. In JSON a backslash is written twice: "\\\\alpha", not "\\alpha".` : "";
     throw new Error(`Could not read ${file}: ${message}${hint}`);
   }
   const report = await check(parsed, baseDir);
+  signal?.throwIfAborted();
   if (report.errors.length) throw new ScriptError(report);
-  return { script: expand(parsed as Script), baseDir, report };
+  return { script: expand(parsed as Script), sourceFile: path.resolve(file), baseDir, report };
 }
 
 /** Every formula the script draws, typeset and keyed by its LaTeX. */
@@ -62,22 +65,46 @@ const IMAGE_MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image
 /** DRAWCAST_ENCODER=ffmpeg turns the browser's encoder down, to compare the two ways or to get past one that misbehaves. */
 const browserMayEncode = () => process.env.DRAWCAST_ENCODER !== "ffmpeg";
 
+function imageSources(script: Script): Set<string> {
+  return new Set(script.steps.flatMap((s) => s.do ?? []).flatMap((a) => a.add ? [a.add].flat() : []).map((el) => el.src).filter((s): s is string => !!s));
+}
+
+async function prepareOutputs(loaded: Loaded, outputs: string[]) {
+  const inputs = [loaded.sourceFile, ...Array.from(imageSources(loaded.script), (src) => path.resolve(loaded.baseDir, src))];
+  const originals = await Promise.all(inputs.map((file) => realpath(file)));
+  for (const output of outputs) {
+    if (!output.trim()) throw new Error("Choose a nonempty output filename.");
+    try {
+      const destination = await realpath(output);
+      if (originals.some((input) => path.relative(input, destination) === "")) throw new Error(`Choose an output different from the input script and its images: ${output}.`);
+      if (!(await stat(destination)).isFile()) throw new Error(`Output must be a file: ${output}.`);
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+    }
+  }
+  await mkdir(path.dirname(path.resolve(outputs[0])), { recursive: true });
+}
+
 /**
  * What the player page needs before any timing is known. For a video, `fps` is given: the size is then
  * rounded up to what H.264 can hold, and the page is asked to look for its encoder.
  */
-async function playerRequest(loaded: Loaded, width: number | undefined, fps?: number): Promise<PrepareRequest> {
-  const { script, baseDir } = loaded;
+export async function playerRequest(loaded: Loaded, width: number | undefined, captions: boolean, fps?: number, signal?: AbortSignal): Promise<PrepareRequest> {
+  signal?.throwIfAborted();
+  const { baseDir } = loaded;
+  const script = { ...loaded.script, captions };
   const canvas = { ...DEFAULT_CANVAS, ...script.canvas };
+  if (width !== undefined && (!Number.isSafeInteger(width) || width < 1)) throw new Error("--width must be a positive whole number of pixels.");
   const outWidth = Math.round(width ?? canvas.width * OUTPUT_SCALE);
-  const outHeight = Math.round((outWidth * canvas.height) / canvas.width);
-  const sources = new Set(script.steps.flatMap((s) => s.do ?? []).flatMap((a) => (a.add ? [a.add].flat() : [])).map((el) => el.src).filter((s): s is string => !!s));
+  const outHeight = Math.max(1, Math.round((outWidth * canvas.height) / canvas.width));
+  if (!Number.isSafeInteger(outWidth) || !Number.isSafeInteger(outHeight) || outWidth < 1) throw new Error("The canvas and output width must give a usable image size.");
   const images: Record<string, string> = {};
-  for (const src of sources) {
-    const data = await readFile(path.resolve(baseDir, src));
+  for (const src of imageSources(script)) {
+    const data = await readFile(path.resolve(baseDir, src), { signal });
     images[src] = `data:${IMAGE_MIME[path.extname(src).toLowerCase()]};base64,${data.toString("base64")}`;
   }
   const math = await typesetFormulas(script);
+  signal?.throwIfAborted();
   if (fps === undefined) return { script, images, math, output: { width: outWidth, height: outHeight } };
   return {
     script,
@@ -144,6 +171,7 @@ export interface Telling {
   sound(from: number, to: number): Float32Array;
   /** Resolves when all of it is settled, with the length of the video. */
   whole: Promise<{ duration: number; frames: number }>;
+  narration: Promise<unknown>;
 }
 
 /**
@@ -163,6 +191,8 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (listene
   let round = 0;
   let failure: unknown = null;
 
+  let narrationFinished = false;
+  let narrationError: Error | undefined;
   const narrating = narrate({
     spoken(index, step, clip) {
       steps[index] = step;
@@ -181,8 +211,13 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (listene
       settled.fire();
     },
   });
-  // a failure is seen by the loop below, the next time it waits for a step
-  narrating.catch(() => {});
+  narrating.then(() => {
+    narrationFinished = true;
+    spoken.fire();
+  }, (error) => {
+    narrationError = error instanceof Error ? error : new Error(String(error));
+    spoken.fire();
+  });
 
   const whole = (async () => {
     const player = await opening;
@@ -190,6 +225,7 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (listene
     let paged = 0;
     let told = 0;
     while (paged !== round || told < script.steps.length) {
+      if (narrationError) throw narrationError;
       if (paged !== round) {
         // the page forgets the first voice's timing too
         paged = round;
@@ -199,7 +235,8 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (listene
       }
       if (steps.length === told) {
         // woken by a step being spoken, by starting over, or by the narration failing
-        await Promise.race([spoken.wait(), narrating]);
+        if (narrationFinished) throw new Error(`Narration ended after ${told} of ${script.steps.length} steps.`);
+        await spoken.wait();
         continue;
       }
       const batch = steps.slice(told);
@@ -211,6 +248,7 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (listene
       // a frame is settled when its time is before `settled`; all of them are, once the length is known
       frames = Math.ceil(schedule.settled * o.fps);
       samples = schedule.duration === null ? Math.floor(schedule.settled * SAMPLE_RATE) : Math.ceil(schedule.duration * SAMPLE_RATE);
+      if (!Number.isSafeInteger(frames) || !Number.isSafeInteger(samples)) throw new Error("The timeline is too long to represent at this frame rate and sample rate.");
       duration = schedule.duration;
       // the canvas as that step is done, which is settled as soon as the step is scheduled
       cover = o.cover && schedule.stepDone[o.cover - 1] !== undefined ? o.cover : null;
@@ -220,7 +258,7 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (listene
     return { duration: duration!, frames };
   })();
   whole.catch((e) => {
-    failure = e;
+    failure = e instanceof Error ? e : new Error(String(e));
     settled.fire();
   });
 
@@ -257,6 +295,7 @@ export function tell(opening: Promise<Player>, script: Script, narrate: (listene
       return out;
     },
     whole,
+    narration: narrating,
   };
 }
 
@@ -274,6 +313,7 @@ export async function recordInBrowser(player: Player, telling: Telling, o: Outpu
   if (!browserMayEncode()) return false;
   // the page has been looking for its encoder since it opened
   const { encoder: info, tried } = await player.encoder().catch((e: Error) => ({ encoder: null, tried: [e.message.split("\n")[0]] }));
+  o.signal?.throwIfAborted();
   if (!info) {
     o.log("  This browser has no H.264 encoder to use, so ffmpeg encodes frame by frame, which takes several times longer.");
     for (const line of tried) o.log(`    ${line}`);
@@ -345,18 +385,24 @@ export async function recordInBrowser(player: Player, telling: Telling, o: Outpu
     };
     const work = async (lane: number) => {
       for (let segment; (segment = await take()); ) {
-        made.set(segment.index, await player.encodeSegment(lane, segment.first, segment.count, segment.cover));
+        const data = await player.encodeSegment(lane, segment.first, segment.count, segment.cover);
+        if (!data.length) throw new Error("The browser returned an empty video segment.");
+        made.set(segment.index, data);
         await (writing = writing.then(write));
       }
     };
     // the sound goes to ffmpeg as it settles, so that it is encoded along the way and not all at the end
     const sound = async () => {
-      for (let sent = 0; !ended(); await news()) {
-        const upTo = telling.samples;
-        if (upTo > sent) muxer.sound(pcm16(telling.sound(sent, upTo)));
-        sent = upTo;
-        if (telling.duration !== null) return;
+      let sent = 0;
+      while (!ended()) {
+        if (sent < telling.samples) {
+          const end = Math.min(sent + SAMPLE_RATE, telling.samples);
+          await muxer.sound(pcm16(telling.sound(sent, end)));
+          sent = end;
+        } else if (telling.duration !== null) break;
+        else await news();
       }
+      muxer.endSound();
     };
     // One that breaks stops the others, and all of them are waited for: a lane is in the middle of a
     // segment in the page, and must be out of it before anything else is asked of that lane.
@@ -366,18 +412,34 @@ export async function recordInBrowser(player: Player, telling: Telling, o: Outpu
       } catch (e) {
         over = true;
         stop();
+        await muxer.abort();
         throw e;
       }
     };
-    const outcome = await Promise.allSettled([sound(), ...Array.from({ length: info.lanes }, (_, lane) => work(lane))].map(ending));
+    const lanes = Array.from({ length: info.lanes }, (_, lane) => ending(work(lane)));
+    const picture = Promise.allSettled(lanes).then((results) => {
+      muxer.endVideo();
+      const error = results.find((result) => result.status === "rejected");
+      if (error) throw error.reason;
+    });
+    const outcome = await Promise.allSettled([picture, ending(sound())]);
     const broken = outcome.find((result) => result.status === "rejected");
 
     if (!broken && telling.round === round) {
       // the browser has nothing left to do, and closes while ffmpeg finishes the file
-      await Promise.all([muxer.finish(), player.close()]);
+      try {
+        await muxer.finish();
+      } catch (e) {
+        o.signal?.throwIfAborted();
+        await player.stopEncoding().catch(() => {});
+        o.log(`  Could not mux the browser video (${(e as Error).message}). Encoding frame by frame with ffmpeg instead.`);
+        return false;
+      }
+      await player.close();
       return true;
     }
     await muxer.abort();
+    o.signal?.throwIfAborted();
     // a narration that failed is the end of the render, whichever way it is encoded
     if (telling.failure) {
       await player.stopEncoding().catch(() => {});
@@ -395,15 +457,17 @@ export async function recordInBrowser(player: Player, telling: Telling, o: Outpu
  * The way that always works: every frame leaves the browser as a PNG and ffmpeg encodes the lot. With
  * `cover`, the first frame is the canvas at that time instead of the empty one.
  */
-export async function recordWithFfmpeg(player: Player, o: Output & { audio: string; frames: number; cover: number | null; log: Log }): Promise<void> {
+export async function recordWithFfmpeg(player: Player, o: Output & { audio: string; pcmRate?: number; frames: number; cover: number | null; log: Log }): Promise<void> {
   const encoder = startEncoder(o);
   const report = progress(o.frames, o.log);
   try {
     let last: Buffer | null = null;
     for (let i = 0; i < o.frames; i++) {
+      o.signal?.throwIfAborted();
       const cover = i === 0 && o.cover !== null;
       last = (await (cover ? player.stepFrame(o.cover!) : player.frame(i / o.fps))) ?? last;
-      await encoder.write(last!);
+      if (!last) throw new Error("The player did not produce a first video frame.");
+      await encoder.write(last);
       report(i + 1);
     }
   } catch (e) {
@@ -422,48 +486,81 @@ export interface RenderOptions {
   speed?: number;
   captions?: boolean;
   ttsCommand?: string;
+  signal?: AbortSignal;
   log: Log;
 }
 
 export async function renderVideo(loaded: Loaded, o: RenderOptions): Promise<{ duration: number }> {
+  o.signal?.throwIfAborted();
   const { script } = loaded;
+  if (!Number.isFinite(o.fps) || o.fps <= 0) throw new Error("--fps must be a positive frame rate.");
+  const speed = speakingRate(o.speed ?? script.speed);
   const voice = await resolveVoice({
     spec: o.voice ?? script.voice,
     narration: script.steps.map((s) => s.say ?? "").join(" "),
     ttsCommand: o.ttsCommand,
     log: o.log,
   });
-  await mkdir(path.dirname(path.resolve(o.output)), { recursive: true });
+  await prepareOutputs(loaded, [o.output]);
+  const ffmpeg = requireFfmpeg();
   // The first frame is a cover, the canvas as this step ends: the empty canvas makes a poor thumbnail.
   const cover = script.cover === false ? null : (script.cover ?? 1);
   // The browser starts, and loads the page with its fonts and images, while the narration is spoken.
-  const opening = openPlayer(await playerRequest(loaded, o.width, o.fps), o.log);
-  opening.catch(() => {});
+  const captions = o.captions ?? script.captions ?? true;
+  const request = await playerRequest(loaded, o.width, captions, o.fps, o.signal);
+  const work = await mkdtemp(path.join(path.dirname(path.resolve(o.output)), ".drawcast-"));
+  const controller = new AbortController();
+  const signal = o.signal ? AbortSignal.any([o.signal, controller.signal]) : controller.signal;
+  const opening = openPlayer(request, o.log, signal);
   o.log("Narration");
   // And the video is drawn behind the narration, as far as it has been spoken.
-  const telling = tell(opening, script, (listener) => narrate(script, voice, o.speed ?? script.speed ?? 1, o.log, listener), {
+  const telling = tell(opening, script, (listener) => narrate(script, voice, speed, o.log, listener, signal), {
     fps: o.fps,
-    captions: o.captions ?? script.captions ?? true,
+    captions,
     cover,
     log: o.log,
   });
 
-  const player = await opening;
-  const audioFile = path.join(cacheDir(), "tmp", `narration-${process.pid}.wav`);
   try {
-    const job = { output: o.output, fps: o.fps, log: o.log };
+    const player = await opening;
+    const job = { output: path.join(work, "video.mp4"), fps: o.fps, ffmpeg, log: o.log, signal };
     if (!(await recordInBrowser(player, telling, { ...job, guess: guessFrames(script, o.fps), cover: cover !== null }))) {
       // the slow way takes the narration whole, from a file
-      const { duration, frames } = await telling.whole;
-      await mkdir(path.dirname(audioFile), { recursive: true });
-      await writeWav(audioFile, { samples: telling.sound(0, telling.samples), sampleRate: SAMPLE_RATE });
-      await recordWithFfmpeg(player, { ...job, audio: audioFile, frames, cover: telling.cover });
+      const { frames } = await telling.whole;
+      const audioFile = path.join(work, "narration.pcm");
+      const audio = await open(audioFile, "w");
+      try {
+        for (let from = 0; from < telling.samples; from += SAMPLE_RATE) {
+          signal.throwIfAborted();
+          await audio.writeFile(pcm16(telling.sound(from, Math.min(from + SAMPLE_RATE, telling.samples))));
+        }
+      } finally {
+        await audio.close();
+      }
+      await recordWithFfmpeg(player, { ...job, audio: audioFile, pcmRate: SAMPLE_RATE, frames, cover: telling.cover });
     }
-    return { duration: (await telling.whole).duration };
+    const { duration } = await telling.whole;
+    signal.throwIfAborted();
+    await publishFile(job.output, o.output, signal);
+    return { duration };
+  } catch (error) {
+    signal.throwIfAborted();
+    throw error;
   } finally {
-    await player.close();
-    await rm(audioFile, { force: true });
+    controller.abort();
+    try {
+      const player = await opening.catch(() => null);
+      await Promise.all([player?.close(), telling.narration.catch(() => {})]);
+    } finally {
+      await rm(work, { recursive: true, force: true });
+    }
   }
+}
+
+function speakingRate(value: number | undefined): number {
+  const speed = value ?? 1;
+  if (!Number.isFinite(speed) || speed < 0.5 || speed > 2) throw new Error("--speed must be between 0.5 and 2.");
+  return speed;
 }
 
 /** About how many frames a video will have, going by the length of what is said: enough to choose a segment's length by. */
@@ -483,6 +580,10 @@ export interface SnapshotOptions {
   sheet?: boolean;
   width?: number;
   voice?: string;
+  speed?: number;
+  captions?: boolean;
+  ttsCommand?: string;
+  signal?: AbortSignal;
   log: Log;
 }
 
@@ -496,51 +597,70 @@ const SHEET_TILE = 512;
  * and any other is estimated from its syllables. Returns each file written, with what it shows.
  */
 export async function renderSnapshot(loaded: Loaded, o: SnapshotOptions): Promise<{ files: { file: string; shows: string }[]; timing: string }> {
+  o.signal?.throwIfAborted();
   const { script } = loaded;
   const canvas = { ...DEFAULT_CANVAS, ...script.canvas };
+  const speed = speakingRate(o.speed ?? script.speed);
+  if (o.at !== undefined && (o.steps || o.sheet)) throw new Error("Use --at on its own, or select steps with --step and --sheet.");
+  if (o.at !== undefined && !Number.isFinite(o.at)) throw new Error("--at must be a finite number of seconds.");
+  const steps = o.steps ?? (o.sheet ? parseSteps("all", script.steps.length) : [script.steps.length]);
+  if (!steps.length || steps.some((s) => !Number.isInteger(s) || s < 1 || s > script.steps.length)) throw new Error(`--step must be step numbers from 1 to ${script.steps.length}, or "all".`);
+  const pageSize = o.sheet ? SHEET_STEPS : 1;
+  const pages = Array.from({ length: Math.ceil(steps.length / pageSize) }, (_, i) => steps.slice(i * pageSize, (i + 1) * pageSize));
+  const outputs = pages.map((part, i) => {
+    if (pages.length === 1) return o.output;
+    const suffix = o.sheet ? `-${i + 1}` : `-step${part[0]}`;
+    return o.output.replace(/(\.png)?$/i, `${suffix}.png`);
+  });
+  await prepareOutputs(loaded, outputs);
+  const captions = o.captions ?? script.captions ?? true;
+  const voice = await resolveVoice({ spec: o.voice ?? script.voice, narration: script.steps.map((s) => s.say ?? "").join(" "), ttsCommand: o.ttsCommand, log: o.log });
   // a still is looked at, not watched: the canvas's own size is plenty, and quicker to make and to read
-  const player = await openPlayer(await playerRequest(loaded, o.width ?? canvas.width), o.log);
+  const request = await playerRequest(loaded, o.width ?? Math.round(canvas.width), captions, undefined, o.signal);
+  const work = await mkdtemp(path.join(path.dirname(path.resolve(o.output)), ".drawcast-"));
+  let player: Player | undefined;
   try {
-    const captions = script.captions ?? true;
-    const voice = await resolveVoice({ spec: o.voice ?? script.voice, narration: script.steps.map((s) => s.say ?? "").join(" "), log: o.log }).catch(() => null);
-    const narration = voice ? await cachedNarration(script, voice, script.speed ?? 1) : { ...estimateNarration(script), cached: 0, total: 1, voice: null };
+    player = await openPlayer(request, o.log, o.signal);
+    const narration = await cachedNarration(script, voice, speed, o.signal);
     const { duration, stepDone } = await player.load(narration.steps.map((step) => timing(step, captions)));
     const timingNote =
-      narration.cached === narration.total && narration.voice
+      !narration.total ? "timing exact: the script has no narration" : narration.cached === narration.total && narration.voice
         ? `timing from the speech of ${narration.voice}, as the video will have it`
         : narration.cached
           ? `timing from cached speech for ${narration.cached} of ${narration.total} sentences, the rest estimated`
           : "timing estimated: times will move a little once the narration is rendered";
-    await mkdir(path.dirname(path.resolve(o.output)), { recursive: true });
-    const named = (suffix: string) => o.output.replace(/(\.png)?$/i, `${suffix}.png`);
     const files: { file: string; shows: string }[] = [];
 
     if (o.at !== undefined) {
       const at = Math.min(Math.max(0, o.at), duration);
       // the first frame of a fresh page always comes back
-      await writeFile(o.output, (await player.frame(at))!);
-      return { files: [{ file: o.output, shows: `the video at ${at.toFixed(1)} s` }], timing: timingNote };
-    }
-    const steps = o.steps ?? [stepDone.length];
-    for (const s of steps) if (!Number.isInteger(s) || s < 1 || s > stepDone.length) throw new Error(`--step must be step numbers from 1 to ${stepDone.length}, or "all".`);
-    if (o.sheet) {
-      const pages = Math.ceil(steps.length / SHEET_STEPS);
-      for (let p = 0; p < pages; p++) {
-        const part = steps.slice(p * SHEET_STEPS, (p + 1) * SHEET_STEPS);
-        const file = pages > 1 ? named(`-${p + 1}`) : o.output;
-        await writeFile(file, await player.sheet(part, Math.min(SHEET_COLUMNS, part.length), SHEET_TILE));
-        files.push({ file, shows: `steps ${part[0]}${part.length > 1 ? ` to ${part[part.length - 1]}` : ""}, each as it is done` });
-      }
+      const frame = await player.frame(at);
+      if (!frame) throw new Error("The player did not produce a snapshot frame.");
+      await writeFile(path.join(work, "0.png"), frame, { signal: o.signal });
+      files.push({ file: o.output, shows: `the video at ${at.toFixed(1)} s` });
     } else {
-      for (const s of steps) {
-        const file = steps.length > 1 ? named(`-step${s}`) : o.output;
-        await writeFile(file, await player.stepFrame(s, true));
-        files.push({ file, shows: `step ${s} done, at ${stepDone[s - 1].toFixed(1)} s` });
+      for (const [i, part] of pages.entries()) {
+        o.signal?.throwIfAborted();
+        const file = outputs[i];
+        const staged = path.join(work, `${i}.png`);
+        if (o.sheet) {
+          await writeFile(staged, await player.sheet(part, Math.min(SHEET_COLUMNS, part.length), o.width ?? SHEET_TILE), { signal: o.signal });
+          files.push({ file, shows: `steps ${part.join(", ")}, each as it is done` });
+        } else {
+          const step = part[0];
+          await writeFile(staged, await player.stepFrame(step, true), { signal: o.signal });
+          files.push({ file, shows: `step ${step} done, at ${stepDone[step - 1].toFixed(1)} s` });
+        }
       }
     }
+    o.signal?.throwIfAborted();
+    for (const [i, file] of files.entries()) await publishFile(path.join(work, `${i}.png`), file.file);
     return { files, timing: timingNote };
+  } catch (error) {
+    o.signal?.throwIfAborted();
+    throw error;
   } finally {
-    await player.close();
+    try { await player?.close(); } finally { await rm(work, { recursive: true, force: true }); }
   }
 }
 
@@ -548,9 +668,14 @@ export async function renderSnapshot(loaded: Loaded, o: SnapshotOptions): Promis
 export function parseSteps(value: string, count: number): number[] {
   if (value.trim() === "all") return Array.from({ length: count }, (_, i) => i + 1);
   // PowerShell hands `--step 4,7` over as "4 7", so spaces separate as well as commas
-  return value.split(/[\s,]+/).filter(Boolean).flatMap((part) => {
-    const [a, b] = part.split("-").map((n) => Number(n.trim()));
-    if (!Number.isInteger(a) || (b !== undefined && !Number.isInteger(b))) throw new Error(`--step must be step numbers such as 3, 2,5,9 or 3-6, or "all" (got "${value}").`);
-    return b === undefined ? [a] : Array.from({ length: Math.max(0, b - a + 1) }, (_, i) => a + i);
-  });
+  const parts = value.trim().split(/\s*,\s*|\s+/);
+  const steps = new Set<number>();
+  for (const part of parts) {
+    const match = /^(\d+)(?:-(\d+))?$/.exec(part);
+    const first = Number(match?.[1]);
+    const last = Number(match?.[2] ?? first);
+    if (!match || first < 1 || last < first || last > count) throw new Error(`--step must select steps 1 to ${count}, for example 2,5 or 3-6, or "all" (got "${value}").`);
+    for (let s = first; s <= last; s++) steps.add(s);
+  }
+  return [...steps];
 }

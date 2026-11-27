@@ -41,18 +41,18 @@ let convert: ((tex: string) => Formula) | undefined;
 function start(): (tex: string) => Formula {
   const adaptor = liteAdaptor();
   RegisterHTMLHandler(adaptor);
-  const input = new TeX({
-    packages: PACKAGES,
-    formatError: (_jax: unknown, error: Error) => {
-      throw error;
-    },
-  });
   // The TeX font has all of its glyphs in the program. MathJax's default font fetches the rarer ones when
   // they are first used, which would make typesetting a formula something to wait for.
   const output = new SVG({ fontData: MathJaxTexFont, fontCache: "local" });
-  const document = mathjax.document("", { InputJax: input, OutputJax: output });
-
   return (tex) => {
+    // Each element is a stand-alone formula. TeX macros and labels belong to this formula alone.
+    const input = new TeX({
+      packages: PACKAGES,
+      formatError: (_jax: unknown, error: Error) => {
+        throw error;
+      },
+    });
+    const document = mathjax.document("", { InputJax: input, OutputJax: output });
     const svg = adaptor.firstChild(document.convert(tex, { display: true })) as LiteElement;
     const box = (adaptor.getAttribute(svg, "viewBox") ?? "").split(" ").map(Number);
     // an equation number is set against the right edge of a page, and a formula here has no page

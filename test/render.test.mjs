@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { tell } from "../src/render/render.ts";
+import { recordInBrowser, tell } from "../src/render/render.ts";
+import { findFfmpeg } from "../src/render/encode.ts";
 import { avcCodecs, colorTags, segmentFrames } from "../src/shared/h264.ts";
 import { SAMPLE_RATE, narrate } from "../src/voice/narrate.ts";
 
@@ -13,12 +15,16 @@ test("the encoder is asked for the lowest H.264 level that holds the video", () 
   assert.deepEqual(avcCodecs(1280, 720, 30), ["avc1.64001f", "avc1.42e01f"]);
   assert.deepEqual(avcCodecs(3840, 2160, 30), ["avc1.640033", "avc1.42e033"]);
   assert.deepEqual(avcCodecs(3840, 2160, 60), ["avc1.640034", "avc1.42e034"]);
+  assert.deepEqual(avcCodecs(4096, 64, 30), ["avc1.640028", "avc1.42e028"]);
 });
 
 test("a video H.264 cannot hold gets no encoder", () => {
   assert.deepEqual(avcCodecs(1921, 1080, 30), []);
   assert.deepEqual(avcCodecs(7680, 4320, 30), []);
   assert.deepEqual(avcCodecs(3840, 2160, 120), []);
+  assert.deepEqual(avcCodecs(64, 10000, 1), []);
+  assert.deepEqual(avcCodecs(0, 100, 30), []);
+  assert.deepEqual(avcCodecs(100, 100, -1), []);
 });
 
 test("the stream is labelled with the colour space the encoder says it used", () => {
@@ -36,6 +42,31 @@ test("segments are a second to five seconds long, and several per encoder", () =
   assert.equal(segmentFrames(100, 30, 2), 30);
   assert.equal(segmentFrames(1200, 60, 1), 300);
   assert.equal(segmentFrames(1, 30, 2), 30);
+});
+
+test("a rejected browser stream leaves the page open for the ffmpeg fallback", async (t) => {
+  const ffmpeg = findFfmpeg();
+  if (!ffmpeg) return t.skip("requires ffmpeg");
+  const previous = process.env.DRAWCAST_ENCODER;
+  delete process.env.DRAWCAST_ENCODER;
+  t.after(() => { if (previous !== undefined) process.env.DRAWCAST_ENCODER = previous; });
+  const dir = mkdtempSync(path.join(tmpdir(), "drawcast-mux-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  let stops = 0;
+  let segment = Buffer.alloc(0);
+  const player = {
+    encoder: async () => ({ encoder: { lanes: 1, color: null }, tried: [] }),
+    encodeSegment: async () => segment,
+    stopEncoding: async () => { stops++; },
+    close: () => assert.fail("closed the page before fallback"),
+  };
+  const telling = { round: 0, frames: 1, samples: 48000, duration: 1, cover: null, sound: () => new Float32Array(48000) };
+  const options = { output: path.join(dir, "out.mp4"), fps: 1, guess: 1, cover: false, log: () => {} };
+  assert.equal(await recordInBrowser(player, telling, options), false);
+  // Give ffmpeg a complete video and audio, then make opening the output file fail.
+  segment = execFileSync(ffmpeg, ["-loglevel", "error", "-f", "lavfi", "-i", "color=s=16x16:r=1", "-frames:v", "1", "-c:v", "libx264", "-f", "h264", "pipe:1"]);
+  assert.equal(await recordInBrowser(player, telling, { ...options, output: path.join(dir, "absent", "out.mp4") }), false);
+  assert.equal(stops, 2);
 });
 
 /** A voice that takes a moment over each sentence and notes how many it was asked for at once. */
@@ -247,6 +278,43 @@ function toyPlayer(steps) {
 const tone = (seconds, level) => ({ samples: new Float32Array(seconds * SAMPLE_RATE).fill(level), sampleRate: SAMPLE_RATE });
 const audioOf = (seconds) => ({ duration: seconds, tokens: [], captions: [{ text: "said", t0: 0, t1: seconds }] });
 
+test("voice fallback discards already queued audio and video before writing a late cover", { timeout: 15000 }, async (t) => {
+  const ffmpeg = findFfmpeg();
+  if (!ffmpeg || process.env.DRAWCAST_ENCODER === "ffmpeg") return t.skip("requires the browser muxing path and ffmpeg");
+  const dir = mkdtempSync(path.join(tmpdir(), "drawcast-restart-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const output = path.join(dir, "video.mp4");
+  const keyframe = execFileSync(ffmpeg, ["-v", "error", "-f", "lavfi", "-i", "color=s=16x16:r=4", "-frames:v", "1", "-c:v", "libx264", "-f", "h264", "pipe:1"]);
+  let listener, finishSpeech;
+  const player = toyPlayer(2);
+  let restarted = false;
+  player.encoder = async () => ({ encoder: { lanes: 1, color: null }, tried: [] });
+  player.encodeSegment = async (_lane, _first, count) => {
+    if (!restarted) {
+      restarted = true;
+      listener.startOver();
+      listener.spoken(0, null, null);
+      listener.spoken(1, null, null);
+      finishSpeech();
+    }
+    return Buffer.concat(Array(count).fill(keyframe));
+  };
+  player.close = async () => {};
+  const telling = tell(Promise.resolve(player), { steps: [{}, {}] }, (events) => new Promise((resolve) => {
+    listener = events;
+    finishSpeech = resolve;
+    listener.spoken(0, audioOf(3), tone(3, 0.5));
+  }), { fps: 4, captions: false, cover: 2, log() {} });
+  const encoded = await recordInBrowser(player, telling, { output, ffmpeg, fps: 4, guess: 4, cover: true, log() {} });
+  assert.equal(encoded, true);
+  assert.equal(telling.round, 1);
+  const hashes = execFileSync(ffmpeg, ["-v", "error", "-i", output, "-map", "0:v:0", "-f", "framemd5", "-"], { encoding: "utf8" });
+  assert.equal(hashes.trim().split(/\r?\n/).filter((line) => !line.startsWith("#")).length, telling.frames);
+  const sound = execFileSync(ffmpeg, ["-v", "error", "-i", output, "-map", "0:a:0", "-f", "s16le", "-"]);
+  assert.ok(sound.length >= telling.samples * 2);
+  assert.ok(sound.every((b) => b === 0), "the abandoned voice must not be audible");
+});
+
 test("a video settles a step at a time, as its narration is heard", async () => {
   const player = toyPlayer(3);
   const lines = [];
@@ -357,6 +425,16 @@ test("a narration that fails stops the telling", async () => {
   assert.match(String(telling.failure), /gave out/);
   await assert.rejects(telling.more(), /gave out/);
   await assert.rejects(telling.whole, /gave out/);
+});
+
+test("a voice that finishes early and an unrepresentable schedule both fail the render", async () => {
+  const options = { fps: 30, captions: true, log() {} };
+  const player = toyPlayer(1);
+  const incomplete = tell(Promise.resolve(player), { steps: [{}, {}] }, async (listener) => listener.spoken(0, null, null), options);
+  await assert.rejects(incomplete.whole, /after 1 of 2 steps/);
+  player.schedule = async () => ({ settled: 1e300, duration: 1e300, stepStarts: [0], stepDone: [1e300] });
+  const oversized = tell(Promise.resolve(player), { steps: [{}] }, async (listener) => listener.spoken(0, null, null), options);
+  await assert.rejects(oversized.whole, /timeline is too long/);
 });
 
 test("a sentence that cannot be spoken fails the narration", async () => {

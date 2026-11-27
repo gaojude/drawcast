@@ -1,55 +1,83 @@
 /** Reading and writing mono WAV files, which is all the audio the pipeline passes around. */
-import { readFile, writeFile } from "node:fs/promises";
+import { open, readFile, writeFile } from "node:fs/promises";
 
 export interface Audio {
   samples: Float32Array;
   sampleRate: number;
 }
 
-export async function readWav(file: string): Promise<Audio> {
-  const buf = await readFile(file);
+function wavHeader(buf: Buffer, file: string, fileSize = buf.length) {
   if (buf.toString("ascii", 0, 4) !== "RIFF" || buf.toString("ascii", 8, 12) !== "WAVE") throw new Error(`${file} is not a WAV file.`);
-  let format = 1;
-  let channels = 1;
+  let format = 0;
+  let channels = 0;
   let sampleRate = 0;
-  let bits = 16;
+  let bits = 0;
+  let blockAlign = 0;
   for (let at = 12; at + 8 <= buf.length; ) {
     const id = buf.toString("ascii", at, at + 4);
-    const size = buf.readUInt32LE(at + 4);
     const body = at + 8;
+    let size = buf.readUInt32LE(at + 4);
+    // A WAV streamed by ffmpeg uses an unknown data size until end of file.
+    if (id === "data" && size === 0xffffffff) size = fileSize - body;
+    if (size > fileSize - body) throw new Error(`${file} has a truncated WAV chunk.`);
     if (id === "fmt ") {
+      if (size < 16) throw new Error(`${file} has an incomplete WAV format.`);
       format = buf.readUInt16LE(body);
       channels = buf.readUInt16LE(body + 2);
       sampleRate = buf.readUInt32LE(body + 4);
+      blockAlign = buf.readUInt16LE(body + 12);
       bits = buf.readUInt16LE(body + 14);
       // WAVE_FORMAT_EXTENSIBLE keeps the real format in its sub-format field
-      if (format === 0xfffe) format = buf.readUInt16LE(body + 24);
-    } else if (id === "data") {
-      const bytes = bits / 8;
-      const frames = Math.floor(Math.min(size, buf.length - body) / (bytes * channels));
-      const read: (offset: number) => number =
-        format === 3 && bits === 32
-          ? (o) => buf.readFloatLE(o)
-          : format === 1 && bits === 16
-            ? (o) => buf.readInt16LE(o) / 32768
-            : format === 1 && bits === 24
-              ? (o) => buf.readIntLE(o, 3) / 8388608
-              : format === 1 && bits === 32
-                ? (o) => buf.readInt32LE(o) / 2147483648
-                : () => {
-                    throw new Error(`${file}: unsupported WAV encoding (format ${format}, ${bits} bit).`);
-                  };
-      const samples = new Float32Array(frames);
-      for (let i = 0; i < frames; i++) {
-        let sum = 0;
-        for (let c = 0; c < channels; c++) sum += read(body + (i * channels + c) * bytes);
-        samples[i] = sum / channels;
+      if (format === 0xfffe) {
+        if (size < 40) throw new Error(`${file} has an incomplete extensible WAV format.`);
+        format = buf.readUInt16LE(body + 24);
       }
-      return { samples, sampleRate };
+    } else if (id === "data") {
+      if (!sampleRate || !channels) throw new Error(`${file} has no valid WAV format before its audio data.`);
+      if (!(format === 1 && [8, 16, 24, 32].includes(bits)) && !(format === 3 && [32, 64].includes(bits))) {
+        throw new Error(`${file}: unsupported WAV encoding (format ${format}, ${bits} bit).`);
+      }
+      const bytes = bits / 8;
+      if (blockAlign !== bytes * channels) throw new Error(`${file} has inconsistent WAV frame alignment.`);
+      const frames = size / (bytes * channels);
+      if (!frames || !Number.isInteger(frames)) throw new Error(`${file} has empty or incomplete WAV audio data.`);
+      return { frames, sampleRate, body, channels, bytes, format };
     }
     at = body + size + (size % 2);
   }
   throw new Error(`${file} has no audio data.`);
+}
+
+export async function readWavInfo(file: string) {
+  const handle = await open(file, "r");
+  try {
+    const header = Buffer.alloc(44);
+    const { bytesRead } = await handle.read(header, 0, header.length, 0);
+    // Files written by drawcast have this fixed layout; snapshots only need the length.
+    if (bytesRead === 44 && header.toString("ascii", 12, 16) === "fmt " && header.readUInt32LE(16) === 16 && header.toString("ascii", 36, 40) === "data") {
+      return wavHeader(header, file, (await handle.stat()).size);
+    }
+    return wavHeader(await handle.readFile(), file);
+  } finally {
+    await handle.close();
+  }
+}
+
+export async function readWav(file: string): Promise<Audio> {
+  const buf = await readFile(file);
+  const { frames, sampleRate, body, channels, bytes, format } = wavHeader(buf, file);
+  const scale = 2 ** (bytes * 8 - 1);
+  const read = format === 3 ? (o: number) => bytes === 4 ? buf.readFloatLE(o) : buf.readDoubleLE(o)
+    : bytes === 1 ? (o: number) => (buf[o] - 128) / 128
+    : (o: number) => buf.readIntLE(o, bytes) / scale;
+  const samples = new Float32Array(frames);
+  for (let i = 0; i < frames; i++) {
+    let sum = 0;
+    for (let c = 0; c < channels; c++) sum += read(body + (i * channels + c) * bytes);
+    samples[i] = sum / channels;
+    if (format === 3 && !Number.isFinite(samples[i])) throw new Error(`${file} contains a non-finite WAV sample.`);
+  }
+  return { samples, sampleRate };
 }
 
 /** Samples as 16-bit numbers, low byte first: what a WAV file holds, and what ffmpeg calls `s16le`. */
@@ -100,22 +128,29 @@ export function resample(audio: Audio, sampleRate: number): Audio {
  * is taken from near where the speed says it should come, at the offset that continues the previous
  * one most smoothly, which is what keeps the pitch (this is the WSOLA method).
  */
-export function changeTempo(audio: Audio, speed: number): Audio {
-  if (Math.abs(speed - 1) < 0.005) return audio;
-  const { samples, sampleRate } = audio;
-  const size = 2 * Math.round(0.015 * sampleRate);
-  const hop = size / 2;
-  const reach = Math.round(0.01 * sampleRate);
-  if (samples.length < size * 2) return audio;
+export function tempoFrames(frames: number, sampleRate: number, speed: number): number {
+  if (!Number.isFinite(speed) || speed <= 0) throw new Error("Speech speed must be positive and finite.");
+  const hop = Math.max(1, Math.round(0.015 * sampleRate));
+  if (Math.abs(speed - 1) < 0.005 || frames < 4 * hop) return frames;
+  // Each window fits while round(k * hop * speed) + 2 * hop <= frames.
+  const windows = Math.ceil((frames - 2 * hop + 0.5) / (hop * speed));
+  return (windows + 1) * hop;
+}
 
-  const out = new Float32Array(Math.ceil(samples.length / speed) + size);
+export function changeTempo(audio: Audio, speed: number): Audio {
+  const { samples, sampleRate } = audio;
+  const length = tempoFrames(samples.length, sampleRate, speed);
+  const hop = Math.max(1, Math.round(0.015 * sampleRate));
+  const size = 2 * hop;
+  if (Math.abs(speed - 1) < 0.005 || samples.length < size * 2) return audio;
+  const reach = Math.round(0.01 * sampleRate);
+
+  const out = new Float32Array(length);
   const hann = Float32Array.from({ length: size }, (_, i) => 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / size));
-  let length = 0;
   // where in the input the previous window would have gone on to
   let follow = 0;
-  for (let k = 0; ; k++) {
+  for (let k = 0; k * hop + size <= length; k++) {
     const want = Math.round(k * hop * speed);
-    if (want + size > samples.length) break;
     let from = want;
     if (k > 0) {
       let best = -Infinity;
@@ -129,9 +164,8 @@ export function changeTempo(audio: Audio, speed: number): Audio {
     }
     for (let i = 0; i < size; i++) out[k * hop + i] += samples[from + i] * hann[i];
     follow = from + hop;
-    length = k * hop + size;
   }
-  return { samples: out.subarray(0, length), sampleRate };
+  return { samples: out, sampleRate };
 }
 
 /** Cut the silence off both ends, keeping `keep` seconds of it. */
@@ -140,6 +174,15 @@ export function trimSilence(audio: Audio, keep = 0.03, threshold = 0.01): Audio 
   let start = 0;
   let end = samples.length;
   while (start < end && Math.abs(samples[start]) < threshold) start++;
+  if (start === end) {
+    // A quiet but audible recording may never reach the fixed threshold.
+    let peak = 0;
+    for (const sample of samples) peak = Math.max(peak, Math.abs(sample));
+    if (peak < 0.5 / 32767) return { samples: samples.subarray(0, 0), sampleRate };
+    start = 0;
+    threshold = peak * 0.1;
+    while (start < end && Math.abs(samples[start]) < threshold) start++;
+  }
   while (end > start && Math.abs(samples[end - 1]) < threshold) end--;
   const pad = Math.round(keep * sampleRate);
   return { samples: samples.subarray(Math.max(0, start - pad), Math.min(samples.length, end + pad)), sampleRate };
