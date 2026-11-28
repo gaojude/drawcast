@@ -114,6 +114,18 @@ Whoever writes a script usually can't see it, so:
 
 ## Voices
 
+To generate speech in another tool, export a request with the script's sentences. After your
+tool writes the WAV recording(s) and a result JSON, use the result with either command below.
+
+```sh
+drawcast narration export talk.drawcast.json -o request.json
+drawcast render talk.drawcast.json --narration result.json -o talk.mp4
+drawcast snapshot talk.drawcast.json --narration result.json --at 3
+```
+
+Drawcast can measure a WAV per sentence or read timestamped ranges from a longer take.
+See the [request and result format](docs/format.md#external-recordings).
+
 | Voice | Name in a script or `--voice` | Runs | Cost |
 | --- | --- | --- | --- |
 | Built-in Kokoro (default) | `maple`, `sol` (English), `lin`, `chen` (Mandarin) | your machine | free |

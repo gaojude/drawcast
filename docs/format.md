@@ -442,6 +442,45 @@ A video holds attention when something on screen answers every sentence. Cheap w
   reports no key, ask the person to run `drawcast key minimax` (or `npx -y drawcast@latest key minimax`
   when drawcast is not installed globally) in their own terminal and paste the key there, then render. `@speech-2.8-turbo` after the voice id picks the cheaper model.
 
+### External recordings
+
+Run `drawcast narration export talk.drawcast.json -o request.json`. The version 1 request contains
+a `fingerprint` and an ordered `steps` array. Each step has a `sentences` array, empty for a silent
+step. Each sentence has an `id`, the exact `text` to speak, and the ordered `tokens` Drawcast uses
+for phrase cues. Your TTS tool can synthesize each sentence, a whole step, or a longer take.
+Choose the voice and speaking rate when making the WAVs.
+
+Write a result JSON with the request's version and fingerprint and one entry per sentence ID.
+Entries can arrive in any order. For example, a provider recording two sentences in one take
+followed by a separate sentence could return this result (substitute the exported fingerprint):
+
+```json
+{
+  "version": 1,
+  "fingerprint": "<copy from request.json>",
+  "sentences": [
+    {"id": "s1.1", "audio": "step-1.wav", "startMs": 120, "endMs": 1080},
+    {"id": "s1.2", "audio": "step-1.wav", "startMs": 1410, "endMs": 3020},
+    {"id": "s2.1", "audio": "closing.wav"}
+  ]
+}
+```
+
+- `audio` identifies a PCM or floating-point WAV. Relative paths resolve beside the result JSON.
+  For a sentence in its own file, omit both bounds and Drawcast uses its measured duration.
+- For a range, supply both `startMs` (inclusive) and `endMs` (exclusive) in milliseconds from
+  the start of the WAV. Drawcast keeps the audio between consecutive ranges in the same take
+  and step. It drops audio outside the selected span. Separate clips in a step get a 280 ms gap.
+  Drawcast schedules each step independently, including the script's animations and pauses.
+- Optionally include `tokenStartsMs` on an entry, e.g. `[120, 410, 680]` for three exported tokens.
+  These timestamps use the same file clock, fall inside the sentence, and follow token order.
+  Without them, phrase cues use estimated token starts within the measured sentence.
+
+Run `drawcast render talk.drawcast.json --narration result.json` for the MP4, or add the same
+option to `snapshot` for a timed preview. Imported audio plays at its recorded speed. The
+fingerprint lets you reuse recordings after visual edits and catches changes to the narration
+text or its step grouping.
+
 ## A longer example
 
 ```json

@@ -5,7 +5,7 @@ import { cacheDir, packageRoot } from "./paths.ts";
 import { findBrowser } from "./render/browser.ts";
 import { findFfmpeg } from "./render/encode.ts";
 import { inspectVideo } from "./render/inspect.ts";
-import { ScriptError, loadScript, parseSteps, renderSnapshot, renderVideo } from "./render/render.ts";
+import { ScriptError, exportNarration, loadScript, parseSteps, renderSnapshot, renderVideo } from "./render/render.ts";
 import { ensureModels, modelsDir, modelsInstalled } from "./voice/models.ts";
 import { MINIMAX_MODEL, MINIMAX_PREFIX, MINIMAX_VOICES, minimaxKeyStatus, removeMinimaxKey, saveMinimaxKey } from "./voice/minimax.ts";
 import { SPEAKERS, builtInVoices } from "./voice/voice.ts";
@@ -15,6 +15,7 @@ const HELP = `drawcast: turn a narrated Excalidraw script into a video
 Usage
   drawcast guide [topic ...]          quick start, selected topics, or the full script reference
   drawcast check <script>             find problems in a script without rendering it
+  drawcast narration export <script>  write a sentence request for an external TTS provider
   drawcast snapshot <script>          save the canvas as a PNG, to look at the layout
   drawcast render <script>            speak the narration and render the MP4
   drawcast inspect <video.mp4>        sample the encoded video to <video>.inspect.png
@@ -26,6 +27,7 @@ Usage
 Options
   -o, --output <file>     where to write (default: the script's name with .mp4 or .png)
   --voice <name>          render, snapshot: a voice from "drawcast voices", instead of the script's
+  --narration <file>      render, snapshot: use a narration result JSON and its recorded WAVs
   --speed <n>             render, snapshot: speaking rate from 0.5 to 2, 1 = normal
   --no-captions           render, snapshot: leave the captions out
   --fps <n>               render: frames per second (default 30)
@@ -108,6 +110,7 @@ async function main(signal: AbortSignal): Promise<number> {
     options: {
       output: { type: "string", short: "o" },
       voice: { type: "string" },
+      narration: { type: "string" },
       speed: { type: "string" },
       "no-captions": { type: "boolean" },
       fps: { type: "string" },
@@ -122,17 +125,21 @@ async function main(signal: AbortSignal): Promise<number> {
       version: { type: "boolean", short: "v" },
     },
   });
-  const [command, file] = positionals;
+  const [command, argument] = positionals;
+  const exporting = command === "narration" && argument === "export";
+  const file = exporting ? positionals[2] : argument;
 
   const version: string = JSON.parse(readFileSync(path.join(packageRoot, "package.json"), "utf8")).version;
   if (values.version) return console.log(version), 0;
   if (values.help || !command) return console.log(HELP), command || values.help ? 0 : 1;
 
   const takesScript = ["check", "snapshot", "render"].includes(command);
-  const maxArgs = takesScript || command === "inspect" || command === "key" ? 2 : 1;
+  if (command === "narration" && !exporting) throw new Error("Usage: drawcast narration export <script> [-o request.json]");
+  const maxArgs = exporting ? 3 : takesScript || command === "inspect" || command === "key" ? 2 : 1;
   if (command !== "guide" && positionals.length > maxArgs) throw new Error(`Unexpected argument for ${command}: ${positionals[maxArgs]}.`);
   const allowed = command === "render" || command === "snapshot"
-    ? ["output", "width", "voice", "speed", "no-captions", "tts-command", ...(command === "snapshot" ? ["sheet", "at", "step"] : ["fps"])]
+    ? ["output", "width", "voice", "speed", "no-captions", "tts-command", "narration", ...(command === "snapshot" ? ["sheet", "at", "step"] : ["fps"])]
+    : exporting ? ["output"]
     : command === "inspect" ? ["output", "at", "motion", "step", "width"] : command === "key" ? ["remove"] : [];
   for (const [option, value] of Object.entries(values)) {
     if (!allowed.includes(option)) throw new Error(`--${option} does not apply to ${command}.`);
@@ -217,6 +224,16 @@ async function main(signal: AbortSignal): Promise<number> {
       return 0;
     }
 
+    case "narration":
+      if (!file) throw new Error("Usage: drawcast narration export <script> [-o request.json]");
+      {
+        const loaded = await loadScript(file, signal);
+        printReport(loaded.report);
+        const output = values.output ?? withExtension(file, ".narration.request.json");
+        await exportNarration(loaded, output);
+        console.log(output);
+        return 0;
+      }
     case "check":
     case "snapshot":
     case "render": {
@@ -232,12 +249,16 @@ async function main(signal: AbortSignal): Promise<number> {
         return 0;
       }
       const speech = {
+        narration: values.narration,
         signal,
         voice: values.voice,
         speed: number(values.speed, "speed"),
         captions: values["no-captions"] ? false : undefined,
         ttsCommand: values["tts-command"],
       };
+      if (values.narration && (values.voice || values.speed || values["tts-command"])) {
+        throw new Error("--narration uses recorded audio. Choose the voice and speed when generating the recordings.");
+      }
       if (command === "snapshot") {
         const sheet = values.sheet ?? false;
         const steps = values.step !== undefined ? parseSteps(values.step, loaded.script.steps.length) : sheet ? parseSteps("all", loaded.script.steps.length) : undefined;

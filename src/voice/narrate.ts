@@ -17,7 +17,7 @@ import { type Audio, changeTempo, encodeWav, readWav, readWavInfo, resample, tem
 
 export const SAMPLE_RATE = 48000;
 /** Silence between two sentences of a step. */
-const SENTENCE_GAP = 0.28;
+export const SENTENCE_GAP = 0.28;
 /** A comma is worth about this many syllables of pause. */
 const COMMA = 1.2;
 
@@ -32,7 +32,7 @@ const SYLLABLES_PER_SECOND = 4.2;
 export const estimateSeconds = (sentence: string) => 0.3 + tokens(sentence).reduce((n, t) => n + tokenLength(t), 0) / SYLLABLES_PER_SECOND;
 
 /** When each token of a sentence lasting `duration` starts. */
-function timeTokens(sentence: string, duration: number): TimedToken[] {
+export function timeTokens(sentence: string, duration: number): TimedToken[] {
   const pieces = sentence.toLowerCase().replace(/[‘’]/g, "'").split(/([,;:，；：、—]+)/);
   const marks: { token: string; at: number }[] = [];
   let length = 0;

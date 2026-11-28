@@ -7,7 +7,8 @@ import { expand, type ResolvedGeometry } from "../format/expand.ts";
 import { axesImageKey, axesSvg } from "../shared/axes.ts";
 import type { PrepareRequest } from "../player/main.ts";
 import { segmentFrames } from "../shared/h264.ts";
-import { prepareOutputFiles, publishFile } from "../shared/files.ts";
+import { prepareOutputFiles, publishFile, writeFileAtomic } from "../shared/files.ts";
+import { importNarration, narrationRequest } from "../voice/external.ts";
 import { DEFAULT_CANVAS, type Formula, imageKey, OUTPUT_SCALE, type Script, type StepAudio } from "../shared/types.ts";
 import { type Listener, SAMPLE_RATE, cachedNarration, estimateNarration, narrate } from "../voice/narrate.ts";
 import { resolveVoice } from "../voice/voice.ts";
@@ -90,9 +91,14 @@ function imageSources(script: Script): Set<string> {
   return new Set(script.steps.flatMap((s) => s.do ?? []).flatMap((a) => a.add ? [a.add].flat() : []).map((el) => el.src).filter((s): s is string => !!s));
 }
 
-async function prepareOutputs(loaded: Loaded, outputs: string[]) {
+async function prepareOutputs(loaded: Loaded, outputs: string[], narrationInputs: string[] = []) {
   const inputs = [loaded.sourceFile, ...Array.from(imageSources(loaded.script), (src) => path.resolve(loaded.baseDir, src))];
-  await prepareOutputFiles(inputs, outputs, "input script and its images");
+  await prepareOutputFiles([...inputs, ...narrationInputs], outputs, narrationInputs.length ? "input script, images and narration files" : "input script and its images");
+}
+
+export async function exportNarration(loaded: Loaded, output: string) {
+  await prepareOutputs(loaded, [output]);
+  await writeFileAtomic(output, Buffer.from(JSON.stringify(narrationRequest(loaded.script), null, 2) + "\n"));
 }
 
 /**
@@ -498,6 +504,7 @@ export async function recordWithFfmpeg(player: Player, o: RecordingOutput & { au
 }
 
 export interface RenderOptions {
+  narration?: string;
   output: string;
   fps: number;
   /** output width in pixels; the height follows from the canvas */
@@ -518,14 +525,15 @@ export async function renderVideo(loaded: Loaded, o: RenderOptions): Promise<{ d
   const speechTimer = stopwatch();
   const encodingTimer = stopwatch();
   const finishVoiceSelection = speechTimer.start();
-  const voice = await resolveVoice({
+  const imported = o.narration ? await importNarration(script, o.narration, true, o.signal) : undefined;
+  const voice = imported ? undefined : await resolveVoice({
     spec: o.voice ?? script.voice,
     narration: script.steps.map((s) => s.say ?? "").join(" "),
     ttsCommand: o.ttsCommand,
     log: o.log,
   });
   finishVoiceSelection();
-  await prepareOutputs(loaded, [o.output]);
+  await prepareOutputs(loaded, [o.output], imported?.inputs);
   const ffmpeg = requireFfmpeg();
   // The first frame is a cover, the canvas as this step ends: the empty canvas makes a poor thumbnail.
   const cover = script.cover === false ? null : (script.cover ?? 1);
@@ -539,7 +547,11 @@ export async function renderVideo(loaded: Loaded, o: RenderOptions): Promise<{ d
   o.log("Narration");
   // And the video is drawn behind the narration, as far as it has been spoken.
   const finishSpeech = speechTimer.start();
-  const telling = tell(opening, script, (listener) => narrate(script, voice, speed, o.log, listener, signal).finally(finishSpeech), {
+  const speak = async (listener: Listener) => {
+    if (imported) imported.steps.forEach((step, i) => listener.spoken(i, step, imported.clips[i]));
+    else await narrate(script, voice!, speed, o.log, listener, signal);
+  };
+  const telling = tell(opening, script, (listener) => speak(listener).finally(finishSpeech), {
     fps: o.fps,
     captions,
     cover,
@@ -597,6 +609,7 @@ function guessFrames(script: Script, fps: number): number {
 }
 
 export interface SnapshotOptions {
+  narration?: string;
   /** the file to write; with several pictures, each gets a suffix before the extension */
   output: string;
   /** seconds into the video, with pointer and captions as the video shows them */
@@ -634,18 +647,20 @@ export async function renderSnapshot(loaded: Loaded, o: SnapshotOptions): Promis
     if (o.sheet) return sheetPage(o.output, i);
     return o.output.replace(/(\.png)?$/i, `-step${part[0]}.png`);
   });
-  await prepareOutputs(loaded, outputs);
+  const imported = o.narration ? await importNarration(script, o.narration, false, o.signal) : undefined;
+  await prepareOutputs(loaded, outputs, imported?.inputs);
   const captions = o.captions ?? script.captions ?? true;
-  const voice = await resolveVoice({ spec: o.voice ?? script.voice, narration: script.steps.map((s) => s.say ?? "").join(" "), ttsCommand: o.ttsCommand, log: o.log });
+  const voice = imported ? undefined : await resolveVoice({ spec: o.voice ?? script.voice, narration: script.steps.map((s) => s.say ?? "").join(" "), ttsCommand: o.ttsCommand, log: o.log });
   // a still is looked at, not watched: the canvas's own size is plenty, and quicker to make and to read
   const request = await playerRequest(loaded, o.width ?? Math.round(canvas.width), captions, undefined, o.signal);
   const work = await mkdtemp(path.join(path.dirname(path.resolve(o.output)), ".drawcast-"));
   let player: Player | undefined;
   try {
     player = await openPlayer(request, o.log, o.signal);
-    const narration = await cachedNarration(script, voice, speed, o.signal);
+    const narration = imported ?? await cachedNarration(script, voice!, speed, o.signal);
     const { duration, stepDone } = await player.load(narration.steps.map((step) => timing(step, captions)));
     const timingNote =
+      !("total" in narration) ? "timing from imported narration" :
       !narration.total ? "timing exact: the script has no narration" : narration.cached === narration.total && narration.voice
         ? `timing from the speech of ${narration.voice}, as the video will have it`
         : narration.cached
