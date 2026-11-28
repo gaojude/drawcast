@@ -1,55 +1,63 @@
-# Tweet: drawcast now speaks with MiniMax
+# Tweet: Drawcast now speaks with MiniMax
 
-Attach `minimax.en.mp4` to the first post. Post only after the MiniMax voice is released on npm:
-`npx -y drawcast@latest key minimax` does not exist in 0.6.0.
+Attach `minimax.en.mp4` (vertical, 9:16) to the first post. Post only once Drawcast with the
+MiniMax voice is released on npm (0.6.0 does not have it).
 
 ## Thread (English)
 
 **1/3** (with the video)
 
-drawcast now speaks with @MiniMax__AI 🎙️
+Ever ask your coding agent something and get a wall of text back? 😵
 
-Ask your coding agent for a video. It writes a script, drawcast sketches a whiteboard explainer step by step, and MiniMax narrates it like a real person.
+Add one line: "use github.com/gaojude/drawcast to explain it"
 
-This whole video was made by an agent. The voice is MiniMax.
+You get a narrated whiteboard video instead. And now it speaks with @MiniMax__AI voices 🎙️
 
 **2/3**
 
-How to use it:
+Try it:
 
-1. npx skills add gaojude/drawcast -g -y
-2. npx -y drawcast@latest key minimax
-   (paste your MiniMax API key once. It never goes in a script or a chat)
-3. Tell your agent: "make a video about X, narrated by a MiniMax voice"
+1. Tell your agent: "Install the gaojude/drawcast skill"
+   (or run npx skills add gaojude/drawcast)
+2. The free built-in voice works right away.
+3. Want MiniMax? Set MINIMAX_API_KEY, then ask for a MiniMax voice.
 
 **3/3**
 
-MiniMax bills by the character, so drawcast caches every sentence: edit one line, pay for one line.
+The key never goes in a script or in your chat, and every sentence is cached, so a re-render only pays for what changed.
 
-Any MiniMax voice works, cloned ones too:
-"voice": "minimax:Casual_Guy"
+Every scene in this video came from one short script.
 
-Free and open source (MIT):
+Give your coding agent a whiteboard. And now, a voice.
 github.com/gaojude/drawcast
 
 ## Single post (if no thread)
 
-drawcast now speaks with @MiniMax__AI 🎙️
+Your coding agent answers with a wall of text? Add "use github.com/gaojude/drawcast to explain it" and get a narrated whiteboard video instead.
 
-Your coding agent writes a script, drawcast sketches a narrated whiteboard video, and MiniMax gives it a voice that sounds like a person.
+Now with @MiniMax__AI voices 🎙️
 
-Save your key once with `drawcast key minimax`, then just ask.
-
-github.com/gaojude/drawcast
+Give your coding agent a whiteboard. And now, a voice.
 
 ## 中文版
 
-drawcast 现在支持 MiniMax 语音了 🎙️
+配 `minimax.mp4`（中文视频，hunyin_6 配音）。
 
-让编程 Agent 写好脚本，drawcast 一步步画出白板讲解视频，再由 MiniMax 用真人般的声音配音。
+**中文 1/2**（附视频）
 
-这条视频从头到尾都是 Agent 做的。
+问编程 Agent 一个问题，却收到一大段文字？😵
 
-用法：运行 drawcast key minimax 保存一次密钥，然后直接让 Agent 做视频。
+加一句：用 github.com/gaojude/drawcast 来讲解它
 
-github.com/gaojude/drawcast
+就能得到一条边画边讲的白板视频。现在还能用 MiniMax 配音 🎙️
+
+给你的 AI 一块白板，现在还有了声音。
+
+**中文 2/2**
+
+上手方法：
+1. 告诉 Agent：「安装 gaojude/drawcast 这个技能」（或运行 npx skills add gaojude/drawcast）
+2. 免费语音马上就能用
+3. 想用 MiniMax？设置 MINIMAX_API_KEY，再让 Agent 用 MiniMax 配音
+
+密钥不进脚本，也不进聊天。

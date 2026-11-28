@@ -183,9 +183,14 @@ function explain(e: unknown, o: { voiceId: string; model: string; source: string
   return new Error(`MiniMax could not say "${o.sentence}" in the voice ${name}: ${e.message}`);
 }
 
-/** Gets ready to speak with a MiniMax voice. Returns the function that says one sentence. */
-export async function openMinimaxVoice(spec: { voiceId: string; model: string }, log: (line: string) => void, signal?: AbortSignal): Promise<(sentence: string) => Promise<Audio>> {
+/**
+ * Gets ready to speak with a MiniMax voice. Returns the function that says one sentence. `speed` (0.5 to
+ * 2, as in a script) is the model's own speaking rate, which paces a faster sentence more naturally than
+ * stretching it afterwards would.
+ */
+export async function openMinimaxVoice(spec: { voiceId: string; model: string }, log: (line: string) => void, signal?: AbortSignal, speed = 1): Promise<(sentence: string) => Promise<Audio>> {
   signal?.throwIfAborted();
+  if (!(speed >= 0.5 && speed <= 2)) throw new Error(`MiniMax speaks at speeds from 0.5 to 2, not ${speed}.`);
   const found = minimaxKey();
   if (!found) {
     throw new Error(`The voice "${MINIMAX_PREFIX}${spec.voiceId}" is MiniMax's, which is paid and needs an API key. Have its owner run "drawcast key minimax" in their own terminal and paste it there, or set MINIMAX_API_KEY. Never put the key in the script.`);
@@ -209,8 +214,7 @@ export async function openMinimaxVoice(spec: { voiceId: string; model: string },
       model: spec.model,
       text: sentence,
       stream: false,
-      // drawcast changes the speed itself, after the sentence is spoken, so that one recording serves every speed
-      voice_setting: { voice_id: spec.voiceId, speed: 1, vol: 1, pitch: 0 },
+      voice_setting: { voice_id: spec.voiceId, speed, vol: 1, pitch: 0 },
       audio_setting: { sample_rate: SAMPLE_RATE, format: "pcm", channel: 1 },
       language_boost: "auto",
       output_format: "hex",

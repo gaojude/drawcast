@@ -1,184 +1,1664 @@
 {
   "drawcast": 1,
-  "title": "drawcast now speaks with MiniMax",
-  "voice": "minimax:Casual_Guy",
+  "title": "Drawcast now speaks with MiniMax",
+  "canvas": {
+    "width": 720,
+    "height": 1280,
+    "background": "#ffffff"
+  },
+  "voice": "minimax:English_magnetic_voiced_man",
+  "speed": 1.15,
+  "cover": 12,
   "steps": [
     {
-      "say": "This whole video was made by an AI agent. Drawn by drawcast. And now, voiced by MiniMax.",
+      "say": "You ask your coding agent a simple question. How does DNS work?",
       "do": [
-        { "at": "made by an AI agent", "duration": 0.8, "add": { "id": "s0-made", "type": "text", "x": 640, "y": 115, "textAlign": "center", "text": "Made end to end by an AI agent", "fontSize": 32, "strokeColor": "#868e96" } },
-        { "at": "Drawn by drawcast", "duration": 0.8, "add": { "id": "s0-dc", "type": "text", "x": 575, "y": 230, "textAlign": "right", "text": "drawcast", "fontSize": 100 } },
-        { "at": "voiced by MiniMax", "duration": 0.3, "add": { "id": "s0-x", "type": "text", "x": 640, "y": 252, "textAlign": "center", "text": "×", "fontSize": 64, "strokeColor": "#868e96" } },
-        { "enter": "fade", "duration": 0.7, "add": { "id": "s0-logo", "type": "image", "x": 705, "y": 217, "width": 420, "height": 140, "src": "assets/minimax-logo-light.png" } },
-        { "duration": 0.6, "add": { "id": "s0-pill", "type": "rectangle", "x": 370, "y": 455, "width": 540, "height": 84, "label": "Now with MiniMax speech", "fontSize": 36, "backgroundColor": "#ffdeeb", "strokeColor": "#c2255c", "strokeWidth": 4 } }
-      ],
-      "pause": 0.6
-    },
-    {
-      "say": "If you haven't met drawcast yet: you ask your coding agent for a video, and it writes a short script. Each step says one thing, and draws something to match.",
-      "do": [
-        { "camera": { "x": 1400, "y": 0, "width": 1280 }, "duration": 0.6 },
-        { "at": "met drawcast", "add": { "id": "h1", "type": "text", "x": 1470, "y": 50, "text": "What is drawcast?", "fontSize": 52 } },
-        { "at": "ask your", "duration": 0.5, "add": { "id": "bubble", "type": "rectangle", "x": 1470, "y": 160, "width": 540, "height": 90, "label": "“Make a video explaining DNS”", "fontSize": 28, "backgroundColor": "#a5d8ff", "strokeColor": "#1971c2" } },
-        { "at": "coding agent", "duration": 0.4, "add": [
-          { "id": "agent", "type": "rectangle", "x": 1470, "y": 360, "width": 240, "height": 100, "label": "Your agent", "fontSize": 30, "backgroundColor": "#e5dbff", "strokeColor": "#6741d9" },
-          { "id": "a-ask", "type": "arrow", "from": "bubble", "to": "agent" }
-        ] },
-        { "at": "writes a short script", "duration": 0.5, "add": [
-          { "id": "card", "type": "rectangle", "x": 1880, "y": 300, "width": 600, "height": 270, "backgroundColor": "#fff9db", "strokeColor": "#f08c00" },
-          { "id": "a-write", "type": "arrow", "from": "agent", "to": "card", "label": "writes" },
-          { "id": "card-name", "type": "text", "x": 1910, "y": 318, "text": "script.json", "fontSize": 22, "fontFamily": "code", "strokeColor": "#e67700" }
-        ] },
-        { "at": "says one thing", "duration": 1.2, "add": { "id": "card-say", "type": "text", "x": 1910, "y": 370, "text": "say: “Your browser asks DNS\n      for the address.”", "fontSize": 24, "fontFamily": "code" } },
-        { "at": "draws something", "duration": 1.2, "add": { "id": "card-do", "type": "text", "x": 1910, "y": 470, "text": "do:  draw Browser, draw DNS,\n      an arrow between them", "fontSize": 24, "fontFamily": "code" } }
-      ],
-      "pause": 0.3
-    },
-    {
-      "say": "Then drawcast turns that script into a video. It sketches every step on a whiteboard, in time with the voice, and renders an MP4.",
-      "do": [
-        { "camera": { "x": 2800, "y": 0, "width": 1280 }, "duration": 0.6 },
-        { "enter": "none", "add": { "id": "h2", "type": "text", "x": 2870, "y": 50, "text": "Script in. Video out.", "fontSize": 52 } },
-        { "duration": 0.3, "add": { "id": "sc2", "type": "rectangle", "x": 2870, "y": 260, "width": 180, "height": 100, "label": "script", "fontSize": 26, "fontFamily": "code", "backgroundColor": "#fff9db", "strokeColor": "#f08c00" } },
-        { "at": "drawcast turns", "duration": 0.5, "add": [
-          { "id": "dc", "type": "rectangle", "x": 3110, "y": 250, "width": 240, "height": 120, "label": "drawcast", "fontSize": 36, "backgroundColor": "#a5d8ff", "strokeColor": "#1971c2", "strokeWidth": 4 },
-          { "id": "a-in", "type": "arrow", "from": "sc2", "to": "dc" }
-        ] },
-        { "at": "into a video", "duration": 0.5, "add": [
-          { "id": "frame", "type": "rectangle", "x": 3420, "y": 140, "width": 600, "height": 340, "backgroundColor": "#ffffff", "strokeColor": "#1e1e1e", "strokeWidth": 4 },
-          { "id": "a-out", "type": "arrow", "from": "dc", "to": "frame" }
-        ] },
-        { "at": "sketches", "duration": 0.4, "add": [
-          { "id": "mb", "type": "rectangle", "x": 3465, "y": 220, "width": 160, "height": 76, "label": "Browser", "fontSize": 22, "backgroundColor": "#a5d8ff", "strokeColor": "#1971c2" },
-          { "id": "md", "type": "rectangle", "x": 3815, "y": 220, "width": 160, "height": 76, "label": "DNS", "fontSize": 22, "backgroundColor": "#e5dbff", "strokeColor": "#6741d9" }
-        ] },
-        { "at": "in time with the voice", "duration": 0.4, "add": [
-          { "id": "ma", "type": "arrow", "from": "mb", "to": "md", "label": "where is it?" },
-          { "id": "strip", "type": "rectangle", "x": 3445, "y": 415, "width": 550, "height": 44, "backgroundColor": "#343a40", "strokeColor": "#343a40", "roughness": 0 },
-          { "id": "strip-text", "type": "text", "x": 3720, "y": 425, "textAlign": "center", "text": "Your browser asks DNS for the address.", "fontSize": 18, "strokeColor": "#f8f9fa" }
-        ] },
-        { "send": { "along": "ma", "color": "red" } },
-        { "at": "MP4", "duration": 0.5, "add": { "id": "mp4", "type": "text", "x": 3720, "y": 505, "textAlign": "center", "text": "explainer.mp4", "fontSize": 28, "fontFamily": "code", "strokeColor": "#2f9e44" } },
-        { "pulse": "frame" }
-      ],
-      "pause": 0.3
-    },
-    {
-      "say": "Until now, that voice came from Microsoft Edge, or from a small model on your laptop. Today there's a third choice: MiniMax.",
-      "do": [
-        { "camera": { "x": 4200, "y": 0, "width": 1280 }, "duration": 0.6 },
-        { "enter": "none", "add": { "id": "h3", "type": "text", "x": 4270, "y": 50, "text": "Choose the voice", "fontSize": 52 } },
-        { "at": "Microsoft Edge", "duration": 0.4, "add": { "id": "v1", "type": "rectangle", "x": 4270, "y": 150, "width": 330, "height": 170, "label": "Edge\nfree · online", "fontSize": 30, "backgroundColor": "#a5d8ff", "strokeColor": "#1971c2" } },
-        { "at": "small model", "duration": 0.4, "add": { "id": "v2", "type": "rectangle", "x": 4640, "y": 150, "width": 330, "height": 170, "label": "Built-in\nfree · offline", "fontSize": 30, "backgroundColor": "#c3fae8", "strokeColor": "#0c8599" } },
-        { "at": "third choice", "duration": 0.4, "add": { "id": "v3", "type": "rectangle", "x": 5010, "y": 150, "width": 400, "height": 170, "backgroundColor": "#fff0f6", "strokeColor": "#e64980", "strokeWidth": 4 } },
-        { "enter": "fade", "duration": 0.5, "add": [
-          { "id": "v3-logo", "type": "image", "x": 5045, "y": 162, "width": 330, "height": 110, "src": "assets/minimax-logo-light.png" },
-          { "id": "v3-text", "type": "text", "x": 5210, "y": 274, "textAlign": "center", "text": "expressive · paid", "fontSize": 26, "strokeColor": "#c2255c" }
-        ] },
-        { "at": "MiniMax", "duration": 0.3, "add": { "id": "badge", "type": "rectangle", "x": 5330, "y": 108, "width": 100, "height": 46, "label": "NEW", "fontSize": 24, "backgroundColor": "#e64980", "strokeColor": "#ffffff" } },
-        { "pulse": "v3" }
-      ],
-      "pause": 0.3
-    },
-    {
-      "say": "MiniMax speech sounds like a real person. It reads the context, picks the right emotion, and speaks English, Chinese, and dozens more languages. In fact, the voice you're hearing right now is MiniMax.",
-      "do": [
-        { "at": "sounds like a real person", "update": { "id": ["v1", "v2"], "opacity": 35 } },
-        { "at": "reads the context", "duration": 0.9, "add": [
-          { "id": "b1-mark", "type": "image", "x": 4270, "y": 374, "width": 40, "height": 34, "src": "assets/minimax-mark.png" },
-          { "id": "b1", "type": "text", "x": 4325, "y": 370, "text": "Reads the context, picks the emotion", "fontSize": 28 }
-        ] },
-        { "at": "speaks English", "duration": 0.9, "add": [
-          { "id": "b2-mark", "type": "image", "x": 4270, "y": 444, "width": 40, "height": 34, "src": "assets/minimax-mark.png" },
-          { "id": "b2", "type": "text", "x": 4325, "y": 440, "text": "English, 中文, and dozens more", "fontSize": 28 }
-        ] },
-        { "at": "the voice you're hearing", "duration": 0.5, "add": [
-          { "id": "hear", "type": "rectangle", "x": 4990, "y": 370, "width": 420, "height": 130, "backgroundColor": "#ffdeeb", "strokeColor": "#e64980", "strokeWidth": 4 },
-          { "id": "hear-mark", "type": "image", "x": 5015, "y": 392, "width": 100, "height": 85, "src": "assets/minimax-mark.png" },
-          { "id": "hear-text", "type": "text", "x": 5135, "y": 393, "text": "You're hearing\nMiniMax now", "fontSize": 30, "strokeColor": "#c2255c" }
-        ] },
-        { "at": "right now", "pulse": "hear" }
-      ],
-      "pause": 0.5
-    },
-    {
-      "say": "Here's how to use it. Step one: get an API key from MiniMax, then save it once, in your own terminal, with drawcast key minimax.",
-      "do": [
-        { "camera": { "x": 5600, "y": 0, "width": 1280 }, "duration": 0.6 },
-        { "at": "Step one", "add": { "id": "h4", "type": "text", "x": 5670, "y": 50, "text": "1 · Save your key, once", "fontSize": 52, "strokeColor": "#c2255c" } },
-        { "at": "get an API key", "duration": 0.8, "add": { "id": "src", "type": "text", "x": 5670, "y": 135, "text": "Get an API key at platform.minimax.io", "fontSize": 26, "strokeColor": "#495057" } },
-        { "at": "your own terminal", "duration": 0.4, "add": { "id": "term", "type": "rectangle", "x": 5670, "y": 200, "width": 780, "height": 200, "backgroundColor": "#212529", "strokeColor": "#212529" } },
-        { "at": "drawcast key minimax", "duration": 1.2, "add": { "id": "t1", "type": "text", "x": 5700, "y": 225, "text": "$ npx -y drawcast@latest key minimax", "fontSize": 24, "fontFamily": "code", "strokeColor": "#69db7c" } },
-        { "duration": 0.8, "add": { "id": "t2", "type": "text", "x": 5700, "y": 285, "text": "MiniMax API key (it is not shown):", "fontSize": 20, "fontFamily": "code", "strokeColor": "#ced4da" } },
-        { "duration": 0.8, "add": { "id": "t3", "type": "text", "x": 5700, "y": 335, "text": "Saved the MiniMax key ending 9f2c.", "fontSize": 20, "fontFamily": "code", "strokeColor": "#ffd43b" } }
+        {
+          "at": 0,
+          "duration": 0.4,
+          "add": [
+            {
+              "id": "win",
+              "type": "rectangle",
+              "x": 30,
+              "y": 50,
+              "width": 660,
+              "height": 1040,
+              "backgroundColor": "#f8f9fa",
+              "strokeColor": "#ced4da",
+              "strokeWidth": 2
+            },
+            {
+              "id": "win-title",
+              "type": "text",
+              "x": 55,
+              "y": 66,
+              "text": "Your coding agent",
+              "fontSize": 22,
+              "strokeColor": "#868e96"
+            }
+          ]
+        },
+        {
+          "at": "How does DNS work",
+          "duration": 0.7,
+          "add": {
+            "id": "q",
+            "type": "rectangle",
+            "x": 355,
+            "y": 110,
+            "width": 310,
+            "height": 64,
+            "label": "How does DNS work?",
+            "fontSize": 26,
+            "backgroundColor": "#a5d8ff",
+            "strokeColor": "#1971c2"
+          }
+        }
       ],
       "pause": 0.2
     },
     {
-      "say": "The key never goes into a script, or into your chat with the agent. It stays on your machine, and every render finds it.",
+      "say": "And it hands you a wall of text. You scroll, you skim, and you still don't get it.",
       "do": [
-        { "at": "never goes", "duration": 0.4, "add": [
-          { "id": "lock-card", "type": "rectangle", "x": 6490, "y": 200, "width": 330, "height": 200, "backgroundColor": "#fff5f5", "strokeColor": "#e03131" },
-          { "id": "lock", "type": "image", "x": 6625, "y": 218, "width": 60, "height": 70, "svg": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 56'><path d='M12 25V16a12 12 0 0 1 24 0v9' fill='none' stroke='#e03131' stroke-width='5' stroke-linecap='round'/><rect x='4' y='25' width='40' height='29' rx='6' fill='#ffc9c9' stroke='#e03131' stroke-width='4'/><circle cx='24' cy='37' r='4' fill='#e03131'/><path d='M24 39v7' stroke='#e03131' stroke-width='4' stroke-linecap='round'/></svg>" }
-        ] },
-        { "duration": 0.8, "add": { "id": "lock-text", "type": "text", "x": 6655, "y": 305, "textAlign": "center", "text": "Never in a script.\nNever in a chat.", "fontSize": 26, "strokeColor": "#e03131" } },
-        { "at": "stays on your machine", "duration": 1.2, "add": { "id": "note", "type": "text", "x": 5670, "y": 440, "text": "Saved on your machine, readable only by you.\nEvery render finds it, even in an agent session that's already open.", "fontSize": 22, "strokeColor": "#495057" } },
-        { "at": "every render finds it", "pulse": "term" }
+        {
+          "at": "wall of text",
+          "duration": 2.2,
+          "add": {
+            "id": "wall",
+            "type": "text",
+            "x": 55,
+            "y": 200,
+            "text": "Great question! DNS (the Domain Name System) is a hierarchical,\ndistributed naming system that translates human-readable domain\nnames into IP addresses. When you type a URL, your browser first\nchecks its own cache, then the operating system's resolver cache,\nand then queries a recursive resolver, typically operated by your\nISP or a public provider. If the resolver has no cached answer, it\nstarts an iterative lookup at one of the 13 root server clusters,\nwhich respond with a referral to the relevant top-level domain (TLD)\nservers, such as those for .com. The TLD servers then refer the\nresolver to the authoritative name servers for the domain, which\nreturn the final A or AAAA record, along with a TTL that controls\nhow long the answer may be cached. Along the way, records such as\nCNAME, NS, MX and TXT may be involved, and DNSSEC can add signatures\nthat let resolvers verify each response. Modern setups may also use\nDNS over HTTPS or DNS over TLS to encrypt queries, anycast routing\nto reduce latency, and negative caching for names that do not exist.\nIt is also worth noting that resolvers may apply prefetching,\nserve-stale behaviour and query name minimisation, while operators\nbalance TTL values against propagation delays whenever records\nchange. In summary, DNS is a layered system of caches and referrals\nthat, together, map names to addresses quickly and reliably, while\nbalancing performance, security, and decentralization across the\nglobal internet...",
+            "fontSize": 17,
+            "fontFamily": "normal",
+            "strokeColor": "#495057"
+          }
+        },
+        {
+          "at": "You scroll",
+          "camera": {
+            "x": 0,
+            "y": 180,
+            "width": 720
+          },
+          "duration": 0.9
+        },
+        {
+          "at": "still don't get it",
+          "duration": 0.4,
+          "update": {
+            "id": "wall",
+            "opacity": 30
+          }
+        },
+        {
+          "at": "still don't get it",
+          "duration": 0.4,
+          "add": {
+            "id": "tldr",
+            "type": "rectangle",
+            "x": 140,
+            "y": 420,
+            "width": 440,
+            "height": 160,
+            "label": "TL;DR",
+            "fontSize": 76,
+            "strokeColor": "#e03131",
+            "backgroundColor": "#fff5f5",
+            "strokeWidth": 5,
+            "angle": -0.18
+          }
+        }
       ],
-      "pause": 0.4
+      "pause": 0.2
     },
     {
-      "say": "Step two: just ask. Tell your agent to narrate the video with a MiniMax voice, or name the voice in the script yourself.",
+      "say": "So you add one line. Use Drawcast to explain it.",
       "do": [
-        { "camera": { "x": 7000, "y": 0, "width": 1280 }, "duration": 0.6 },
-        { "at": "Step two", "add": { "id": "h5", "type": "text", "x": 7070, "y": 50, "text": "2 · Just ask", "fontSize": 52, "strokeColor": "#1971c2" } },
-        { "at": "Tell your agent", "duration": 0.5, "add": { "id": "ask", "type": "rectangle", "x": 7070, "y": 150, "width": 900, "height": 90, "label": "“Make a video about DNS, narrated by a MiniMax voice”", "fontSize": 26, "backgroundColor": "#a5d8ff", "strokeColor": "#1971c2" } },
-        { "at": "name the voice", "duration": 0.5, "add": { "id": "or", "type": "text", "x": 7070, "y": 272, "text": "or, in the script:", "fontSize": 24, "strokeColor": "#868e96" } },
-        { "duration": 0.5, "add": { "id": "code", "type": "rectangle", "x": 7070, "y": 315, "width": 480, "height": 80, "label": "\"voice\": \"minimax:Casual_Guy\"", "fontSize": 24, "fontFamily": "code", "backgroundColor": "#fff9db", "strokeColor": "#f08c00" } },
-        { "at": "yourself", "enter": "fade", "add": { "id": "hint", "type": "text", "x": 7590, "y": 322, "text": "any MiniMax voice id,\nor one you cloned", "fontSize": 22, "strokeColor": "#868e96" } }
+        {
+          "at": "add one line",
+          "duration": 1.6,
+          "add": {
+            "id": "q2",
+            "type": "rectangle",
+            "x": 125,
+            "y": 910,
+            "width": 540,
+            "height": 110,
+            "label": "use github.com/gaojude/drawcast\nto explain it",
+            "fontSize": 26,
+            "backgroundColor": "#d3f9d8",
+            "strokeColor": "#2f9e44",
+            "strokeWidth": 3
+          }
+        },
+        {
+          "at": "explain it",
+          "pulse": "q2"
+        }
       ],
-      "pause": 0.3
+      "pause": 0.2
     },
     {
-      "say": "MiniMax bills by the character, so drawcast caches every sentence. Edit one line, render again, and you only pay for that line.",
+      "say": "And now you get this. A whiteboard video, drawn and narrated, step by step.",
       "do": [
-        { "at": "caches every sentence", "duration": 0.3, "add": [
-          { "id": "c1", "type": "rectangle", "x": 7070, "y": 440, "width": 300, "height": 72, "label": "Sentence 1 · cached", "fontSize": 22, "backgroundColor": "#d3f9d8", "strokeColor": "#2f9e44" },
-          { "id": "c2", "type": "rectangle", "x": 7410, "y": 440, "width": 300, "height": 72, "label": "Sentence 2 · cached", "fontSize": 22, "backgroundColor": "#d3f9d8", "strokeColor": "#2f9e44" },
-          { "id": "c3", "type": "rectangle", "x": 7750, "y": 440, "width": 300, "height": 72, "label": "Sentence 3 · cached", "fontSize": 22, "backgroundColor": "#d3f9d8", "strokeColor": "#2f9e44" }
-        ] },
-        { "at": "Edit one line", "update": { "id": "c3", "label": "Sentence 3 · edited", "backgroundColor": "#ffe8cc", "strokeColor": "#e8590c" } },
-        { "at": "only pay", "pulse": "c3" },
-        { "at": "that line", "enter": "fade", "add": { "id": "billed", "type": "text", "x": 7900, "y": 532, "textAlign": "center", "text": "only this one is billed", "fontSize": 22, "strokeColor": "#e8590c" } }
-      ],
-      "pause": 0.5
+        {
+          "camera": {
+            "x": 800,
+            "y": 0,
+            "width": 720
+          },
+          "duration": 0.7
+        },
+        {
+          "at": "you get this",
+          "duration": 0.5,
+          "add": [
+            {
+              "id": "rescue",
+              "type": "text",
+              "x": 1160,
+              "y": 50,
+              "textAlign": "center",
+              "text": "Drawcast to the rescue",
+              "fontSize": 46,
+              "strokeColor": "#2f9e44"
+            },
+            {
+              "id": "frame",
+              "type": "rectangle",
+              "x": 840,
+              "y": 140,
+              "width": 640,
+              "height": 760,
+              "backgroundColor": "#ffffff",
+              "strokeColor": "#1e1e1e",
+              "strokeWidth": 4
+            },
+            {
+              "id": "frame-name",
+              "type": "text",
+              "x": 865,
+              "y": 155,
+              "text": "dns.mp4",
+              "fontSize": 20,
+              "fontFamily": "code",
+              "strokeColor": "#868e96"
+            },
+            {
+              "id": "bar-bg",
+              "type": "rectangle",
+              "x": 860,
+              "y": 880,
+              "width": 600,
+              "height": 6,
+              "backgroundColor": "#dee2e6",
+              "strokeColor": "#dee2e6",
+              "roughness": 0,
+              "rounded": false
+            },
+            {
+              "id": "bar",
+              "type": "rectangle",
+              "x": 860,
+              "y": 880,
+              "width": 8,
+              "height": 6,
+              "backgroundColor": "#e03131",
+              "strokeColor": "#e03131",
+              "roughness": 0,
+              "rounded": false
+            }
+          ]
+        },
+        {
+          "duration": 2.6,
+          "update": {
+            "id": "bar",
+            "width": 600
+          }
+        },
+        {
+          "at": "whiteboard video",
+          "duration": 0.3,
+          "add": [
+            {
+              "id": "pb",
+              "type": "rectangle",
+              "x": 880,
+              "y": 260,
+              "width": 220,
+              "height": 90,
+              "label": "Browser",
+              "fontSize": 28,
+              "backgroundColor": "#a5d8ff",
+              "strokeColor": "#1971c2"
+            },
+            {
+              "id": "pr",
+              "type": "rectangle",
+              "x": 1220,
+              "y": 260,
+              "width": 220,
+              "height": 90,
+              "label": "Resolver",
+              "fontSize": 28,
+              "backgroundColor": "#e5dbff",
+              "strokeColor": "#6741d9"
+            }
+          ]
+        },
+        {
+          "at": "drawn",
+          "duration": 0.25,
+          "add": [
+            {
+              "id": "pa1",
+              "type": "arrow",
+              "from": "pb",
+              "to": "pr",
+              "label": "asks"
+            },
+            {
+              "id": "strip",
+              "type": "rectangle",
+              "x": 860,
+              "y": 790,
+              "width": 600,
+              "height": 60,
+              "backgroundColor": "#343a40",
+              "strokeColor": "#343a40",
+              "roughness": 0
+            },
+            {
+              "id": "strip-text",
+              "type": "text",
+              "x": 1160,
+              "y": 806,
+              "textAlign": "center",
+              "text": "Your browser asks a resolver where the site lives.",
+              "fontSize": 18,
+              "strokeColor": "#f8f9fa"
+            }
+          ]
+        },
+        {
+          "send": {
+            "along": "pa1",
+            "color": "red"
+          }
+        },
+        {
+          "at": "narrated",
+          "duration": 0.2,
+          "add": [
+            {
+              "id": "ps",
+              "type": "rectangle",
+              "x": 1220,
+              "y": 520,
+              "width": 220,
+              "height": 90,
+              "label": "example.com",
+              "fontSize": 26,
+              "backgroundColor": "#d3f9d8",
+              "strokeColor": "#2f9e44"
+            },
+            {
+              "id": "pa2",
+              "type": "arrow",
+              "from": "pr",
+              "to": "ps",
+              "label": "IP"
+            },
+            {
+              "id": "proot",
+              "type": "rectangle",
+              "x": 880,
+              "y": 520,
+              "width": 220,
+              "height": 90,
+              "label": "root · .com",
+              "fontSize": 24,
+              "backgroundColor": "#f1f3f5",
+              "strokeColor": "#868e96",
+              "strokeStyle": "dashed"
+            },
+            {
+              "id": "pa3",
+              "type": "arrow",
+              "from": "pr",
+              "to": "proot",
+              "strokeStyle": "dashed",
+              "strokeColor": "#868e96",
+              "startArrowhead": "arrow"
+            }
+          ]
+        },
+        {
+          "duration": 0.6,
+          "send": {
+            "along": [
+              "pa3",
+              "pa2"
+            ],
+            "color": "green"
+          }
+        },
+        {
+          "at": "step by step",
+          "enter": "fade",
+          "duration": 0.4,
+          "add": {
+            "id": "made",
+            "type": "text",
+            "x": 1160,
+            "y": 930,
+            "textAlign": "center",
+            "text": "made by your agent, with Drawcast",
+            "fontSize": 26,
+            "strokeColor": "#868e96"
+          }
+        }
+      ]
     },
     {
-      "say": "drawcast is free and open source. Install it in your agent, save your MiniMax key, and ask for a video. Just like this one.",
+      "say": "Behind the scenes, your agent writes a short script, and Drawcast turns it into the video.",
       "do": [
-        { "camera": { "x": 8400, "y": 0, "width": 1280 }, "duration": 0.6 },
-        { "enter": "fade", "duration": 0.6, "add": [
-          { "id": "e-dc", "type": "text", "x": 9010, "y": 40, "textAlign": "right", "text": "drawcast", "fontSize": 76 },
-          { "id": "e-x", "type": "text", "x": 9050, "y": 58, "textAlign": "center", "text": "×", "fontSize": 48, "strokeColor": "#868e96" },
-          { "id": "e-logo", "type": "image", "x": 9095, "y": 30, "width": 300, "height": 100, "src": "assets/minimax-logo-light.png" }
-        ] },
-        { "at": "free and open source", "enter": "fade", "add": { "id": "e-sub", "type": "text", "x": 9040, "y": 160, "textAlign": "center", "text": "Free · open source · MIT", "fontSize": 26, "strokeColor": "#868e96" } },
-        { "at": "Install it", "duration": 0.5, "add": [
-          { "id": "n1", "type": "text", "x": 8560, "y": 236, "text": "1", "fontSize": 40, "strokeColor": "#1971c2" },
-          { "id": "r1", "type": "rectangle", "x": 8620, "y": 230, "width": 860, "height": 76, "label": "npx skills add gaojude/drawcast -g -y", "fontSize": 26, "fontFamily": "code", "backgroundColor": "#e7f5ff", "strokeColor": "#1971c2" }
-        ] },
-        { "at": "save your MiniMax key", "duration": 0.5, "add": [
-          { "id": "n2", "type": "text", "x": 8560, "y": 336, "text": "2", "fontSize": 40, "strokeColor": "#c2255c" },
-          { "id": "r2", "type": "rectangle", "x": 8620, "y": 330, "width": 860, "height": 76, "label": "npx -y drawcast@latest key minimax", "fontSize": 26, "fontFamily": "code", "backgroundColor": "#fff0f6", "strokeColor": "#e64980" }
-        ] },
-        { "at": "ask for a video", "duration": 0.5, "add": [
-          { "id": "n3", "type": "text", "x": 8560, "y": 436, "text": "3", "fontSize": 40, "strokeColor": "#2f9e44" },
-          { "id": "r3", "type": "rectangle", "x": 8620, "y": 430, "width": 860, "height": 76, "label": "“Make a video about …”", "fontSize": 30, "backgroundColor": "#ebfbee", "strokeColor": "#2f9e44" }
-        ] },
-        { "at": "Just like this one", "enter": "fade", "add": { "id": "gh", "type": "text", "x": 9040, "y": 540, "textAlign": "center", "text": "github.com/gaojude/drawcast", "fontSize": 28, "fontFamily": "code", "strokeColor": "#495057" } },
-        { "pulse": ["e-dc", "e-logo"] }
+        {
+          "camera": {
+            "x": 1600,
+            "y": 0,
+            "width": 720
+          },
+          "duration": 0.7
+        },
+        {
+          "enter": "none",
+          "add": {
+            "id": "h-how",
+            "type": "text",
+            "x": 1640,
+            "y": 60,
+            "text": "How it works",
+            "fontSize": 56
+          }
+        },
+        {
+          "at": "your agent writes",
+          "duration": 0.4,
+          "add": [
+            {
+              "id": "ag",
+              "type": "rectangle",
+              "x": 1790,
+              "y": 190,
+              "width": 340,
+              "height": 100,
+              "label": "Your agent",
+              "fontSize": 32,
+              "backgroundColor": "#e5dbff",
+              "strokeColor": "#6741d9"
+            },
+            {
+              "id": "card",
+              "type": "rectangle",
+              "x": 1710,
+              "y": 350,
+              "width": 500,
+              "height": 250,
+              "backgroundColor": "#fff9db",
+              "strokeColor": "#f08c00"
+            },
+            {
+              "id": "a-w",
+              "type": "arrow",
+              "from": "ag",
+              "to": "card"
+            }
+          ]
+        },
+        {
+          "duration": 0.9,
+          "add": [
+            {
+              "id": "card-name",
+              "type": "text",
+              "x": 1735,
+              "y": 368,
+              "text": "script.json",
+              "fontSize": 22,
+              "fontFamily": "code",
+              "strokeColor": "#e67700"
+            },
+            {
+              "id": "card-code",
+              "type": "text",
+              "x": 1735,
+              "y": 425,
+              "text": "say: “Your browser asks\n      a resolver…”\ndo:  draw · arrow · send",
+              "fontSize": 24,
+              "fontFamily": "code"
+            }
+          ]
+        },
+        {
+          "at": "Drawcast turns",
+          "duration": 0.3,
+          "add": [
+            {
+              "id": "dc",
+              "type": "rectangle",
+              "x": 1790,
+              "y": 660,
+              "width": 340,
+              "height": 110,
+              "label": "Drawcast",
+              "fontSize": 42,
+              "backgroundColor": "#a5d8ff",
+              "strokeColor": "#1971c2",
+              "strokeWidth": 4
+            },
+            {
+              "id": "a-d",
+              "type": "arrow",
+              "from": "card",
+              "to": "dc"
+            }
+          ]
+        },
+        {
+          "duration": 0.3,
+          "add": [
+            {
+              "id": "mp4",
+              "type": "rectangle",
+              "x": 1820,
+              "y": 840,
+              "width": 280,
+              "height": 100,
+              "label": "dns.mp4",
+              "fontSize": 32,
+              "fontFamily": "code",
+              "backgroundColor": "#d3f9d8",
+              "strokeColor": "#2f9e44"
+            },
+            {
+              "id": "a-v",
+              "type": "arrow",
+              "from": "dc",
+              "to": "mp4"
+            }
+          ]
+        },
+        {
+          "duration": 0.7,
+          "send": {
+            "along": [
+              "a-w",
+              "a-d",
+              "a-v"
+            ],
+            "color": "red"
+          }
+        }
       ],
-      "pause": 2
+      "pause": 0.1
+    },
+    {
+      "say": "And it's not just boxes and arrows. It writes math, plots curves, builds charts, and sets things in motion.",
+      "do": [
+        {
+          "camera": {
+            "x": 1600,
+            "y": 1400,
+            "width": 720
+          },
+          "duration": 0.7
+        },
+        {
+          "at": "not just boxes",
+          "duration": 0.25,
+          "add": [
+            {
+              "id": "h-m",
+              "type": "text",
+              "x": 1640,
+              "y": 1440,
+              "text": "Not just boxes and arrows",
+              "fontSize": 40
+            },
+            {
+              "id": "tA",
+              "type": "rectangle",
+              "x": 1640,
+              "y": 1520,
+              "width": 640,
+              "height": 220,
+              "backgroundColor": "#f8f9fa",
+              "strokeColor": "#ced4da",
+              "strokeWidth": 1
+            },
+            {
+              "id": "tA-name",
+              "type": "text",
+              "x": 1658,
+              "y": 1530,
+              "text": "math",
+              "fontSize": 20,
+              "strokeColor": "#868e96"
+            },
+            {
+              "id": "tB",
+              "type": "rectangle",
+              "x": 1640,
+              "y": 1760,
+              "width": 640,
+              "height": 220,
+              "backgroundColor": "#f8f9fa",
+              "strokeColor": "#ced4da",
+              "strokeWidth": 1
+            },
+            {
+              "id": "tB-name",
+              "type": "text",
+              "x": 1658,
+              "y": 1770,
+              "text": "plots",
+              "fontSize": 20,
+              "strokeColor": "#868e96"
+            },
+            {
+              "id": "tC",
+              "type": "rectangle",
+              "x": 1640,
+              "y": 2000,
+              "width": 640,
+              "height": 220,
+              "backgroundColor": "#f8f9fa",
+              "strokeColor": "#ced4da",
+              "strokeWidth": 1
+            },
+            {
+              "id": "tC-name",
+              "type": "text",
+              "x": 1658,
+              "y": 2010,
+              "text": "charts",
+              "fontSize": 20,
+              "strokeColor": "#868e96"
+            },
+            {
+              "id": "tD",
+              "type": "rectangle",
+              "x": 1640,
+              "y": 2240,
+              "width": 640,
+              "height": 220,
+              "backgroundColor": "#f8f9fa",
+              "strokeColor": "#ced4da",
+              "strokeWidth": 1
+            },
+            {
+              "id": "tD-name",
+              "type": "text",
+              "x": 1658,
+              "y": 2250,
+              "text": "motion",
+              "fontSize": 20,
+              "strokeColor": "#868e96"
+            }
+          ]
+        },
+        {
+          "enter": "fade",
+          "duration": 0.3,
+          "add": [
+            {
+              "id": "mA",
+              "type": "ellipse",
+              "x": 1690,
+              "y": 2313,
+              "width": 140,
+              "height": 76,
+              "label": "agent",
+              "fontSize": 22,
+              "color": "violet"
+            },
+            {
+              "id": "mB",
+              "type": "rectangle",
+              "x": 1900,
+              "y": 2315,
+              "width": 120,
+              "height": 72,
+              "label": "script",
+              "fontSize": 22,
+              "color": "yellow"
+            },
+            {
+              "id": "mC",
+              "type": "rectangle",
+              "x": 2090,
+              "y": 2315,
+              "width": 120,
+              "height": 72,
+              "label": "video",
+              "fontSize": 22,
+              "color": "green"
+            },
+            {
+              "id": "mab",
+              "type": "arrow",
+              "from": "mA",
+              "to": "mB"
+            },
+            {
+              "id": "mbc",
+              "type": "arrow",
+              "from": "mB",
+              "to": "mC"
+            }
+          ]
+        },
+        {
+          "at": "writes math",
+          "duration": 0.9,
+          "add": {
+            "id": "eq",
+            "type": "math",
+            "x": 1960,
+            "y": 1595,
+            "textAlign": "center",
+            "fontSize": 38,
+            "tex": "\\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx"
+          }
+        },
+        {
+          "update": {
+            "id": "eq",
+            "tex": "\\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx = \\sqrt{\\pi}",
+            "strokeColor": "#2f9e44"
+          }
+        },
+        {
+          "at": "plots curves",
+          "duration": 0.4,
+          "add": [
+            {
+              "id": "ax",
+              "type": "axes",
+              "x": 1690,
+              "y": 1805,
+              "width": 540,
+              "height": 150,
+              "domain": [
+                -3,
+                3
+              ],
+              "range": [
+                0,
+                2.4
+              ]
+            },
+            {
+              "id": "bowl",
+              "type": "line",
+              "fn": "x^2/4",
+              "domain": [
+                -3,
+                3
+              ],
+              "range": [
+                0,
+                2.4
+              ],
+              "x": 1690,
+              "y": 1805,
+              "width": 540,
+              "height": 150,
+              "strokeColor": "#1971c2",
+              "strokeWidth": 3
+            }
+          ]
+        },
+        {
+          "duration": 0.15,
+          "add": {
+            "id": "ball",
+            "type": "ellipse",
+            "on": [
+              "bowl",
+              -2.8
+            ],
+            "width": 26,
+            "height": 26,
+            "color": "red"
+          }
+        },
+        {
+          "duration": 1.1,
+          "update": {
+            "id": "ball",
+            "along": [
+              [
+                "bowl",
+                -2.8
+              ],
+              [
+                "bowl",
+                0
+              ]
+            ]
+          }
+        },
+        {
+          "at": "builds charts",
+          "duration": 0.3,
+          "add": [
+            {
+              "id": "pie",
+              "type": "slice",
+              "center": [
+                1790,
+                2124
+              ],
+              "radius": 76,
+              "share": 100,
+              "color": "gray"
+            },
+            {
+              "id": "p1",
+              "type": "slice",
+              "after": "pie",
+              "share": 50,
+              "color": "blue",
+              "label": "50%"
+            },
+            {
+              "id": "p2",
+              "type": "slice",
+              "after": "p1",
+              "share": 30,
+              "color": "violet",
+              "label": "30%"
+            },
+            {
+              "id": "p3",
+              "type": "slice",
+              "after": "p2",
+              "share": 20,
+              "color": "orange"
+            }
+          ]
+        },
+        {
+          "at": "builds charts",
+          "duration": 0.15,
+          "add": [
+            {
+              "id": "bar1",
+              "type": "rectangle",
+              "x": 2000,
+              "y": 2190,
+              "width": 54,
+              "height": 10,
+              "color": "blue",
+              "rounded": false
+            },
+            {
+              "id": "bar2",
+              "type": "rectangle",
+              "x": 2075,
+              "y": 2190,
+              "width": 54,
+              "height": 10,
+              "color": "violet",
+              "rounded": false
+            },
+            {
+              "id": "bar3",
+              "type": "rectangle",
+              "x": 2150,
+              "y": 2190,
+              "width": 54,
+              "height": 10,
+              "color": "orange",
+              "rounded": false
+            }
+          ]
+        },
+        {
+          "duration": 0.8,
+          "update": [
+            {
+              "id": "bar1",
+              "y": 2090,
+              "height": 110
+            },
+            {
+              "id": "bar2",
+              "y": 2040,
+              "height": 160
+            },
+            {
+              "id": "bar3",
+              "y": 2130,
+              "height": 70
+            }
+          ]
+        },
+        {
+          "at": "sets things in motion",
+          "send": {
+            "along": [
+              "mab",
+              "mbc"
+            ],
+            "color": "red"
+          }
+        }
+      ]
+    },
+    {
+      "say": "Out of the box, it speaks with a free voice that runs right on your laptop. And today, there's a brand new option: MiniMax!",
+      "do": [
+        {
+          "camera": {
+            "x": 800,
+            "y": 1400,
+            "width": 720
+          },
+          "duration": 0.7
+        },
+        {
+          "enter": "none",
+          "add": {
+            "id": "h3",
+            "type": "text",
+            "x": 840,
+            "y": 1460,
+            "text": "Choose the voice",
+            "fontSize": 52
+          }
+        },
+        {
+          "at": "free voice",
+          "duration": 0.4,
+          "add": {
+            "id": "v1",
+            "type": "rectangle",
+            "x": 840,
+            "y": 1560,
+            "width": 640,
+            "height": 150,
+            "label": "Built-in\nfree · runs on your laptop",
+            "fontSize": 32,
+            "backgroundColor": "#c3fae8",
+            "strokeColor": "#0c8599"
+          }
+        },
+        {
+          "at": "brand new option",
+          "duration": 0.4,
+          "add": {
+            "id": "v3",
+            "type": "rectangle",
+            "x": 840,
+            "y": 1750,
+            "width": 640,
+            "height": 200,
+            "backgroundColor": "#fff0f6",
+            "strokeColor": "#e64980",
+            "strokeWidth": 4
+          }
+        },
+        {
+          "enter": "fade",
+          "duration": 0.5,
+          "add": [
+            {
+              "id": "v3-logo",
+              "type": "image",
+              "x": 965,
+              "y": 1765,
+              "width": 390,
+              "height": 130,
+              "src": "assets/minimax-logo-light.png"
+            },
+            {
+              "id": "v3-text",
+              "type": "text",
+              "x": 1160,
+              "y": 1900,
+              "textAlign": "center",
+              "text": "expressive · paid",
+              "fontSize": 30,
+              "strokeColor": "#c2255c"
+            }
+          ]
+        },
+        {
+          "at": "MiniMax",
+          "duration": 0.3,
+          "add": {
+            "id": "badge",
+            "type": "rectangle",
+            "x": 1380,
+            "y": 1720,
+            "width": 110,
+            "height": 50,
+            "label": "NEW",
+            "fontSize": 26,
+            "backgroundColor": "#e64980",
+            "strokeColor": "#ffffff"
+          }
+        },
+        {
+          "pulse": "v3"
+        }
+      ],
+      "pause": 0.2
+    },
+    {
+      "say": "It sounds like a real person. It reads the context, and picks the right emotion. Fun fact: the voice you're hearing right now? That's MiniMax!",
+      "do": [
+        {
+          "at": "sounds like a real person",
+          "update": {
+            "id": "v1",
+            "opacity": 35
+          }
+        },
+        {
+          "at": "reads the context",
+          "duration": 0.8,
+          "add": [
+            {
+              "id": "b1-mark",
+              "type": "image",
+              "x": 860,
+              "y": 2004,
+              "width": 44,
+              "height": 37,
+              "src": "assets/minimax-mark.png"
+            },
+            {
+              "id": "b1",
+              "type": "text",
+              "x": 920,
+              "y": 2000,
+              "text": "Reads the context",
+              "fontSize": 34
+            }
+          ]
+        },
+        {
+          "at": "picks the right emotion",
+          "duration": 0.8,
+          "add": [
+            {
+              "id": "b2-mark",
+              "type": "image",
+              "x": 860,
+              "y": 2074,
+              "width": 44,
+              "height": 37,
+              "src": "assets/minimax-mark.png"
+            },
+            {
+              "id": "b2",
+              "type": "text",
+              "x": 920,
+              "y": 2070,
+              "text": "Picks the right emotion",
+              "fontSize": 34
+            }
+          ]
+        },
+        {
+          "at": "Fun fact",
+          "duration": 0.4,
+          "add": [
+            {
+              "id": "hear",
+              "type": "rectangle",
+              "x": 840,
+              "y": 2160,
+              "width": 640,
+              "height": 280,
+              "backgroundColor": "#ffdeeb",
+              "strokeColor": "#e64980",
+              "strokeWidth": 4
+            },
+            {
+              "id": "hear-text",
+              "type": "text",
+              "x": 1160,
+              "y": 2180,
+              "textAlign": "center",
+              "text": "You're hearing MiniMax now",
+              "fontSize": 32,
+              "strokeColor": "#c2255c"
+            },
+            {
+              "id": "hear-wave",
+              "type": "line",
+              "fn": "0.85*sin(4*x+p)*exp(-x^2/7)",
+              "p": 0,
+              "domain": [
+                -6,
+                6
+              ],
+              "range": [
+                -1,
+                1
+              ],
+              "x": 880,
+              "y": 2250,
+              "width": 560,
+              "height": 150,
+              "strokeColor": "#e64980",
+              "strokeWidth": 4,
+              "roughness": 0
+            }
+          ]
+        },
+        {
+          "duration": 2.5,
+          "update": {
+            "id": "hear-wave",
+            "p": 18.85
+          }
+        },
+        {
+          "at": "That's MiniMax",
+          "pulse": "hear"
+        }
+      ],
+      "pause": 0.2
+    },
+    {
+      "say": "Getting started takes one line. Ask your agent to install the Drawcast skill. The free voice works right away.",
+      "do": [
+        {
+          "camera": {
+            "x": 0,
+            "y": 1400,
+            "width": 720
+          },
+          "duration": 0.7
+        },
+        {
+          "at": "one line",
+          "add": {
+            "id": "h4",
+            "type": "text",
+            "x": 40,
+            "y": 1460,
+            "text": "1 · Install the skill",
+            "fontSize": 50,
+            "strokeColor": "#1971c2"
+          }
+        },
+        {
+          "at": "install the Drawcast skill",
+          "duration": 0.8,
+          "add": {
+            "id": "prompt",
+            "type": "rectangle",
+            "x": 40,
+            "y": 1570,
+            "width": 640,
+            "height": 130,
+            "label": "“Install the\ngaojude/drawcast skill”",
+            "fontSize": 34,
+            "backgroundColor": "#a5d8ff",
+            "strokeColor": "#1971c2"
+          }
+        },
+        {
+          "duration": 0.5,
+          "add": {
+            "id": "alt",
+            "type": "text",
+            "x": 40,
+            "y": 1722,
+            "text": "or run:  npx skills add gaojude/drawcast",
+            "fontSize": 22,
+            "fontFamily": "code",
+            "strokeColor": "#868e96"
+          }
+        },
+        {
+          "duration": 0.25,
+          "add": {
+            "id": "term",
+            "type": "rectangle",
+            "x": 40,
+            "y": 1790,
+            "width": 640,
+            "height": 160,
+            "backgroundColor": "#212529",
+            "strokeColor": "#212529"
+          }
+        },
+        {
+          "duration": 0.5,
+          "add": {
+            "id": "t1",
+            "type": "text",
+            "x": 70,
+            "y": 1820,
+            "text": "$ npx skills add gaojude/drawcast",
+            "fontSize": 24,
+            "fontFamily": "code",
+            "strokeColor": "#ced4da"
+          }
+        },
+        {
+          "duration": 0.4,
+          "add": {
+            "id": "t2",
+            "type": "text",
+            "x": 70,
+            "y": 1878,
+            "text": "installed  the Drawcast skill",
+            "fontSize": 24,
+            "fontFamily": "code",
+            "strokeColor": "#69db7c"
+          }
+        },
+        {
+          "at": "free voice works",
+          "duration": 0.7,
+          "add": {
+            "id": "free",
+            "type": "text",
+            "x": 40,
+            "y": 2010,
+            "text": "The free voice\nworks right away.\nNo key needed.",
+            "fontSize": 44,
+            "strokeColor": "#0c8599"
+          }
+        }
+      ],
+      "pause": 0.2
+    },
+    {
+      "say": "Want MiniMax? Add your key once, in your agent's environment, or with drawcast key minimax. It never lands in a script, or in your chat.",
+      "do": [
+        {
+          "camera": {
+            "x": 0,
+            "y": 2800,
+            "width": 720
+          },
+          "duration": 0.7
+        },
+        {
+          "at": "Want MiniMax",
+          "add": {
+            "id": "h5",
+            "type": "text",
+            "x": 40,
+            "y": 2850,
+            "text": "2 · Add your\nMiniMax key, once",
+            "fontSize": 48,
+            "strokeColor": "#c2255c"
+          }
+        },
+        {
+          "at": "agent's environment",
+          "duration": 0.25,
+          "add": {
+            "id": "env",
+            "type": "rectangle",
+            "x": 40,
+            "y": 3030,
+            "width": 640,
+            "height": 150,
+            "backgroundColor": "#212529",
+            "strokeColor": "#212529"
+          }
+        },
+        {
+          "duration": 0.6,
+          "add": [
+            {
+              "id": "env-1",
+              "type": "text",
+              "x": 70,
+              "y": 3062,
+              "text": "MINIMAX_API_KEY=sk-…",
+              "fontSize": 30,
+              "fontFamily": "code",
+              "strokeColor": "#ffd43b"
+            },
+            {
+              "id": "env-2",
+              "type": "text",
+              "x": 70,
+              "y": 3125,
+              "text": "in your agent's environment",
+              "fontSize": 24,
+              "strokeColor": "#adb5bd"
+            }
+          ]
+        },
+        {
+          "at": "or with",
+          "enter": "fade",
+          "add": {
+            "id": "or-key",
+            "type": "text",
+            "x": 360,
+            "y": 3195,
+            "textAlign": "center",
+            "text": "or",
+            "fontSize": 32,
+            "strokeColor": "#868e96"
+          }
+        },
+        {
+          "at": "drawcast key minimax",
+          "duration": 0.25,
+          "add": {
+            "id": "cmd",
+            "type": "rectangle",
+            "x": 40,
+            "y": 3260,
+            "width": 640,
+            "height": 150,
+            "backgroundColor": "#212529",
+            "strokeColor": "#212529"
+          }
+        },
+        {
+          "duration": 0.6,
+          "add": [
+            {
+              "id": "cmd-1",
+              "type": "text",
+              "x": 70,
+              "y": 3292,
+              "text": "$ drawcast key minimax",
+              "fontSize": 30,
+              "fontFamily": "code",
+              "strokeColor": "#69db7c"
+            },
+            {
+              "id": "cmd-2",
+              "type": "text",
+              "x": 70,
+              "y": 3355,
+              "text": "pasted once, never shown",
+              "fontSize": 24,
+              "strokeColor": "#adb5bd"
+            }
+          ]
+        },
+        {
+          "at": "never lands",
+          "duration": 0.35,
+          "add": [
+            {
+              "id": "lock-card",
+              "type": "rectangle",
+              "x": 40,
+              "y": 3470,
+              "width": 640,
+              "height": 270,
+              "backgroundColor": "#fff5f5",
+              "strokeColor": "#e03131"
+            },
+            {
+              "id": "lock",
+              "type": "image",
+              "x": 325,
+              "y": 3492,
+              "width": 70,
+              "height": 82,
+              "svg": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 56'><path d='M12 25V16a12 12 0 0 1 24 0v9' fill='none' stroke='#e03131' stroke-width='5' stroke-linecap='round'/><rect x='4' y='25' width='40' height='29' rx='6' fill='#ffc9c9' stroke='#e03131' stroke-width='4'/><circle cx='24' cy='37' r='4' fill='#e03131'/><path d='M24 39v7' stroke='#e03131' stroke-width='4' stroke-linecap='round'/></svg>"
+            }
+          ]
+        },
+        {
+          "duration": 0.7,
+          "add": {
+            "id": "lock-text",
+            "type": "text",
+            "x": 360,
+            "y": 3600,
+            "textAlign": "center",
+            "text": "Never in a script.\nNever in a chat.",
+            "fontSize": 46,
+            "strokeColor": "#e03131"
+          }
+        },
+        {
+          "at": "your chat",
+          "pulse": "lock-card"
+        }
+      ],
+      "pause": 0.2
+    },
+    {
+      "say": "Then just ask for a MiniMax voice. Every sentence is cached, so a re-render only pays for what changed.",
+      "do": [
+        {
+          "camera": {
+            "x": 800,
+            "y": 2800,
+            "width": 720
+          },
+          "duration": 0.7
+        },
+        {
+          "at": "just ask",
+          "add": {
+            "id": "h6",
+            "type": "text",
+            "x": 840,
+            "y": 2860,
+            "text": "3 · Just ask",
+            "fontSize": 56,
+            "strokeColor": "#2f9e44"
+          }
+        },
+        {
+          "at": "MiniMax voice",
+          "duration": 0.6,
+          "add": {
+            "id": "ask",
+            "type": "rectangle",
+            "x": 840,
+            "y": 2970,
+            "width": 640,
+            "height": 130,
+            "label": "“Make a video about DNS,\nnarrated by a MiniMax voice”",
+            "fontSize": 30,
+            "backgroundColor": "#d3f9d8",
+            "strokeColor": "#2f9e44"
+          }
+        },
+        {
+          "duration": 0.5,
+          "add": {
+            "id": "code",
+            "type": "rectangle",
+            "x": 840,
+            "y": 3130,
+            "width": 640,
+            "height": 80,
+            "label": "\"voice\": \"minimax:English_magnetic_voiced_man\"",
+            "fontSize": 22,
+            "fontFamily": "code",
+            "backgroundColor": "#fff9db",
+            "strokeColor": "#f08c00"
+          }
+        },
+        {
+          "at": "Every sentence is cached",
+          "duration": 0.25,
+          "add": [
+            {
+              "id": "c1",
+              "type": "rectangle",
+              "x": 840,
+              "y": 3270,
+              "width": 640,
+              "height": 75,
+              "label": "Sentence 1 · cached",
+              "fontSize": 28,
+              "backgroundColor": "#d3f9d8",
+              "strokeColor": "#2f9e44"
+            },
+            {
+              "id": "c2",
+              "type": "rectangle",
+              "x": 840,
+              "y": 3365,
+              "width": 640,
+              "height": 75,
+              "label": "Sentence 2 · cached",
+              "fontSize": 28,
+              "backgroundColor": "#d3f9d8",
+              "strokeColor": "#2f9e44"
+            },
+            {
+              "id": "c3",
+              "type": "rectangle",
+              "x": 840,
+              "y": 3460,
+              "width": 640,
+              "height": 75,
+              "label": "Sentence 3 · cached",
+              "fontSize": 28,
+              "backgroundColor": "#d3f9d8",
+              "strokeColor": "#2f9e44"
+            }
+          ]
+        },
+        {
+          "at": "only pays",
+          "update": {
+            "id": "c3",
+            "label": "Sentence 3 · edited",
+            "backgroundColor": "#ffe8cc",
+            "strokeColor": "#e8590c"
+          }
+        },
+        {
+          "at": "what changed",
+          "enter": "fade",
+          "add": {
+            "id": "billed",
+            "type": "text",
+            "x": 1160,
+            "y": 3565,
+            "textAlign": "center",
+            "text": "only this one is billed",
+            "fontSize": 30,
+            "strokeColor": "#e8590c"
+          }
+        },
+        {
+          "at": "what changed",
+          "pulse": "c3"
+        }
+      ],
+      "pause": 0.2
+    },
+    {
+      "say": "Drawcast is free and open source. Every scene you just saw came from one short script. Give your coding agent a whiteboard. And now, a voice!",
+      "do": [
+        {
+          "camera": {
+            "x": 1600,
+            "y": 2800,
+            "width": 720
+          },
+          "duration": 0.7
+        },
+        {
+          "at": "free and open source",
+          "enter": "fade",
+          "duration": 0.6,
+          "add": [
+            {
+              "id": "e-dc",
+              "type": "text",
+              "x": 1960,
+              "y": 2900,
+              "textAlign": "center",
+              "text": "Drawcast",
+              "fontSize": 96
+            },
+            {
+              "id": "e-x",
+              "type": "text",
+              "x": 1960,
+              "y": 3025,
+              "textAlign": "center",
+              "text": "×",
+              "fontSize": 52,
+              "strokeColor": "#868e96"
+            },
+            {
+              "id": "e-logo",
+              "type": "image",
+              "x": 1750,
+              "y": 3100,
+              "width": 420,
+              "height": 140,
+              "src": "assets/minimax-logo-light.png"
+            },
+            {
+              "id": "e-sub",
+              "type": "text",
+              "x": 1960,
+              "y": 3262,
+              "textAlign": "center",
+              "text": "Free · open source · MIT",
+              "fontSize": 28,
+              "strokeColor": "#868e96"
+            }
+          ]
+        },
+        {
+          "at": "Every scene",
+          "duration": 1.6,
+          "camera": {
+            "fit": "all",
+            "padding": 60
+          }
+        },
+        {
+          "at": "Give your coding agent",
+          "duration": 1.1,
+          "camera": {
+            "x": 1600,
+            "y": 2800,
+            "width": 720
+          }
+        },
+        {
+          "duration": 0.8,
+          "add": {
+            "id": "slogan",
+            "type": "text",
+            "x": 1960,
+            "y": 3330,
+            "textAlign": "center",
+            "text": "Give your coding agent\na whiteboard.",
+            "fontSize": 48,
+            "strokeColor": "#6741d9"
+          }
+        },
+        {
+          "at": "And now, a voice",
+          "duration": 0.5,
+          "add": [
+            {
+              "id": "voice-line",
+              "type": "text",
+              "x": 1960,
+              "y": 3470,
+              "textAlign": "center",
+              "text": "And now, a voice.",
+              "fontSize": 46,
+              "strokeColor": "#c2255c"
+            },
+            {
+              "id": "e-wave2",
+              "type": "line",
+              "fn": "0.55*sin(3*x+p+1.6)*exp(-x^2/14)",
+              "p": 0,
+              "domain": [
+                -6,
+                6
+              ],
+              "range": [
+                -1,
+                1
+              ],
+              "x": 1660,
+              "y": 3550,
+              "width": 600,
+              "height": 110,
+              "strokeColor": "#fd7e14",
+              "strokeWidth": 3,
+              "roughness": 0
+            },
+            {
+              "id": "e-wave1",
+              "type": "line",
+              "fn": "0.9*sin(3*x+p)*exp(-x^2/8)",
+              "p": 0,
+              "domain": [
+                -6,
+                6
+              ],
+              "range": [
+                -1,
+                1
+              ],
+              "x": 1660,
+              "y": 3550,
+              "width": 600,
+              "height": 110,
+              "strokeColor": "#e64980",
+              "strokeWidth": 4,
+              "roughness": 0
+            }
+          ]
+        },
+        {
+          "at": "And now, a voice",
+          "duration": 0.5,
+          "add": [
+            {
+              "id": "cta",
+              "type": "rectangle",
+              "x": 1640,
+              "y": 3700,
+              "width": 640,
+              "height": 80,
+              "label": "“Install the gaojude/drawcast skill”",
+              "fontSize": 28,
+              "backgroundColor": "#e7f5ff",
+              "strokeColor": "#1971c2"
+            },
+            {
+              "id": "gh",
+              "type": "text",
+              "x": 1960,
+              "y": 3805,
+              "textAlign": "center",
+              "text": "github.com/gaojude/drawcast",
+              "fontSize": 28,
+              "fontFamily": "code",
+              "strokeColor": "#495057"
+            }
+          ]
+        },
+        {
+          "duration": 2.4,
+          "update": [
+            {
+              "id": "e-wave1",
+              "p": 15.08
+            },
+            {
+              "id": "e-wave2",
+              "p": 15.08
+            }
+          ]
+        }
+      ],
+      "pause": 0.6
     }
   ]
 }
