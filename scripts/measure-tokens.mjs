@@ -1,5 +1,5 @@
 // Measures what a script costs a model to write, in tokens, and what the same finished canvas costs
-// as the scene file Excalidraw saves. The numbers in the README come from here.
+// as the scene file Excalidraw saves.
 //
 //   npm run build && node scripts/measure-tokens.mjs examples/dns.drawcast.json [more scripts]
 //
@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { encode } from "gpt-tokenizer/encoding/o200k_base";
 import { openPlayer } from "../src/render/player.ts";
 import { loadScript, playerRequest } from "../src/render/render.ts";
-import { estimateNarration } from "../src/voice/narrate.ts";
+import { estimateNarration } from "../src/narration/timing.ts";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const count = (text) => encode(text).length;

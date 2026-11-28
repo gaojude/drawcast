@@ -34,7 +34,6 @@ test("invalid options fail with a diagnostic before a render starts", () => {
     ["render", ["--fps", "0"], /--fps/],
     ["render", ["--speed", "3"], /--speed/],
     ["snapshot", ["--at", "1", "--sheet"], /--at/],
-    ["snapshot", ["--voice", "unavailable-example"], /no voice/i],
     ["render", ["--voice", " "], /--voice/],
     ["render", ["--step", "1"], /--step/],
     ["snapshot", ["-o", sample], /input script/],
@@ -118,16 +117,13 @@ test("viewBox-only inline SVG keeps both corners in a snapshot at its display si
   }
 });
 
-test("an invalid encoder is reported before any narration is requested", () => {
-  const result = spawnSync(process.execPath, [cli, "render", sample, "--voice", "maple"], {
-    encoding: "utf8", env: { ...process.env, DRAWCAST_FFMPEG: path.join(os.tmpdir(), "drawcast-missing-encoder-test.exe") },
-  });
+test("spoken scripts require a result and point to the export workflow", () => {
+  const result = run("render", sample);
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /DRAWCAST_FFMPEG/);
-  assert.doesNotMatch(result.stderr, /Narration|speaking/);
+  assert.match(result.stderr, /--narration result.json.*narration export/);
 });
 
-test("even a silent render reports elapsed speech and encoding time", async (t) => {
+test("a silent script renders through either encoder", async (t) => {
   if (!existsSync(path.join(import.meta.dirname, "../dist/player/index.html"))) return t.skip("requires the built player");
   const browser = await findBrowser(false, () => {});
   if (!browser || !findFfmpeg()) return t.skip("requires a browser and ffmpeg");
@@ -142,29 +138,23 @@ test("even a silent render reports elapsed speech and encoding time", async (t) 
     assert.ifError(result.error);
     assert.equal(result.status, 0, result.stderr);
     const total = /rendered in (\d+\.\d{3}) s/.exec(result.stdout);
-    const phases = /Phase wall times \(may overlap\): speech preparation and synthesis (\d+\.\d{3}) s, video encoding and MP4 muxing (\d+\.\d{3}) s/.exec(result.stderr);
     assert.ok(total, result.stdout);
-    assert.ok(phases, result.stderr);
-    assert.ok(Number(phases[1]) <= Number(total[1]), result.stdout);
-    assert.ok(Number(phases[2]) > 0 && Number(phases[2]) <= Number(total[1]), result.stdout);
   }
 });
 
-test("interrupting a render stops the voice, preserves the previous MP4 and cleans up", { timeout: 20000 }, async (t) => {
+test("interrupting a render preserves the previous MP4 and cleans up", { timeout: 20000 }, async (t) => {
   const browser = await findBrowser(false, () => {});
-  if (!browser) return t.skip("requires an installed browser");
+  if (!browser || !findFfmpeg()) return t.skip("requires browser and ffmpeg");
   const dir = mkdtempSync(path.join(os.tmpdir(), "drawcast-interrupt-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const output = path.join(dir, "video.mp4");
-  const pidFile = path.join(dir, "voice.pid");
-  const helper = path.join(dir, "voice.cjs");
+  const file = path.join(dir, "silent.json");
   writeFileSync(output, "previous video");
-  writeFileSync(helper, 'require("node:fs").writeFileSync(process.argv[2], String(process.pid)); setTimeout(() => {}, 10000);');
+  writeFileSync(file, JSON.stringify({ drawcast: 1, steps: [{ duration: 60 }] }));
   // Node cannot send Unix signals to Windows children. Deliver the same event over IPC there.
   const windows = process.platform === "win32";
   const preload = 'data:text/javascript,' + encodeURIComponent('process.once("message", (name) => { process.emit(name, name); process.disconnect(); });');
-  const voiceCommand = `"${process.execPath}" "${helper}" "${pidFile}"`;
-  const child = spawn(process.execPath, [...(windows ? ["--import", preload] : []), cli, "render", sample, "--tts-command", voiceCommand, "-o", output], {
+  const child = spawn(process.execPath, [...(windows ? ["--import", preload] : []), cli, "render", file, "-o", output], {
     env: { ...process.env, DRAWCAST_HOME: dir, DRAWCAST_BROWSER: browser }, stdio: ["ignore", "ignore", "pipe", ...(windows ? ["ipc"] : [])],
   });
   t.after(() => { if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL"); });
@@ -172,47 +162,29 @@ test("interrupting a render stops the voice, preserves the previous MP4 and clea
   child.stderr.on("data", (data) => { stderr += data; });
   const ended = new Promise((resolve, reject) => { child.once("error", reject); child.once("close", resolve); });
   const deadline = Date.now() + 10000;
-  while (!existsSync(pidFile) && child.exitCode === null && Date.now() < deadline) await delay(20);
-  assert.ok(existsSync(pidFile), stderr);
+  while (!readdirSync(dir).some(name => name.startsWith(".drawcast-")) && child.exitCode === null && Date.now() < deadline) await delay(20);
+  assert.ok(readdirSync(dir).some(name => name.startsWith(".drawcast-")), stderr);
   if (windows) child.send("SIGINT");
   else child.kill("SIGINT");
   assert.equal(await ended, 130, stderr);
   assert.match(stderr, /Interrupted by SIGINT/);
   assert.equal(readFileSync(output, "utf8"), "previous video");
   assert.deepEqual(readdirSync(dir).filter((name) => name.startsWith(".drawcast-")), []);
-  assert.throws(() => process.kill(Number(readFileSync(pidFile, "utf8")), 0), { code: "ESRCH" });
 });
 
-test("SIGTERM interrupts model setup and snapshots without publishing staged files", (t) => {
+test("SIGTERM interrupts snapshots without publishing staged files", (t) => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "drawcast-sigterm-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const stop = 'const stop = () => process.platform === "win32" ? process.emit("SIGTERM", "SIGTERM") : process.kill(process.pid, "SIGTERM");';
   const output = path.join(dir, "existing.png");
   writeFileSync(output, "previous snapshot");
-  // Keep a real transfer in flight while POSIX delivers SIGTERM on a later event-loop turn.
-  const download = `
-    import { createServer } from "node:http";
-    const server = createServer((_req, res) => {
-      res.write("partial model");
-      server.close();
-      setImmediate(stop);
-    });
-    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-    const fetchModel = globalThis.fetch;
-    globalThis.fetch = (_url, options) => fetchModel("http://127.0.0.1:" + server.address().port, options);
-  `;
-  const commands = [
-    { args: ["setup"], hook: download },
-    { args: ["snapshot", sample, "-o", output], hook: 'import {watch} from "node:fs"; const w = watch(process.env.DRAWCAST_HOME, {persistent: false}, (_event, file) => { if (file?.startsWith(".drawcast-")) { w.close(); stop(); } });' },
-  ];
-  for (const { args, hook } of commands) {
-    const preload = "data:text/javascript," + encodeURIComponent(stop + hook);
-    const result = spawnSync(process.execPath, ["--import", preload, cli, ...args], { encoding: "utf8", timeout: 15000, killSignal: "SIGKILL", env: { ...process.env, DRAWCAST_HOME: dir } });
-    assert.ifError(result.error);
-    assert.equal(result.status, 143, result.stderr);
-    assert.match(result.stderr, /Interrupted by SIGTERM/);
-  }
-  assert.deepEqual(readdirSync(path.join(dir, "models")), []);
+  const hook = 'import {watch} from "node:fs"; const w = watch(process.env.DRAWCAST_HOME, {persistent: false}, (_event, file) => { if (file?.startsWith(".drawcast-")) { w.close(); stop(); } });';
+  const args = ["snapshot", sample, "-o", output];
+  const preload = "data:text/javascript," + encodeURIComponent(stop + hook);
+  const result = spawnSync(process.execPath, ["--import", preload, cli, ...args], { encoding: "utf8", timeout: 15000, killSignal: "SIGKILL", env: { ...process.env, DRAWCAST_HOME: dir } });
+  assert.ifError(result.error);
+  assert.equal(result.status, 143, result.stderr);
+  assert.match(result.stderr, /Interrupted by SIGTERM/);
   assert.equal(readFileSync(output, "utf8"), "previous snapshot");
   assert.deepEqual(readdirSync(dir).filter((name) => name.startsWith(".drawcast-")), []);
 });

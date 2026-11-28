@@ -5,35 +5,26 @@ import { cacheDir, packageRoot } from "./paths.ts";
 import { findBrowser } from "./render/browser.ts";
 import { findFfmpeg } from "./render/encode.ts";
 import { inspectVideo } from "./render/inspect.ts";
-import { ScriptError, loadScript, parseSteps, renderSnapshot, renderVideo } from "./render/render.ts";
-import { ensureModels, modelsDir, modelsInstalled } from "./voice/models.ts";
-import { MINIMAX_MODEL, MINIMAX_PREFIX, MINIMAX_VOICES, minimaxKeyStatus, removeMinimaxKey, saveMinimaxKey } from "./voice/minimax.ts";
-import { SPEAKERS, builtInVoices } from "./voice/voice.ts";
+import { ScriptError, exportNarration, loadScript, parseSteps, renderSnapshot, renderVideo } from "./render/render.ts";
 
 const HELP = `drawcast: turn a narrated Excalidraw script into a video
 
 Usage
   drawcast guide [topic ...]          quick start, selected topics, or the full script reference
   drawcast check <script>             find problems in a script without rendering it
+  drawcast narration export <script>  write a sentence request for an external TTS provider
   drawcast snapshot <script>          save the canvas as a PNG, to look at the layout
-  drawcast render <script>            speak the narration and render the MP4
+  drawcast render <script>            render the MP4 from the script and recorded audio
   drawcast inspect <video.mp4>        sample the encoded video to <video>.inspect.png
-  drawcast voices                     list the voices
-  drawcast key minimax [--remove]     save the API key for MiniMax's paid voices, typed or pasted
-                                      here and never shown, or remove the saved one
   drawcast setup                      download what rendering needs, and report what is installed
 
 Options
   -o, --output <file>     where to write (default: the script's name with .mp4 or .png)
-  --voice <name>          render, snapshot: a voice from "drawcast voices", instead of the script's
-  --speed <n>             render, snapshot: speaking rate from 0.5 to 2, 1 = normal
+  --narration <file>      render, snapshot: use a narration result JSON and its recorded WAVs
   --no-captions           render, snapshot: leave the captions out
   --fps <n>               render: frames per second (default 30)
   --width <px>            output width (default 1.5 x the canvas for video, canvas width for a still,
                           encoded width for an inspected frame, or 512 per tile for a sheet)
-  --tts-command <cmd>     render: speak with your own program. It gets one sentence on stdin
-                          and must write a WAV file to the path in $DRAWCAST_OUT. With snapshot,
-                          use cached timing from that command.
   --step <n>              snapshot: the canvas as step n is done (every action finished). Several:
                           2,5,9 or 3-6 or all, a file each
                           inspect: encoded frames for those steps in a Drawcast MP4, up to 12 per sheet
@@ -43,7 +34,7 @@ Options
                           inspect: one full-size frame, or a sheet at up to 12 comma-separated times
   -h, --help, -v, --version
 
-Files are kept in ${cacheDir()} (set DRAWCAST_HOME to move them).`;
+Downloaded browsers are kept in ${cacheDir()} (set DRAWCAST_HOME to move them).`;
 
 const log = (line: string) => process.stderr.write(`${line}\n`);
 
@@ -61,79 +52,39 @@ function number(value: string | undefined, name: string): number | undefined {
   return n;
 }
 
-/**
- * Reads a secret: typed or pasted at a terminal without being shown, or piped in
- * (`Get-Clipboard | drawcast key minimax`, `pbpaste | drawcast key minimax`).
- */
-async function readSecret(prompt: string, signal: AbortSignal): Promise<string> {
-  const stdin = process.stdin;
-  if (!stdin.isTTY) {
-    const chunks: Buffer[] = [];
-    for await (const chunk of stdin) chunks.push(chunk as Buffer);
-    return Buffer.concat(chunks).toString("utf8").trim();
-  }
-  process.stderr.write(prompt);
-  return new Promise((resolve, reject) => {
-    let value = "";
-    const finish = (error?: Error) => {
-      stdin.off("data", onData);
-      signal.removeEventListener("abort", onAbort);
-      stdin.setRawMode(false);
-      stdin.pause();
-      process.stderr.write("\n");
-      if (error) reject(error);
-      else resolve(value.trim());
-    };
-    // in raw mode Ctrl+C arrives as a character, not as SIGINT
-    const onData = (chunk: string) => {
-      for (const ch of chunk) {
-        if (ch === "\r" || ch === "\n") return finish();
-        if (ch === "\u0003" || ch === "\u0004") return finish(new Error("Cancelled. Nothing was saved."));
-        if (ch === "\u007f" || ch === "\b") value = value.slice(0, -1);
-        else if (ch >= " ") value += ch;
-      }
-    };
-    const onAbort = () => finish(signal.reason instanceof Error ? signal.reason : new Error("Cancelled."));
-    signal.addEventListener("abort", onAbort, { once: true });
-    stdin.setRawMode(true);
-    stdin.setEncoding("utf8");
-    stdin.on("data", onData);
-    stdin.resume();
-  });
-}
-
 async function main(signal: AbortSignal): Promise<number> {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
     options: {
       output: { type: "string", short: "o" },
-      voice: { type: "string" },
-      speed: { type: "string" },
+      narration: { type: "string" },
       "no-captions": { type: "boolean" },
       fps: { type: "string" },
       width: { type: "string" },
-      "tts-command": { type: "string" },
       at: { type: "string" },
       step: { type: "string" },
       sheet: { type: "boolean" },
       motion: { type: "boolean" },
-      remove: { type: "boolean" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
     },
   });
-  const [command, file] = positionals;
+  const [command, argument] = positionals;
+  const exporting = command === "narration" && argument === "export";
+  const file = exporting ? positionals[2] : argument;
 
   const version: string = JSON.parse(readFileSync(path.join(packageRoot, "package.json"), "utf8")).version;
   if (values.version) return console.log(version), 0;
   if (values.help || !command) return console.log(HELP), command || values.help ? 0 : 1;
 
   const takesScript = ["check", "snapshot", "render"].includes(command);
-  const maxArgs = takesScript || command === "inspect" || command === "key" ? 2 : 1;
+  if (command === "narration" && !exporting) throw new Error("Usage: drawcast narration export <script> [-o request.json]");
+  const maxArgs = exporting ? 3 : takesScript || command === "inspect" ? 2 : 1;
   if (command !== "guide" && positionals.length > maxArgs) throw new Error(`Unexpected argument for ${command}: ${positionals[maxArgs]}.`);
   const allowed = command === "render" || command === "snapshot"
-    ? ["output", "width", "voice", "speed", "no-captions", "tts-command", ...(command === "snapshot" ? ["sheet", "at", "step"] : ["fps"])]
-    : command === "inspect" ? ["output", "at", "motion", "step", "width"] : command === "key" ? ["remove"] : [];
+    ? ["output", "width", "no-captions", "narration", ...(command === "snapshot" ? ["sheet", "at", "step"] : ["fps"])]
+    : exporting ? ["output"]
+    : command === "inspect" ? ["output", "at", "motion", "step", "width"] : [];
   for (const [option, value] of Object.entries(values)) {
     if (!allowed.includes(option)) throw new Error(`--${option} does not apply to ${command}.`);
     if (typeof value === "string" && !value.trim()) throw new Error(`--${option} needs a nonempty value.`);
@@ -159,42 +110,12 @@ async function main(signal: AbortSignal): Promise<number> {
       return 0;
     }
 
-    case "voices": {
-      for (const [name, v] of Object.entries(builtInVoices())) console.log(`${name.padEnd(6)}  ${v.language}  ${v.description}`);
-      console.log(`\nThese run on this machine. The model has ${SPEAKERS.length} speakers and these are names for four of them;\nany other works by its own name, such as zf_001 or zm_100:\n  https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh/tree/main/voices`);
-      console.log("Default narration uses maple for English and lin for Mandarin.");
-      console.log(`\nMiniMax's voices are paid by the character, with your own API key, and are used only when a script\nor --voice names one. minimax: ${minimaxKeyStatus()}.`);
-      for (const v of MINIMAX_VOICES) console.log(`${(MINIMAX_PREFIX + v.name).padEnd(6)}  ${v.language}  ${v.description}`);
-      console.log(`Any voice id from MiniMax's list, or one you cloned, works after "${MINIMAX_PREFIX}". The model is\n${MINIMAX_MODEL}; add "@speech-2.8-turbo" to a name for the cheaper one.`);
-      return 0;
-    }
-
-    case "key": {
-      if (file !== "minimax") throw new Error(`Usage: drawcast key minimax [--remove]. MiniMax is the only service drawcast keeps a key for.`);
-      if (values.remove) {
-        console.log(`Removed the saved MiniMax key from ${await removeMinimaxKey()}.`);
-        if (process.env.MINIMAX_API_KEY?.trim()) console.log("MINIMAX_API_KEY is still set in this environment, and is used while it is.");
-        return 0;
-      }
-      const key = await readSecret("MiniMax API key (it is not shown): ", signal);
-      if (!key) throw new Error("No key was given, so nothing was saved.");
-      if (/\s/.test(key)) throw new Error("That has spaces in it, so it is not one API key. Nothing was saved.");
-      const saved = await saveMinimaxKey(key);
-      console.log(`Saved the MiniMax key ending ${key.slice(-4)} to ${saved}.`);
-      console.log(`A script with "voice": "${MINIMAX_PREFIX}<voice id>" uses it from now on, in any program that runs drawcast.`);
-      if (process.env.MINIMAX_API_KEY?.trim()) console.log("MINIMAX_API_KEY is set in this environment, and is used instead while it is.");
-      return 0;
-    }
-
     case "setup": {
-      await ensureModels(log, signal);
       const browser = await findBrowser(true, log, signal);
       signal.throwIfAborted();
-      console.log(`speech model  ${modelsInstalled() ? modelsDir() : "missing"}`);
       console.log(`browser       ${browser ?? "missing: install Chrome, Chromium or Edge"}`);
       const ffmpeg = findFfmpeg();
       console.log(`ffmpeg        ${ffmpeg ?? "missing: install ffmpeg, or reinstall drawcast with install scripts allowed"}`);
-      console.log(`minimax       ${minimaxKeyStatus()} (needed for MiniMax's paid voices)`);
       return browser && ffmpeg ? 0 : 1;
     }
 
@@ -217,6 +138,16 @@ async function main(signal: AbortSignal): Promise<number> {
       return 0;
     }
 
+    case "narration":
+      if (!file) throw new Error("Usage: drawcast narration export <script> [-o request.json]");
+      {
+        const loaded = await loadScript(file, signal);
+        printReport(loaded.report);
+        const output = values.output ?? withExtension(file, ".narration.request.json");
+        await exportNarration(loaded, output);
+        console.log(output);
+        return 0;
+      }
     case "check":
     case "snapshot":
     case "render": {
@@ -231,12 +162,10 @@ async function main(signal: AbortSignal): Promise<number> {
         console.log(loaded.report.warnings.length ? `${loaded.report.warnings.length} warning(s), no errors.` : "No problems found.");
         return 0;
       }
-      const speech = {
+      const renderOptions = {
+        narration: values.narration,
         signal,
-        voice: values.voice,
-        speed: number(values.speed, "speed"),
         captions: values["no-captions"] ? false : undefined,
-        ttsCommand: values["tts-command"],
       };
       if (command === "snapshot") {
         const sheet = values.sheet ?? false;
@@ -244,23 +173,22 @@ async function main(signal: AbortSignal): Promise<number> {
         // each kind of still gets its own name, so that looking at one does not overwrite another
         const kind = sheet ? ".sheet" : values.at !== undefined ? `.at${values.at}` : steps?.length === 1 ? `.step${steps[0]}` : "";
         const output = values.output ?? withExtension(file, `${kind}.png`);
-        const { files, timing } = await renderSnapshot(loaded, { output, at: number(values.at, "at"), steps, sheet, width, ...speech, log });
+        const { files, timing } = await renderSnapshot(loaded, { output, at: number(values.at, "at"), steps, sheet, width, ...renderOptions, log });
         for (const f of files) console.log(`${f.file} (${f.shows})`);
         console.log(timing);
         return 0;
       }
       const output = values.output ?? withExtension(file, ".mp4");
       const started = performance.now();
-      const { duration, speechMs, encodingMs } = await renderVideo(loaded, {
+      const { duration } = await renderVideo(loaded, {
         output,
         width,
         fps: number(values.fps, "fps") ?? 30,
-        ...speech,
+        ...renderOptions,
         log,
       });
       const wall = (ms: number) => `${(ms / 1000).toFixed(3)} s`;
       const totalMs = performance.now() - started;
-      log(`Phase wall times (may overlap): speech preparation and synthesis ${wall(speechMs)}, video encoding and MP4 muxing ${wall(encodingMs)}`);
       console.log(`${output} (${duration.toFixed(1)} s, rendered in ${wall(totalMs)})`);
       return 0;
     }

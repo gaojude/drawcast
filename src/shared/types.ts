@@ -186,10 +186,6 @@ export interface Script {
   drawcast: 1;
   title?: string;
   canvas?: { width?: number; height?: number; background?: string };
-  /** A voice name from `drawcast voices`. */
-  voice?: string;
-  /** Speaking rate, 1 = normal. */
-  speed?: number;
   /** Burn the narration into the picture as captions (default true). */
   captions?: boolean;
   /** The step whose finished canvas is the first frame of the video (default 1), or false for no cover. */

@@ -1,8 +1,7 @@
 # Writing a drawcast script
 
 A drawcast script is a JSON file that says what to draw on an Excalidraw canvas and what to say while
-drawing it. `drawcast render` turns it into an MP4: the narration is spoken by a local voice, and each
-element is drawn at the moment the narration reaches the words you tie it to.
+drawing it. Drawcast synchronizes the drawings with a recording supplied by your agent.
 
 ```json
 {
@@ -41,20 +40,8 @@ in reading order. In a movie with a step index, the sheet also shows the complet
 each sampled movement. Use `--at 2.5` for a full-size frame or `--at 2,2.5,3` to compare up to twelve
 times in one sheet. Tiles show distinct frames in chronological order.
 
-Node.js 22.12 or newer is required. The first use of a built-in voice downloads a speech model
-of about 365 MB. `drawcast setup` can download it ahead of time.
-
-A snapshot needs no narration, so it is quick. Its timing is estimated until a render has spoken the
-narration, and exact after that; it says which. `--at 12.5` shows the video at that moment, with the
-pointer and the captions.
-
-Leave `voice` unset unless the user asks for one (see Narration). The sheet marks the finished step
-that appears as the MP4's first frame. Choose the opening you want with `cover`.
-Speech is cached, so rendering again after changing
-only the drawing is quicker. When a command fails, its message says what is missing.
-
-Render reports total elapsed time plus wall times for speech preparation and synthesis, and for
-encoding and muxing. Speech and video can run together, so the phase times can overlap.
+A layout snapshot estimates timing until you pass `--narration result.json`. With the result,
+`snapshot --at 12.5` uses the recorded timeline, including captions and the pointer.
 
 ## Script
 
@@ -64,8 +51,6 @@ encoding and muxing. Speech and video can run together, so the phase times can o
 | `steps` | The list of steps, played in order. Required. |
 | `title` | A name for the video. Not drawn. |
 | `canvas` | `{ "width": 1280, "height": 720, "background": "#ffffff" }`, which is the default. |
-| `voice` | A voice name from `drawcast voices`. Defaults to local narration in English or Mandarin. A name starting with `minimax:` selects a paid MiniMax voice (see Narration). |
-| `speed` | Speaking rate, 0.5 to 2. Default 1. |
 | `captions` | `false` leaves the narration out of the picture. Default `true`. |
 | `cover` | The number of the step whose finished canvas is the cover. Default `1`. `false` for no cover. |
 
@@ -286,7 +271,7 @@ Each `share` is a percentage of the whole. To show the unallocated part during t
 start with a neutral 100% slice and build the colored slices on top:
 
 ```json
-{"drawcast":1,"voice":"maple","steps":[{"say":"The circle shows the whole team. Sales make up three quarters. Support accounts for one quarter.","do":[
+{"drawcast":1,"steps":[{"say":"The circle shows the whole team. Sales make up three quarters. Support accounts for one quarter.","do":[
   {"at":"circle","enter":"none","add":{"id":"whole","type":"slice","center":[540,320],"radius":205,"share":100,"color":"gray"}},
   {"at":"Sales","add":{"id":"sales","type":"slice","after":"whole","share":75,"color":"blue","label":"Sales\n75%"}},
   {"at":"Support","add":{"id":"support","type":"slice","after":"sales","share":25,"color":"teal","label":"Support\n25%"}}
@@ -419,28 +404,65 @@ A video holds attention when something on screen answers every sentence. Cheap w
 
 ## Narration
 
-- Write for the ear: short sentences, plain words. What is said is also what the captions show.
-- The voice does not read LaTeX, or symbols such as `=` and `²`. Say a formula in words ("x squared",
-  "the sum from one to n") and show it in a `math` element.
-- Numbers, percentages and years are read out. A short word in capitals (`API`, `DNS`, `JSON`) is
-  spelled letter by letter; write it the way it sounds (`jason`) to have it read as a word. An English
-  word the voice does not know is read by its spelling, which is usually close and sometimes wrong.
-- English inside a Chinese sentence is less reliable than either language alone: about one such word
-  in four comes out unclear. Keep to common terms, or say the term in Chinese and write the English
-  on the canvas.
-- A word's time within its sentence is estimated, so an `at` lands within about a quarter of a second
-  of the word. The start of each sentence is exact.
-- By default, Kokoro speaks locally using `maple` for English and `lin` for Mandarin. Setup downloads
-  the model once. Remove the `voice` field from older scripts that specify an `edge:` voice.
-- For environments that require local narration, use a built-in voice. An explicit MiniMax voice
-  sends the narration to MiniMax. A custom `--tts-command` receives each sentence on stdin and can
-  send it wherever that program is configured to send it.
-- `minimax:<voice id>` (for example `minimax:male-qn-qingse`) is one of MiniMax's voices. They are
-  the most expressive, but each character spoken is billed to the person's own MiniMax account, so use
-  one only when asked to. A spoken sentence is cached, so a render again pays only for new sentences.
-  It needs an API key, which never goes in the script or the conversation: if `drawcast voices`
-  reports no key, ask the person to run `drawcast key minimax` (or `npx -y drawcast@latest key minimax`
-  when drawcast is not installed globally) in their own terminal and paste the key there, then render. `@speech-2.8-turbo` after the voice id picks the cheaper model.
+### Choose the voice with the user
+
+Look for a working TTS recipe in the project's agent notes. If this is the first narrated video,
+ask whether the user already has a preferred voice or wants help setting one up. A simple
+starting point is local Kokoro. Help install the runtime and model for the user's platform and
+language, then generate a short WAV so they can hear the voice. Follow the
+[Kokoro setup instructions](https://github.com/hexgrad/kokoro).
+
+Use another local engine or a hosted provider such as ElevenLabs when the user prefers it.
+For a hosted provider, ask the user to configure its credentials in their environment.
+Once the voice works, save the reproducible invocation or adapter path, model version, voice,
+language, rate and output format in the project's agent notes. For credentials, record only the
+environment variable name. Consult those notes on the next video.
+
+Write narration as it should sound. For example, say “x squared” while drawing the formula.
+When implementing the simplest adapter, loop over `request.steps` in order. For each sentence,
+synthesize its entire `text` into a WAV named after its `id`. If the model streams multiple
+chunks for that text, join them in order. Append `{"id": sentence.id, "audio": filename}` to
+your result list. Copy `version` and `fingerprint` from the request, write the list as
+`sentences`, and keep the WAVs beside the result. Drawcast measures these files directly.
+
+### External recordings
+
+Run `drawcast narration export talk.drawcast.json -o request.json`. The version 1 request contains
+a `fingerprint` and an ordered `steps` array. Each step has a `sentences` array, empty for a silent
+step. Each sentence has an `id`, the exact `text` to speak, and the ordered `tokens` Drawcast uses
+for phrase cues. Your TTS tool can synthesize each sentence, a whole step, or a longer take.
+Choose the voice and speaking rate when making the WAVs.
+
+Write a result JSON with the request's version and fingerprint and one entry per sentence ID.
+Entries can arrive in any order. For example, a provider recording two sentences in one take
+followed by a separate sentence could return this result (substitute the exported fingerprint):
+
+```json
+{
+  "version": 1,
+  "fingerprint": "<copy from request.json>",
+  "sentences": [
+    {"id": "s1.1", "audio": "step-1.wav", "startMs": 120, "endMs": 1080},
+    {"id": "s1.2", "audio": "step-1.wav", "startMs": 1410, "endMs": 3020},
+    {"id": "s2.1", "audio": "closing.wav"}
+  ]
+}
+```
+
+- `audio` identifies a PCM or floating-point WAV. Relative paths resolve beside the result JSON.
+  For a sentence in its own file, omit both bounds and Drawcast uses its measured duration.
+- For a range, supply both `startMs` (inclusive) and `endMs` (exclusive) in milliseconds from
+  the start of the WAV. Drawcast keeps the audio between consecutive ranges in the same take
+  and step. It drops audio outside the selected span. Separate clips in a step get a 280 ms gap.
+  Drawcast schedules each step independently, including the script's animations and pauses.
+- Optionally include `tokenStartsMs` on an entry, e.g. `[120, 410, 680]` for three exported tokens.
+  These timestamps use the same file clock, fall inside the sentence, and follow token order.
+  Without them, phrase cues use estimated token starts within the measured sentence.
+
+Run `drawcast render talk.drawcast.json --narration result.json` for the MP4, or add the same
+option to `snapshot` for a timed preview. Imported audio plays at its recorded speed. The
+fingerprint lets you reuse recordings after visual edits and catches changes to the narration
+text or its step grouping.
 
 ## A longer example
 

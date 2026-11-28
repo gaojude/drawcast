@@ -5,7 +5,7 @@ import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { packageRoot } from "../paths.ts";
 import type { Schedule } from "../player/compile.ts";
-import type { EncodeStart, LoadResult, PlayerApi, PrepareRequest } from "../player/main.ts";
+import type { EncodeStart, PlayerApi, PrepareRequest } from "../player/main.ts";
 import type { StepAudio } from "../shared/types.ts";
 import { launchBrowser } from "./browser.ts";
 
@@ -39,14 +39,7 @@ async function servePlayer(): Promise<{ url: string; close: () => void }> {
 
 export interface Player {
   /** Schedules the whole script against its audio (one entry per step). Frames can be asked for after this. */
-  load(audio: (StepAudio | null)[]): Promise<LoadResult>;
-  /**
-   * Schedules the next steps of the script, as their audio becomes known (one entry per step). Frames
-   * before the `settled` it returns can be asked for after this, while later steps are still unknown.
-   */
-  schedule(audio: (StepAudio | null)[]): Promise<Schedule>;
-  /** Forgets every step scheduled so far: the script is to be scheduled again, against another voice's audio. */
-  startOver(): Promise<void>;
+  load(audio: (StepAudio | null)[]): Promise<Schedule>;
   /** PNG of the frame at `t`, or null when it equals the one before. `bare` leaves the pointer and the caption out. */
   frame(t: number, bare?: boolean): Promise<Buffer | null>;
   /** PNG of the canvas once step `step` (1-based) is done, without pointer or captions; with `zone`, the captions' strip shaded. */
@@ -106,8 +99,6 @@ export async function openPlayer(request: PrepareRequest, log: (line: string) =>
     return {
       close,
       load: (audio) => page.evaluate((a) => drawcast.load(a), audio as any),
-      schedule: (audio) => page.evaluate((a) => drawcast.schedule(a), audio as any),
-      startOver: () => page.evaluate(() => drawcast.startOver()),
       async frame(t, bare) {
         const url = await page.evaluate((time, b) => drawcast.frame(time, b), t, bare ?? false);
         return url === null ? null : png(url);
