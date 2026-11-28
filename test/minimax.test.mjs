@@ -4,7 +4,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { minimaxKey, minimaxKeyStatus, openMinimaxVoice, parseMinimaxVoice, removeMinimaxKey, saveMinimaxKey } from "../src/voice/minimax.ts";
+import { RETRY_WAITS, minimaxKey, minimaxKeyStatus, openMinimaxVoice, parseMinimaxVoice, removeMinimaxKey, saveMinimaxKey } from "../src/voice/minimax.ts";
+import { narrate } from "../src/voice/narrate.ts";
 import { resolveVoice } from "../src/voice/voice.ts";
 
 const KEY = "sk-api-test-0123456789abcdef-WXYZ";
@@ -142,14 +143,64 @@ test("MiniMax's refusals become messages that say what to do", async (t) => {
   }
 });
 
-test("a rate limit is waited out and the sentence asked for again", async (t) => {
+test("a rate limit is waited out, said once, and the sentence asked for again", async (t) => {
   isolated(t);
   process.env.MINIMAX_API_KEY = KEY;
+  const waits = { ...RETRY_WAITS };
+  RETRY_WAITS.rateLimit = [1, 1, 1];
+  RETRY_WAITS.transient = [1];
+  t.after(() => Object.assign(RETRY_WAITS, waits));
+
   let calls = 0;
-  t.mock.method(globalThis, "fetch", async () => (++calls === 1 ? reply(1002, "rate limit") : reply(0, "success", hexPcm(8192))));
-  const say = await openMinimaxVoice({ voiceId: "v", model: "m" }, () => {});
+  t.mock.method(globalThis, "fetch", async () => (++calls <= 2 ? reply(1002, "rate limit exceeded(RPM)") : reply(0, "success", hexPcm(8192))));
+  const logs = [];
+  const say = await openMinimaxVoice({ voiceId: "v", model: "m" }, (line) => logs.push(line));
   assert.deepEqual([...(await say("a.")).samples], [0.25]);
-  assert.equal(calls, 2);
+  assert.equal(calls, 3);
+  assert.equal(logs.filter((line) => /rate limit/.test(line)).length, 1);
+
+  // a limit that does not lift is given up on once the waits are used up
+  t.mock.method(globalThis, "fetch", async () => new Response("busy", { status: 429 }));
+  await assert.rejects(say("b."), /could not say "b\."/);
+});
+
+test("MiniMax is asked to speak at the script's speed", async (t) => {
+  isolated(t);
+  process.env.MINIMAX_API_KEY = KEY;
+  const bodies = [];
+  t.mock.method(globalThis, "fetch", async (_url, init) => (bodies.push(JSON.parse(init.body)), reply(0, "success", hexPcm(1))));
+  await (await openMinimaxVoice({ voiceId: "v", model: "m" }, () => {}, undefined, 1.15))("a.");
+  assert.equal(bodies[0].voice_setting.speed, 1.15);
+  await assert.rejects(openMinimaxVoice({ voiceId: "v", model: "m" }, () => {}, undefined, 3), /0\.5 to 2/);
+  assert.equal((await resolveVoice({ spec: "minimax:v", narration: "", log: () => {} })).nativeSpeed, true);
+});
+
+test("a voice that speaks at the speed itself is not stretched, and keeps each speed apart", async (t) => {
+  const dir = isolated(t);
+  const opened = [];
+  // half a second of sound, whatever it is asked
+  const voice = {
+    name: "native", key: "native-test", nativeSpeed: true,
+    open: async (_signal, speed) => (opened.push(speed), async () => ({ samples: new Float32Array(24000).fill(0.5), sampleRate: 48000 })),
+  };
+  const script = { drawcast: 1, steps: [{ say: "Hello there." }] };
+  const fast = await narrate(script, voice, 1.5, () => {});
+  assert.ok(Math.abs(fast.steps[0].duration - 0.5) < 0.01, `${fast.steps[0].duration}`);
+  assert.deepEqual(opened, [1.5]);
+  assert.ok(existsSync(path.join(dir, "speech", "native-test-x1.5")));
+
+  // the same speed again comes from the cache; another speed is spoken anew
+  await narrate(script, voice, 1.5, () => {});
+  assert.deepEqual(opened, [1.5]);
+  const normal = await narrate(script, voice, 1, () => {});
+  assert.deepEqual(opened, [1.5, 1]);
+  assert.ok(existsSync(path.join(dir, "speech", "native-test")));
+  assert.ok(Math.abs(normal.steps[0].duration - 0.5) < 0.01);
+
+  // a voice without it is spoken once and made faster afterwards
+  const stretched = await narrate(script, { ...voice, key: "stretched-test", nativeSpeed: undefined }, 1.5, () => {});
+  assert.ok(Math.abs(stretched.steps[0].duration - 0.5 / 1.5) < 0.02, `${stretched.steps[0].duration}`);
+  assert.equal(opened.at(-1), undefined);
 });
 
 test("drawcast key minimax saves a piped key, shows only its end, and removes it", (t) => {

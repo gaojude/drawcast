@@ -16,7 +16,7 @@ import path from "node:path";
 import { cacheDir } from "../paths.ts";
 import { isCjk } from "../shared/text.ts";
 import { writeFileAtomic } from "../shared/files.ts";
-import { MINIMAX_PREFIX, openMinimaxVoice, parseMinimaxVoice } from "./minimax.ts";
+import { MINIMAX_PREFIX, minimaxKey, openMinimaxVoice, parseMinimaxVoice } from "./minimax.ts";
 import { type ModelFiles, ensureModels } from "./models.ts";
 import { normalize } from "./normalize.ts";
 import { type Dictionaries, parseDictionary, toTokens } from "./tokenize.ts";
@@ -27,10 +27,19 @@ export interface Voice {
   name: string;
   /** Identifies the voice and its settings; audio is cached under it. */
   key: string;
-  /** Gets ready to speak (loads the model). Returns the function that says one sentence. */
-  open(signal?: AbortSignal): Promise<(sentence: string) => Promise<Audio>>;
+  /**
+   * Gets ready to speak (loads the model). Returns the function that says one sentence. `speed` is
+   * given only to a voice with `nativeSpeed`.
+   */
+  open(signal?: AbortSignal, speed?: number): Promise<(sentence: string) => Promise<Audio>>;
   /** How many sentences it can be asked for at once. Left out, one. */
   parallel?: number;
+  /**
+   * The voice speaks at the script's speed itself, which sounds more natural than speech made faster
+   * afterwards. Its speech is then kept for each speed apart, and not stretched. Left out, every speed
+   * is made from one recording at normal speed.
+   */
+  nativeSpeed?: boolean;
   /** The voice that says the whole script instead if this one cannot. */
   fallback?: Voice;
 }
@@ -266,9 +275,11 @@ function minimaxVoice(spec: string, log: (line: string) => void): Voice {
   return {
     name: MINIMAX_PREFIX + spec,
     key: sha("minimax", parsed.model, parsed.voiceId, "pcm-32000"),
-    open: (signal) => openMinimaxVoice(parsed, log, signal),
+    open: (signal, speed) => openMinimaxVoice(parsed, log, signal, speed),
     // MiniMax limits requests per minute; past a few at once a render only meets the limit sooner
     parallel: 3,
+    // the model paces a faster sentence itself, rather than having it squeezed afterwards
+    nativeSpeed: true,
   };
 }
 
@@ -276,6 +287,8 @@ export async function resolveVoice(o: VoiceOptions): Promise<Voice> {
   if (o.ttsCommand) return commandVoice(o.ttsCommand);
   if (o.spec?.startsWith("edge:")) throw new Error("Edge TTS was removed. Omit the voice or choose maple for English or lin for Mandarin.");
   if (o.spec?.startsWith(MINIMAX_PREFIX)) return minimaxVoice(o.spec.slice(MINIMAX_PREFIX.length).trim(), o.log);
+  // with a MiniMax key on hand, an unnamed voice is MiniMax's rather than the local one
+  if (!o.spec && minimaxKey()) return minimaxVoice(isCjk(o.narration) ? "hunyin_6" : "English_magnetic_voiced_man", o.log);
   const name = o.spec || (isCjk(o.narration) ? "lin" : "maple");
   // a built-in voice, or one of the model's speakers by its own name
   if (Object.hasOwn(BUILT_IN, name)) {

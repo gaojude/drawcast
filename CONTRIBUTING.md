@@ -72,7 +72,8 @@ on the merge's workflow run.
    `minimax:` voice posts the sentence to MiniMax's HTTP API with the user's own key, from
    `MINIMAX_API_KEY` or the file `drawcast key minimax` saves, and gets raw PCM back; it is paid, so
    it never stands in for another voice. `--speed` changes the tempo of the finished audio, not the
-   voice.
+   voice; a MiniMax voice is instead asked to speak at that speed, which it paces more naturally, and
+   its speech is cached for each speed apart.
 3. **Schedule.** Each `at` phrase is located in its sentence. Sentence boundaries are exact; a word's
    position inside its sentence is estimated from syllable counts, which lands within about a quarter
    of a second. A step is scheduled as soon as it and the steps before it are spoken: where it falls

@@ -78,16 +78,21 @@ export function estimateNarration(script: Script): Narration {
   return { steps, clips: steps.map(() => null) };
 }
 
-const speechFile = (voice: Voice, sentence: string) => path.join(cacheDir(), "speech", voice.key, `${createHash("sha256").update(sentence).digest("hex").slice(0, 24)}.wav`);
+/** How much faster a voice's recordings are still to be made: not at all when it spoke at the speed itself. */
+const stretchOf = (voice: Voice, speed: number) => (voice.nativeSpeed ? 1 : speed);
+/** A voice that speaks at the speed itself keeps each speed's recordings apart. */
+const speechDir = (voice: Voice, speed: number) =>
+  path.join(cacheDir(), "speech", voice.nativeSpeed && Math.abs(speed - 1) >= 0.005 ? `${voice.key}-x${speed}` : voice.key);
+const speechFile = (voice: Voice, speed: number, sentence: string) => path.join(speechDir(voice, speed), `${createHash("sha256").update(sentence).digest("hex").slice(0, 24)}.wav`);
 
 async function cachedSeconds(voice: Voice, all: string[], speed: number, signal?: AbortSignal): Promise<Map<string, number>> {
   const seconds = new Map<string, number>();
   for (const sentence of all) {
     signal?.throwIfAborted();
-    const info = await readWavInfo(speechFile(voice, sentence)).catch(() => null);
+    const info = await readWavInfo(speechFile(voice, speed, sentence)).catch(() => null);
     if (!info) continue;
     const resampledFrames = Math.floor(info.frames / (info.sampleRate / SAMPLE_RATE));
-    seconds.set(sentence, tempoFrames(resampledFrames, SAMPLE_RATE, speed) / SAMPLE_RATE);
+    seconds.set(sentence, tempoFrames(resampledFrames, SAMPLE_RATE, stretchOf(voice, speed)) / SAMPLE_RATE);
   }
   return seconds;
 }
@@ -124,16 +129,20 @@ export interface Listener {
   startOver(): void;
 }
 
-/** `speed` is applied to the finished speech, so a sentence is spoken once whatever speeds it is played at. */
+/**
+ * `speed` is applied to the finished speech, so a sentence is spoken once whatever speeds it is played
+ * at; except by a voice with `nativeSpeed`, which is asked to speak at that speed.
+ */
 export async function narrate(script: Script, voice: Voice, speed: number, log: (line: string) => void, listener?: Listener, signal?: AbortSignal): Promise<Narration> {
   signal?.throwIfAborted();
   const perStep = script.steps.map((step) => (step.say?.trim() ? sentences(step.say) : []));
   const all = [...new Set(perStep.flat())];
-  const fileOf = (sentence: string) => speechFile(voice, sentence);
+  const fileOf = (sentence: string) => speechFile(voice, speed, sentence);
+  const stretch = stretchOf(voice, speed);
 
   const have = new Set((await cachedSeconds(voice, all, speed, signal)).keys());
   const missing = all.filter((s) => !have.has(s));
-  if (missing.length) await mkdir(path.join(cacheDir(), "speech", voice.key), { recursive: true });
+  if (missing.length) await mkdir(speechDir(voice, speed), { recursive: true });
   signal?.throwIfAborted();
   log(`  voice: ${voice.name}, ${all.length} sentence(s), ${missing.length ? `${all.length - missing.length} from the cache` : "all from the cache"}`);
   const clips: (Audio | null)[] = [];
@@ -145,7 +154,7 @@ export async function narrate(script: Script, voice: Voice, speed: number, log: 
     while (!failed && steps.length < perStep.length && perStep[steps.length].every((s) => have.has(s))) {
       signal?.throwIfAborted();
       const list = perStep[steps.length];
-      const parts = await Promise.all(list.map(async (s) => changeTempo(resample(await readWav(fileOf(s)), SAMPLE_RATE), speed)));
+      const parts = await Promise.all(list.map(async (s) => changeTempo(resample(await readWav(fileOf(s)), SAMPLE_RATE), stretch)));
       if (failed) return;
       signal?.throwIfAborted();
       clips.push(list.length ? concat(parts, SENTENCE_GAP) : null);
@@ -165,7 +174,7 @@ export async function narrate(script: Script, voice: Voice, speed: number, log: 
   if (missing.length) {
     let cacheError: unknown;
     try {
-      const say = await voice.open(signal);
+      const say = await voice.open(signal, voice.nativeSpeed ? speed : undefined);
       // Sentences do not depend on each other, so a voice that can says several at once.
       let next = 0;
       const speak = async () => {
