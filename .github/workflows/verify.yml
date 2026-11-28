@@ -36,34 +36,56 @@ jobs:
   publish:
     name: Publish to npm
     needs: verify
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    concurrency: publish
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: '22.18.0'
           registry-url: 'https://registry.npmjs.org'
           cache: npm
-      - name: Check the release tag
+      - name: Check whether this version is unpublished
+        id: release
         shell: bash
         run: |
           version=$(node -p "require('./package.json').version")
-          if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ || "$GITHUB_REF_NAME" != "v$version" ]]; then
-            echo "::error::Expected a stable release tag matching package.json (v$version)."
-            exit 1
+          if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Skipping: $version is not a stable version."
+            exit 0
           fi
-      - run: npm ci
+          if npm view "drawcast@$version" version > /dev/null 2>&1; then
+            echo "Skipping: drawcast@$version is already on npm."
+            exit 0
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - if: steps.release.outputs.version
+        run: npm ci
       - name: Build the release tarball
+        if: steps.release.outputs.version
         run: npm pack --pack-destination "$RUNNER_TEMP"
       - name: Publish the release tarball
+        if: steps.release.outputs.version
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ steps.release.outputs.version }}
         run: |
           if [[ -z "$NODE_AUTH_TOKEN" ]]; then
             echo "::error::Add the NPM_TOKEN repository secret as described in CONTRIBUTING.md."
             exit 1
           fi
-          npm publish "$RUNNER_TEMP/drawcast-${GITHUB_REF_NAME#v}.tgz" --access public --tag latest --ignore-scripts
+          npm publish "$RUNNER_TEMP/drawcast-$VERSION.tgz" --access public --tag latest --ignore-scripts
+      - name: Tag the release
+        if: steps.release.outputs.version
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" > /dev/null; then
+            echo "Tag v$VERSION already exists."
+          else
+            git tag "v$VERSION"
+            git push origin "v$VERSION"
+          fi

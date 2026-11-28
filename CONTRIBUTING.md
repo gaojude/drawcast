@@ -48,14 +48,14 @@ generated Markdown file. The **Require changeset** check runs on every pull requ
    and set the same version in `.claude-plugin/plugin.json`. Run
    `npm run changeset -- --empty` to record the release PR itself, then commit
    the generated files and deletions and merge the PR into `main`.
-2. From the updated `main` checkout, create and push the matching tag. For example,
-   for version `0.6.1`, run `git tag v0.6.1` followed by `git push origin v0.6.1`.
-3. Open the tag's **Verify** run in GitHub Actions. Once Linux, macOS, and Windows pass,
-   **Publish to npm** checks the tag against the package version, builds the tarball,
-   and publishes it with the `latest` dist-tag. Confirm with `npm view drawcast dist-tags.latest`.
+2. Merging into `main` publishes the release. Once Linux, macOS, and Windows pass,
+   **Publish to npm** in the merge's **Verify** run checks whether the `package.json`
+   version is already on npm. If it isn't, the job builds the tarball, publishes it with
+   the `latest` dist-tag, and pushes the matching `v` tag. Pushes that don't change the
+   version skip publishing. Confirm with `npm view drawcast dist-tags.latest`.
 
 If publishing fails because the token expired, replace the secret and use **Re-run failed jobs**
-on the tag's workflow run.
+on the merge's workflow run.
 
 ## How a script becomes a video
 
