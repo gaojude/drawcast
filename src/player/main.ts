@@ -10,7 +10,7 @@ import { DEFAULT_CANVAS, imageKey, type Formula, type Script, type StepAudio } f
 import { type FormulaFile, type Frame, type ImageInfo, type Pointer, type Schedule, type Timeline, timeline } from "./compile.ts";
 import type { Rect } from "./elements.ts";
 
-/** Everything about a video but its timing, so the page can get ready while the narration is still being spoken. */
+/** The script, drawing assets and output dimensions. */
 export interface PrepareRequest {
   script: Script;
   /** image `src` -> data URL */
@@ -22,13 +22,6 @@ export interface PrepareRequest {
   video?: EncodeRequest;
 }
 
-export interface LoadResult {
-  duration: number;
-  stepStarts: number[];
-  stepEnds: number[];
-  stepDone: number[];
-}
-
 const CAPTION_FONT = 'Nunito, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", Xiaolai, sans-serif';
 const LASER = "#e03131";
 
@@ -36,7 +29,7 @@ let request: PrepareRequest;
 let images: Map<string, ImageInfo>;
 let files: Record<string, unknown>;
 let formula: FormulaFile;
-/** The script against its audio, as far as the audio has come. */
+/** The script against its audio, ready to render. */
 let line: Timeline;
 
 /** A canvas that frames are painted on. It remembers what it shows, so a frame that changes nothing costs nothing. */
@@ -188,46 +181,22 @@ async function loadImages(sources: Record<string, string>): Promise<Map<string, 
   return out;
 }
 
-/**
- * Loads the script's fonts and images, and for a video starts on finding an encoder. None of it depends
- * on how long the narration turns out to be, so it is done while the narration is spoken.
- */
+/** Load drawing assets and prepare the browser encoder. */
 async function prepare(req: PrepareRequest): Promise<void> {
   stopEncoding();
   request = req;
-  known = null;
   still = surface();
   files = {};
   // one set of formula pictures for the page: a timeline made later asks for the same ones by the same names
   formula = formulaFiles(req.math);
   encoderReady = req.video ? startEncoding(req.video).catch((e) => ({ encoder: null, tried: [String(e?.message || e)] })) : null;
   [images] = await Promise.all([loadImages(req.images), loadFonts(req.script)]);
-  line = timeline(req.script, images, formula);
 }
 
-/**
- * Schedules the next steps of the script against their audio, one entry for each. Frames before the
- * `settled` it returns can be asked for from then on, so a video can be drawn as far as it has been spoken.
- */
-const schedule = (audio: (StepAudio | null)[]): Schedule => (known = line.extend(audio));
-
-/** The timing scheduled so far. */
-let known: Schedule | null = null;
-
-/** Forgets every step scheduled so far: the script is to be scheduled again, against other audio. */
-function startOver(): void {
-  line = timeline(request.script, images, formula);
-  known = null;
-  // what was painted for another timing is not this timing's picture
-  for (const s of [still, ...lanes.map((lane) => lane.surface)]) s.scene = null;
-}
-
-/** Schedules the whole script at once, from the start, against audio for every step. */
-function load(audio: (StepAudio | null)[]): LoadResult {
-  if (audio.length !== request.script.steps.length) throw new Error(`The script has ${request.script.steps.length} steps, and audio came for ${audio.length}.`);
-  startOver();
-  const { stepStarts, stepEnds, stepDone, settled } = (known = line.extend(audio));
-  return { duration: settled, stepStarts, stepEnds, stepDone };
+function load(audio: (StepAudio | null)[]): Schedule {
+  line = timeline(request.script, images, formula, audio);
+  for (const s of [still, ...lanes.map(lane => lane.surface)]) s.scene = null;
+  return line.schedule;
 }
 
 function drawPointer(g: CanvasRenderingContext2D, p: Pointer, view: Rect) {
@@ -326,7 +295,7 @@ async function frame(t: number, bare = false): Promise<string | null> {
 
 /** When step `step` (1-based) is over, by the timing scheduled so far. */
 function stepDone(step: number): number {
-  const t = known?.stepDone[step - 1];
+  const t = line.schedule.stepDone[step - 1];
   if (t === undefined) throw new Error(`step ${step} has not been scheduled`);
   return t;
 }
@@ -761,6 +730,6 @@ async function encodeSegment(index: number, first: number, count: number, cover?
 /** The encoder `prepare` was asked to find, once the search is over. */
 const encoder = (): Promise<EncodeStart> => encoderReady ?? Promise.resolve({ encoder: null, tried: ["no video was asked for"] });
 
-const api = { prepare, load, schedule, startOver, frame, stepFrame, sheet, elements, scene, encoder, encodeSegment, stopEncoding };
+const api = { prepare, load, frame, stepFrame, sheet, elements, scene, encoder, encodeSegment, stopEncoding };
 export type PlayerApi = typeof api;
 (window as any).drawcast = api;

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { sentences, tokens } from "../shared/text.ts";
 import type { Script, StepAudio } from "../shared/types.ts";
-import { type Narration, SAMPLE_RATE, SENTENCE_GAP, timeTokens } from "./narrate.ts";
+import { type Narration, SAMPLE_RATE, SENTENCE_GAP, timeTokens } from "./timing.ts";
 import { readWav, readWavInfo, resample } from "./wav.ts";
 
 export function narrationRequest(script: Script) {

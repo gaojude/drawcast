@@ -102,27 +102,12 @@ export interface Schedule {
    * which may run on into the next step. `frameAt(stepDone[i], i)` is the canvas as step i finishes.
    */
   stepDone: number[];
-  /**
-   * No frame before this time changes, whatever the steps still to come turn out to be: it is when the
-   * next of them starts. Once the last step is in, it is the length of the video.
-   */
-  settled: number;
-  /** How long the video is. Null until the last step is scheduled. */
-  duration: number | null;
+  duration: number;
 }
 
-/**
- * A script being scheduled against its audio, a step at a time. A step's place in time depends on the
- * audio of the steps before it and on its own, never on what comes after, so the start of a video can be
- * drawn while the end of it is still being spoken.
- */
 export interface Timeline {
-  /** Schedules the next steps of the script, in order: `audio` has an entry for each of them. */
-  extend(audio: (StepAudio | null)[]): Schedule;
-  /**
-   * What is on the canvas at `t`, which has to be before `settled`. With `upTo`, only what steps up to
-   * that one (0-based) do is shown, and `t` may be any time once that step is scheduled.
-   */
+  schedule: Schedule;
+  /** With upTo, include only actions through that step (0-based). */
   frameAt(t: number, upTo?: number): Frame;
 }
 
@@ -751,7 +736,7 @@ function spokenAt(at: string, audio: StepAudio, from: number): { t: number; inde
   return found >= 0 ? { t: audio.tokens[found].t, index: found } : null;
 }
 
-export function timeline(script: Script, images: Map<string, ImageInfo>, formula: FormulaFile): Timeline {
+export function timeline(script: Script, images: Map<string, ImageInfo>, formula: FormulaFile, audio: (StepAudio | null)[]): Timeline {
   const size = { ...DEFAULT_CANVAS, ...script.canvas };
   const canvas: Rect = { x: 0, y: 0, w: size.width, h: size.height };
   const b = new Builder(canvas, images, formula, script.captions !== false && script.steps.some((s) => !!s.say?.trim()));
@@ -761,46 +746,40 @@ export function timeline(script: Script, images: Map<string, ImageInfo>, formula
   const captions: { t0: number; t1: number; text: string }[] = [];
   let free = LEAD_IN; // when the next step may start speaking
   let busy = 0; // when the last animation ends
-  let tracks: Seg[][] = [];
+  if (audio.length !== script.steps.length) throw new Error("Expected audio timing for every step.");
+  for (const voice of audio) {
+    const step = script.steps[stepStarts.length];
+    const start = Math.max(free, busy - OVERLAP);
+    b.step = stepStarts.length;
+    stepStarts.push(start);
+    let done = start;
+    for (const c of voice?.captions ?? []) captions.push({ t0: start + c.t0, t1: start + c.t1, text: c.text });
 
-  const extend = (audio: (StepAudio | null)[]): Schedule => {
-    if (stepStarts.length + audio.length > script.steps.length) throw new Error(`The script has ${script.steps.length} steps, and audio came for more.`);
-    for (const voice of audio) {
-      const step = script.steps[stepStarts.length];
-      const start = Math.max(free, busy - OVERLAP);
-      b.step = stepStarts.length;
-      stepStarts.push(start);
-      let done = start;
-      for (const c of voice?.captions ?? []) captions.push({ t0: start + c.t0, t1: start + c.t1, text: c.text });
-
-      let next = start; // where an action without `at` starts
-      let from = 0;
-      for (const action of step.do ?? []) {
-        let t0 = next;
-        if (typeof action.at === "number") t0 = start + action.at;
-        else if (typeof action.at === "string" && voice) {
-          const hit = spokenAt(action.at, voice, from);
-          if (hit) {
-            t0 = start + hit.t;
-            from = hit.index;
-          }
+    let next = start; // where an action without `at` starts
+    let from = 0;
+    for (const action of step.do ?? []) {
+      let t0 = next;
+      if (typeof action.at === "number") t0 = start + action.at;
+      else if (typeof action.at === "string" && voice) {
+        const hit = spokenAt(action.at, voice, from);
+        if (hit) {
+          t0 = start + hit.t;
+          from = hit.index;
         }
-        next = b.run(action, t0);
-        busy = Math.max(busy, next);
-        done = Math.max(done, next + (action.point !== undefined || action.send !== undefined ? POINTER_TRAIL : 0));
       }
-      const length = voice?.duration ?? step.duration ?? 0;
-      stepDone.push(Math.max(done, start + length, stepDone.at(-1) ?? 0));
-      free = voice ? start + length + STEP_GAP : Math.max(start + length, next);
-      if (step.pause) free = Math.max(free, busy) + step.pause;
-      stepEnds.push(Math.max(free, busy - OVERLAP) - STEP_END);
+      next = b.run(action, t0);
+      busy = Math.max(busy, next);
+      done = Math.max(done, next + (action.point !== undefined || action.send !== undefined ? POINTER_TRAIL : 0));
     }
-    tracks = b.order.map((id) => b.tracks.get(id)!.sort((x, y) => x.t0 - y.t0));
-    const duration = stepStarts.length === script.steps.length ? Math.max(free, busy) + TAIL : null;
-    if (duration !== null) stepEnds[stepEnds.length - 1] = duration;
-    // Nothing a step does comes before its own start, and the next one starts here.
-    return { stepStarts: [...stepStarts], stepEnds: [...stepEnds], stepDone: [...stepDone], settled: duration ?? Math.max(free, busy - OVERLAP), duration };
-  };
+    const length = voice?.duration ?? step.duration ?? 0;
+    stepDone.push(Math.max(done, start + length, stepDone.at(-1) ?? 0));
+    free = voice ? start + length + STEP_GAP : Math.max(start + length, next);
+    if (step.pause) free = Math.max(free, busy) + step.pause;
+    stepEnds.push(Math.max(free, busy - OVERLAP) - STEP_END);
+  }
+  const tracks = b.order.map((id) => b.tracks.get(id)!.sort((x, y) => x.t0 - y.t0));
+  const duration = Math.max(free, busy) + TAIL;
+  stepEnds[stepEnds.length - 1] = duration;
 
   const pointersAt = (t: number, upTo: number): Pointer[] =>
     b.pointers
@@ -841,5 +820,5 @@ export function timeline(script: Script, images: Map<string, ImageInfo>, formula
     };
   };
 
-  return { extend, frameAt };
+  return { schedule: { duration, stepStarts, stepEnds, stepDone }, frameAt };
 }

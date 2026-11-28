@@ -6,8 +6,8 @@ import path from "node:path";
 import { test } from "node:test";
 import { findBrowser } from "../src/render/browser.ts";
 import { findFfmpeg } from "../src/render/encode.ts";
-import { importNarration, narrationRequest } from "../src/voice/external.ts";
-import { writeWav } from "../src/voice/wav.ts";
+import { importNarration, narrationRequest } from "../src/narration/manifest.ts";
+import { writeWav } from "../src/narration/wav.ts";
 
 const script = { drawcast: 1, steps: [
   { say: "Open up the window. Look at the river.", do: [{ at: "river", add: { id: "label", type: "text", text: "River", x: 25, y: 30 } }] },
@@ -72,13 +72,22 @@ test("built CLI exports a request, renders imported audio and previews the same 
   if (!existsSync(cli) || !ffmpeg || !await findBrowser(false, () => {})) return t.skip("requires built CLI, browser and ffmpeg");
   const { dir, file, request } = await fixture(t);
   const run = (...args) => execFileSync(process.execPath, [cli, ...args], { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
-  writeFileSync(path.join(dir, "talk.json"), JSON.stringify({ ...script, voice: "minimax:external-import-only", speed: 2 }));
+  writeFileSync(path.join(dir, "talk.json"), JSON.stringify(script));
   run("narration", "export", "talk.json", "-o", "request.json");
   assert.deepEqual(JSON.parse(readFileSync(path.join(dir, "request.json"))), request);
   assert.throws(() => run("render", "talk.json", "--narration", file, "-o", "take.wav"), /output different/);
   run("render", "talk.json", "--narration", file, "--width", "256", "--fps", "8");
   const pcm = execFileSync(ffmpeg, ["-v", "error", "-i", path.join(dir, "talk.mp4"), "-map", "0:a:0", "-f", "s16le", "-"]);
-  assert.ok(pcm.some(byte => byte !== 0), "the encoded MP4 contains the imported sound");
+  const peak = (seconds) => {
+    const at = Math.round(seconds * 48000);
+    let value = 0;
+    for (let i = at; i < at + 480; i++) value = Math.max(value, Math.abs(pcm.readInt16LE(i * 2)));
+    return value;
+  };
+  assert.ok(peak(0.2) < 10, "silent lead-in");
+  assert.ok(peak(0.6) > 1000, "first recorded step");
+  assert.ok(peak(1.4) < 10, "silence after the first recording");
+  assert.ok(peak(2.1) > 1000, "recording after the silent step");
   assert.match(run("snapshot", "talk.json", "--narration", file, "--at", "0.65", "--width", "256"), /timing from imported narration/);
   assert.ok(existsSync(path.join(dir, "talk.at0.65.png")));
 });

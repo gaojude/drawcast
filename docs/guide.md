@@ -2,11 +2,12 @@
 
 Use the same CLI invocation that printed this guide for the commands below.
 
-1. Write a `lesson.drawcast.json`. Give each spoken idea a visible change.
-2. Run `drawcast render lesson.drawcast.json` to speak the narration and write the MP4. For a layout preview, use `drawcast snapshot lesson.drawcast.json --sheet`. Both commands include the script check.
-3. Review the MP4 and return it. For reveals or movement, `drawcast inspect lesson.mp4 --motion` samples movement, step arrivals and the ending in one sheet. For completed layouts, use `--step all`. Use `--at 2,2.5,3` for known times.
+1. Ask which TTS setup to use for narrated videos. Check the project's agent notes for an existing choice. On first use, offer to help the user install local Kokoro, or use a model or hosted service they prefer. Run `drawcast guide narration` for setup and the file contract.
+2. Write `lesson.drawcast.json`. Tie each spoken idea to a visible change. Use `drawcast snapshot lesson.drawcast.json --sheet` to review the layout.
+3. Export `drawcast narration export lesson.drawcast.json -o request.json`. Read the sentence IDs and text, generate WAVs with the chosen tool, and write `result.json`. Keep the working TTS command, model, voice and rate in the project's agent notes for repeat runs.
+4. Run `drawcast render lesson.drawcast.json --narration result.json -o lesson.mp4`. Review the MP4 with `drawcast inspect lesson.mp4 --motion` and return it to the user. For a silent script, omit `--narration`.
 
-Video defaults to 1080p at 30 fps. Set `--width` and `--fps` on render. On an inspection sheet, `--width` sets each tile's width. Inspect prints encoded dimensions, duration, frame count, average fps and audio codec. Speech is cached. Built-in narration runs locally. Use an external speech service only when requested.
+Video defaults to 1080p at 30 fps. Use `--width` and `--fps` on render.
 
 ```json
 {
@@ -41,11 +42,11 @@ Start with the topic for your visual. For a pie chart, `drawcast guide pie` give
 | Topic | Use it for |
 | --- | --- |
 | `pie` | Reveal labeled pie slices by percentage |
-| `script` | Canvas background and size, voice, speed, captions and cover |
+| `script` | Canvas background and size, captions and cover |
 | `plots` | Function curves, moving parameters, markers that follow a path |
 | `math` | Typeset LaTeX, animate a derivation |
 | `elements` | Shapes, lines, arrows, images, text, colours and fonts |
 | `actions` | Motion along a path, simultaneous actions, camera, signals |
 | `layout` | Spacing, overlap, label and caption clearance |
-| `narration` | Voice, language, offline speech and pronunciation |
+| `narration` | Choose and remember a TTS setup, generate WAVs and a result JSON |
 | `full` | Complete script reference and longer worked example. Includes every topic. |

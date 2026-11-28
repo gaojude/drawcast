@@ -1,6 +1,6 @@
 {
   "name": "drawcast",
   "version": "0.7.0",
-  "description": "Make narrated whiteboard videos: an Excalidraw diagram drawn step by step while a local voice explains it.",
+  "description": "Make narrated whiteboard videos: an Excalidraw diagram drawn step by step in sync with recorded narration.",
   "license": "MIT"
 }

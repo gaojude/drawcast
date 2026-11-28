@@ -64,12 +64,6 @@ test("typos in property names and values are caught", async () => {
   assert.match(errors[2], /fillStyle must be one of/);
 });
 
-test("a voice is a name", async () => {
-  const withVoice = async (voice) => (await check({ ...script({ say: "Hello there." }), voice }, examples)).errors;
-  assert.deepEqual(await withVoice("maple"), []);
-  assert.match((await withVoice({ clip: "me.wav", transcript: "Hello." }))[0], /must be a voice name/);
-});
-
 test("layout problems are warnings", async () => {
   const { errors, warnings } = await report({
     do: [

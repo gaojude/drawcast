@@ -21,8 +21,8 @@ test("the browser timeline", async (t) => {
   const page = await browser.newPage();
   await page.addScriptTag({ content: outputFiles.find((f) => f.path.endsWith(".js")).text });
   const run = (steps, times = [10], images = [], audio = steps.map(() => null)) => page.evaluate((steps, times, images, audio) => {
-    const timeline = player.timeline({ drawcast: 1, steps }, new Map(images), () => undefined);
-    const schedule = timeline.extend(audio);
+    const timeline = player.timeline({ drawcast: 1, steps }, new Map(images), () => undefined, audio);
+    const schedule = timeline.schedule;
     return { schedule, frames: times.map((time) => timeline.frameAt(time)) };
   }, steps, times, images, audio);
   const box = (id, x, extra = {}) => ({ type: "rectangle", id, x, y: 0, width: 100, height: 100, ...extra });

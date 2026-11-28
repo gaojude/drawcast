@@ -233,12 +233,10 @@ export async function check(input: unknown, baseDir: string, geometry?: Resolved
 
   if (!isObject(input)) return { errors: ["The file must hold a JSON object."], warnings };
   const script = input as Partial<Script> & Record<string, unknown>;
-  unknownKeys("script", script, ["drawcast", "title", "canvas", "voice", "speed", "captions", "cover", "steps"]);
+  unknownKeys("script", script, ["drawcast", "title", "canvas", "captions", "cover", "steps"]);
   if (script.drawcast !== 1) fail("script", `"drawcast" must be 1, the version of the format (got ${quote(script.drawcast)}).`);
   if (script.title !== undefined && typeof script.title !== "string") fail("script", `"title" must be text.`);
-  if (script.speed !== undefined && !(isNumber(script.speed) && script.speed >= 0.5 && script.speed <= 2)) fail("script", `"speed" must be between 0.5 and 2.`);
   if (script.captions !== undefined && typeof script.captions !== "boolean") fail("script", `"captions" must be true or false.`);
-  if (script.voice !== undefined && (typeof script.voice !== "string" || !script.voice.trim())) fail("voice", `must be a voice name from "drawcast voices". A voice made from a recording is no longer supported.`);
 
   const canvas = { ...DEFAULT_CANVAS, ...(isObject(script.canvas) ? script.canvas : {}) };
   if (script.canvas !== undefined) {

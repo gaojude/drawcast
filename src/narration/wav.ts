@@ -53,7 +53,7 @@ export async function readWavInfo(file: string) {
   try {
     const header = Buffer.alloc(44);
     const { bytesRead } = await handle.read(header, 0, header.length, 0);
-    // Files written by drawcast have this fixed layout; snapshots only need the length.
+    // For a standard PCM header, snapshots need only the header and file size.
     if (bytesRead === 44 && header.toString("ascii", 12, 16) === "fmt " && header.readUInt32LE(16) === 16 && header.toString("ascii", 36, 40) === "data") {
       return wavHeader(header, file, (await handle.stat()).size);
     }
@@ -119,71 +119,4 @@ export function resample(audio: Audio, sampleRate: number): Audio {
     out[i] = audio.samples[k] + (audio.samples[next] - audio.samples[k]) * (at - k);
   }
   return { samples: out, sampleRate };
-}
-
-/**
- * The same speech faster or slower, at the same pitch.
- *
- * Short overlapping windows of the input are laid down closer together or further apart. Each window
- * is taken from near where the speed says it should come, at the offset that continues the previous
- * one most smoothly, which is what keeps the pitch (this is the WSOLA method).
- */
-export function tempoFrames(frames: number, sampleRate: number, speed: number): number {
-  if (!Number.isFinite(speed) || speed <= 0) throw new Error("Speech speed must be positive and finite.");
-  const hop = Math.max(1, Math.round(0.015 * sampleRate));
-  if (Math.abs(speed - 1) < 0.005 || frames < 4 * hop) return frames;
-  // Each window fits while round(k * hop * speed) + 2 * hop <= frames.
-  const windows = Math.ceil((frames - 2 * hop + 0.5) / (hop * speed));
-  return (windows + 1) * hop;
-}
-
-export function changeTempo(audio: Audio, speed: number): Audio {
-  const { samples, sampleRate } = audio;
-  const length = tempoFrames(samples.length, sampleRate, speed);
-  const hop = Math.max(1, Math.round(0.015 * sampleRate));
-  const size = 2 * hop;
-  if (Math.abs(speed - 1) < 0.005 || samples.length < size * 2) return audio;
-  const reach = Math.round(0.01 * sampleRate);
-
-  const out = new Float32Array(length);
-  const hann = Float32Array.from({ length: size }, (_, i) => 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / size));
-  // where in the input the previous window would have gone on to
-  let follow = 0;
-  for (let k = 0; k * hop + size <= length; k++) {
-    const want = Math.round(k * hop * speed);
-    let from = want;
-    if (k > 0) {
-      let best = -Infinity;
-      for (let shift = -reach; shift <= reach; shift += 2) {
-        const start = want + shift;
-        if (start < 0 || start + size > samples.length) continue;
-        let match = 0;
-        for (let i = 0; i < size && follow + i < samples.length; i += 4) match += samples[start + i] * samples[follow + i];
-        if (match > best) [best, from] = [match, start];
-      }
-    }
-    for (let i = 0; i < size; i++) out[k * hop + i] += samples[from + i] * hann[i];
-    follow = from + hop;
-  }
-  return { samples: out, sampleRate };
-}
-
-/** Cut the silence off both ends, keeping `keep` seconds of it. */
-export function trimSilence(audio: Audio, keep = 0.03, threshold = 0.01): Audio {
-  const { samples, sampleRate } = audio;
-  let start = 0;
-  let end = samples.length;
-  while (start < end && Math.abs(samples[start]) < threshold) start++;
-  if (start === end) {
-    // A quiet but audible recording may never reach the fixed threshold.
-    let peak = 0;
-    for (const sample of samples) peak = Math.max(peak, Math.abs(sample));
-    if (peak < 0.5 / 32767) return { samples: samples.subarray(0, 0), sampleRate };
-    start = 0;
-    threshold = peak * 0.1;
-    while (start < end && Math.abs(samples[start]) < threshold) start++;
-  }
-  while (end > start && Math.abs(samples[end - 1]) < threshold) end--;
-  const pad = Math.round(keep * sampleRate);
-  return { samples: samples.subarray(Math.max(0, start - pad), Math.min(samples.length, end + pad)), sampleRate };
 }
